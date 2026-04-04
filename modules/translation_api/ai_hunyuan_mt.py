@@ -1,9 +1,7 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-import os
 import time
-from configparser import ConfigParser
 
 import torch
 from transformers import (AutoModelForCausalLM, AutoTokenizer,
@@ -11,8 +9,7 @@ from transformers import (AutoModelForCausalLM, AutoTokenizer,
 
 from modules.exception.tool_exception import ToolException
 from modules.translation_api.base_translation import BaseTranslation
-from modules.utils import (BASE_ABSPATH, get_file_encoding, print_err,
-                           print_info)
+from modules.utils import print_err, print_info, read_config
 
 # 量化加载类型
 FLAGS = {
@@ -47,7 +44,9 @@ class HunYuanMTTranslation(BaseTranslation):
         self.__model = None  # 加载完毕的模型
         self.__max_new_tokens = 2048  # 设置生成的最大 token 数（即输出长度上限）
         self.__temperature = 0.7  # 控制输出的随机性，值越高越有创意，值越低越确定性
-        self.__top_p = 0.6  # 核采样（top-p sampling），限制概率累积最高的 token 选择范围
+        self.__top_p = (
+            0.6  # 核采样（top-p sampling），限制概率累积最高的 token 选择范围
+        )
         self.__top_k = 20  # 限制采样到概率最高的前 k 个 token
         self.__repetition_penalty = 1.05  # 惩罚重复内容，值越高越避免重复
         self.__context = ''  # 上下文
@@ -225,16 +224,12 @@ class HunYuanMTTranslation(BaseTranslation):
         获取配置
         '''
 
-        config_path = os.path.join(BASE_ABSPATH, 'config.ini')
-        if not os.path.isfile(config_path):
+        conf = read_config()
+        if conf is None:
             return
 
-        conf = ConfigParser()  # 调用读取配置模块中的类
-        conf.optionxform = lambda option: option
-        conf.read(config_path, encoding=get_file_encoding(config_path))
-
-        self._activated = conf.getboolean(self._section, 'activate')
         self.__model_path = conf.get(self._section, 'model_path')
+        self._activated = conf.getboolean(self._section, 'activate')
         _flag = conf.get(self._section, 'load_flag')
         if _flag in FLAGS:
             self.__load_flag = FLAGS[_flag]

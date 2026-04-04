@@ -1,19 +1,19 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-import os
 import time
-from configparser import ConfigParser
 from hashlib import md5
 from http.client import HTTPConnection
 from json import loads
 from random import randint
 from urllib import parse
 
+from modules.encrypt import SimpleAPIKeyEncryptor, SimpleKeyStore
 from modules.exception.tool_exception import ToolException
 from modules.translation_api.base_translation import BaseTranslation
-from modules.utils import (BASE_ABSPATH, acquire_token, get_file_encoding,
-                           print_err, print_info, remove_escape)
+from modules.utils import (acquire_token, get_password_with_star,
+                           is_all_digits, is_letters_and_digits, print_err,
+                           print_info, read_config, remove_escape)
 
 
 class BaiduTranslation(BaseTranslation):
@@ -33,8 +33,11 @@ class BaiduTranslation(BaseTranslation):
         )
         self.__app_id = ''
         self.__secret_key = ''
+
         # 获取配置
         self.__get_config()
+        # 检查翻译引擎是否已就绪
+        self.is_ready()
 
     def translate(self, source_txt: str, to_lang: str, **kwargs) -> str:
         '''
@@ -77,7 +80,7 @@ class BaiduTranslation(BaseTranslation):
             + '&sign='
             + sign
         )
-        http_client = self.__init_client()
+        http_client = HTTPConnection('api.fanyi.baidu.com')
 
         # 重试次数
         retry = kwargs.get('retry', 3)
@@ -86,7 +89,7 @@ class BaiduTranslation(BaseTranslation):
             self._tokens, self._last_refill = acquire_token(
                 self._max_qps, self._tokens, self._last_refill
             )
-                
+
             try:
                 http_client.request('GET', myurl)
 
@@ -102,7 +105,7 @@ class BaiduTranslation(BaseTranslation):
                     err_code = result['error_msg']
                     print_err(f'Error Code: {err_code}，Message: {err_code}')
                     # 指数退避
-                    wait = 1.5 ** attempt
+                    wait = 1.5**attempt
                     print_info(f"{wait}秒后重试……")
                     time.sleep(wait)
                 else:
@@ -125,47 +128,53 @@ class BaiduTranslation(BaseTranslation):
             self._activated = False
         return self._activated
 
-    def __check_pass(self):
+    def __check_pass(self) -> bool:
         '''
         检查API密钥是否配置
         '''
 
-        def _check():
-            if self.__app_id == '' or self.__secret_key == '':
-                raise ToolException(
-                    'TranslationAPIErr', '百度翻译启动失败，未配置API密钥！'
-                )
-
-        try:
-            _check()
-        except ToolException as e:
-            print_err(f'翻译引擎调用异常：{str(e)}')
-            return False
-        else:
+        if self.__app_id and self.__secret_key:
             return True
 
-    def __init_client(self):
-        '''
-        初始化客户端
-        '''
-        return HTTPConnection('api.fanyi.baidu.com')
+        keys = {}
+        if not self.__app_id:
+            inp = get_password_with_star(prompt="未配置appid！请输入：")
+            if inp == '' or not is_all_digits(inp) or len(inp) < 17:
+                print_err('未输入正确参数，引擎启动失败！')
+                return False
+            self.__app_id = keys['appid'] = inp
+        if not self.__secret_key:
+            inp = get_password_with_star(prompt="未配置secretKey！请输入：")
+            if inp == '' or not is_letters_and_digits(inp) or len(inp) < 20:
+                print_err('未输入正确参数，引擎启动失败！')
+                return False
+            self.__secret_key = keys['secretKey'] = inp
+
+        store = SimpleKeyStore(SimpleAPIKeyEncryptor('baidu_api_tokens'))
+        store.add_keys(self._section, keys)
+        return True
 
     def __get_config(self):
         '''
         获取配置
         '''
 
-        config_path = os.path.join(BASE_ABSPATH, 'config.ini')
-        if not os.path.isfile(config_path):
+        conf = read_config()
+        if conf is None:
             return
 
-        conf = ConfigParser()  # 调用读取配置模块中的类
-        conf.optionxform = lambda option: option
-        conf.read(config_path, encoding=get_file_encoding(config_path))
+        api_keys = {}
+        enc_appid = conf.get(self._section, 'appid')
+        if enc_appid:
+            api_keys['appid'] = enc_appid
+        enc_key = conf.get(self._section, 'secretKey')
+        if enc_key:
+            api_keys['secretKey'] = enc_key
+        store = SimpleKeyStore(SimpleAPIKeyEncryptor('baidu_api_tokens'), api_keys)
+        self.__app_id = store.get_key('appid')
+        self.__secret_key = store.get_key('secretKey')
 
         self._activated = conf.getboolean(self._section, 'activate')
-        self.__app_id = conf.get(self._section, 'appid')
-        self.__secret_key = conf.get(self._section, 'secretKey')
         self._max_qps = conf.getint(self._section, 'max_qps')
         if self._max_qps < 1:
             self._max_qps = 1

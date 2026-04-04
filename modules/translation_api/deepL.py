@@ -1,15 +1,13 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-import os
-from configparser import ConfigParser
-
 import deepl
 
+from modules.encrypt import SimpleAPIKeyEncryptor, SimpleKeyStore
 from modules.exception.tool_exception import ToolException
 from modules.translation_api.base_translation import BaseTranslation
-from modules.utils import (BASE_ABSPATH, acquire_token, check_langs, get_file_encoding,
-                           remove_escape)
+from modules.utils import (acquire_token, check_langs, get_password_with_star,
+                           print_err, read_config, remove_escape)
 
 
 class DeepLTranslation(BaseTranslation):
@@ -27,8 +25,11 @@ class DeepLTranslation(BaseTranslation):
             to_langs=_DEEPL_TO_LANGS,
         )
         self.__auth_key = ''
+
         # 获取配置
         self.__get_config()
+        # 检查翻译引擎是否已就绪
+        self.is_ready()
 
     def translate(self, source_txt: str, to_lang: str, **kwargs) -> str:
         '''
@@ -74,21 +75,50 @@ class DeepLTranslation(BaseTranslation):
         else:
             return target
 
+    def is_ready(self) -> bool:
+        '''
+        查询翻译引擎是否就绪
+        '''
+
+        if not self.__check_pass():
+            self._activated = False
+        return self._activated
+
+    def __check_pass(self) -> bool:
+        '''
+        检查API密钥是否配置
+        '''
+
+        if self.__auth_key:
+            return True
+
+        inp = get_password_with_star('未配置auth_key！请输入：').strip()
+        if inp == '' or ' ' in inp:
+            print_err('未输入正确参数，引擎启动失败！')
+            return False
+        self.__auth_key = inp
+
+        store = SimpleKeyStore(SimpleAPIKeyEncryptor('deepl_api_tokens'))
+        store.add_keys(self._section, {'auth_key': inp})
+        return True
+
     def __get_config(self):
         '''
         获取配置
         '''
 
-        config_path = os.path.join(BASE_ABSPATH, 'config.ini')
-        if not os.path.isfile(config_path):
+        conf = read_config()
+        if conf is None:
             return
 
-        conf = ConfigParser()  # 调用读取配置模块中的类
-        conf.optionxform = lambda option: option
-        conf.read(config_path, encoding=get_file_encoding(config_path))
+        api_keys = {}
+        enc_key = conf.get(self._section, 'auth_key')
+        if enc_key:
+            api_keys['auth_key'] = enc_key
+        store = SimpleKeyStore(SimpleAPIKeyEncryptor('deepl_api_tokens'), api_keys)
+        self.__auth_key = store.get_key('auth_key')
 
         self._activated = conf.getboolean(self._section, 'activate')
-        self.__auth_key = conf.get(self.__auth_key, 'auth_key')
         self._max_qps = conf.getint(self._section, 'max_qps')
         if self._max_qps < 1:
             self._max_qps = 1

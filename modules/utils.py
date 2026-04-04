@@ -12,6 +12,7 @@ import base64
 import copy
 import hashlib
 import json
+import msvcrt
 import os
 import pathlib
 import re
@@ -89,6 +90,9 @@ GLOBAL_DATA = {
 
 # 项目所在绝对路径
 BASE_ABSPATH = os.path.abspath('.')
+
+# 配置文件绝对路径
+CONFIG_ABSPATH = os.path.join(BASE_ABSPATH, 'config.ini')
 
 # renpy项目工作区的绝对路径
 RENPY_PROJECT_PARENT_FOLDER = os.path.join(BASE_ABSPATH, 'RenPy Workspace')
@@ -393,6 +397,20 @@ def is_int(val: any) -> bool:
         return True
     except ValueError:
         return False
+
+
+def is_all_digits(val='') -> bool:
+    '''
+    校验字串是否是全数字
+    '''
+    return bool(re.fullmatch(r'\d+', val))
+
+
+def is_letters_and_digits(val='') -> bool:
+    '''
+    校验字串是否是大小写英文字母和数字组成
+    '''
+    return bool(re.fullmatch(r'^[A-Za-z0-9]+$', val))
 
 
 def check_langs(txt: str) -> str:
@@ -784,18 +802,87 @@ def acquire_token(qps=1, tokens=1, last_refill=0):
     return tokens, last_refill
 
 
+def read_config(config_path='') -> ConfigParser | None:
+    '''
+    读取项目配置文件
+    '''
+    if not config_path:
+        config_path = CONFIG_ABSPATH
+    if not os.path.exists(config_path) or not os.path.isfile(config_path):
+        return None
+    conf = ConfigParser()  # 调用读取配置模块中的类
+    conf.optionxform = lambda option: option
+    conf.read(config_path, encoding=get_file_encoding(config_path))
+    return conf
+
+
+def write_config(section: str, keys=None, add=True) -> bool:
+    '''
+    写入项目配置文件
+
+    :param section: 配置文件节点名称
+    :param keys: 键值对字典
+    :param add: 新增/修改配置 or 删减配置
+    '''
+
+    if not section or not isinstance(section, str):
+        return False
+    if keys is None or not isinstance(keys, dict) or len(keys) < 1:
+        return False
+
+    # 读取配置文件，如果值为None说明未读取到，直接返回
+    conf = read_config()
+    if conf is None:
+        return False
+
+    section = section.strip()
+    if not conf.has_section(section):
+        conf.add_section(section)
+        # 删减模式下直接返回
+        if not add:
+            return False
+
+    for key, item in keys.items():
+        if add:
+            conf.set(section, key, item)
+        else:
+            conf.remove_option(section, key)
+    conf.write(open(CONFIG_ABSPATH, 'w', encoding=get_file_encoding(CONFIG_ABSPATH)))
+    return True
+
+
+def get_password_with_star(prompt='请输入密码: '):
+    print(prompt, end='', flush=True)
+    password = []
+
+    while True:
+        ch = msvcrt.getch()
+
+        if ch in (b'\r', b'\n'):  # 回车
+            print()
+            break
+        elif ch == b'\x08':  # 退格
+            if password:
+                password.pop()
+                print('\b \b', end='', flush=True)
+        else:
+            # 获取字符的原始字节
+            char = ch.decode('utf-8', errors='ignore')
+            if char:  # 只处理可打印字符
+                password.append(char)
+                print('*', end='', flush=True)
+
+    return ''.join(password)
+
+
 def get_config():
     '''
     调用get方法，获取配置的数据
     '''
 
-    configpath = os.path.join(BASE_ABSPATH, 'config.ini')
-    if not os.path.isfile(configpath):
+    conf = read_config()
+    if conf is None:
         return
-
-    conf = ConfigParser()  # 调用读取配置模块中的类
-    conf.optionxform = lambda option: option
-    conf.read(configpath, encoding=get_file_encoding(configpath))
 
     GLOBAL_DATA['debug'] = conf.getboolean('common_settings', 'debug')
     GLOBAL_DATA['mark_todo'] = conf.getboolean('common_settings', 'mark_todo')

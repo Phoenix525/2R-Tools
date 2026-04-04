@@ -1,14 +1,11 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-import os
-from configparser import ConfigParser
-
 import google_trans_new
 
 from modules.exception.tool_exception import ToolException
 from modules.translation_api.base_translation import BaseTranslation
-from modules.utils import BASE_ABSPATH, acquire_token, get_file_encoding, remove_escape
+from modules.utils import acquire_token, read_config, remove_escape
 
 
 class GoogleTranslation(BaseTranslation):
@@ -25,10 +22,15 @@ class GoogleTranslation(BaseTranslation):
             from_langs=_GOOGLE_FROM_LANGS,
             to_langs=_GOOGLE_TO_LANGS,
         )
+        # 翻译接口客户端
+        self.__translator = None
+
         # 获取配置
         self.__get_config()
-        # 初始化谷歌翻译
-        self.__translator = google_trans_new.google_translator()
+        # 检查翻译引擎是否已就绪
+        if self.is_ready():
+            # 初始化谷歌翻译
+            self.__translator = google_trans_new.google_translator()
 
     def translate(self, source_txt: str, to_lang: str, **kwargs) -> str:
         '''
@@ -38,6 +40,9 @@ class GoogleTranslation(BaseTranslation):
         - to_lang: 目标语种
         - **kwargs: 其他参数
         '''
+
+        if self.__translator is None:
+            raise ToolException('TranslationAPIErr', 'API客户端未实例化！')
 
         # 源文本语种
         from_lang = kwargs.get('from_lang', 'auto')
@@ -74,13 +79,9 @@ class GoogleTranslation(BaseTranslation):
         获取配置
         '''
 
-        config_path = os.path.join(BASE_ABSPATH, 'config.ini')
-        if not os.path.isfile(config_path):
+        conf = read_config()
+        if conf is None:
             return
-
-        conf = ConfigParser()  # 调用读取配置模块中的类
-        conf.optionxform = lambda option: option
-        conf.read(config_path, encoding=get_file_encoding(config_path))
 
         self._activated = conf.getboolean(self._section, 'activate')
         self._max_qps = conf.getint(self._section, 'max_qps')

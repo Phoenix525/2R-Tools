@@ -4,15 +4,15 @@
 import ast
 import base64
 import json
-import os
-from configparser import ConfigParser
 
 from xfyunsdknlp.translate_client import TranslateClient
 
+from modules.encrypt import SimpleAPIKeyEncryptor, SimpleKeyStore
 from modules.exception.tool_exception import ToolException
 from modules.translation_api.base_translation import BaseTranslation
-from modules.utils import (BASE_ABSPATH, acquire_token, check_langs,
-                           get_file_encoding, print_err, remove_escape)
+from modules.utils import (acquire_token, check_langs, get_password_with_star,
+                           is_letters_and_digits, print_err, read_config,
+                           remove_escape)
 
 
 class XunFeiTranslation(BaseTranslation):
@@ -32,13 +32,16 @@ class XunFeiTranslation(BaseTranslation):
         self.__app_id = ''
         self.__api_secret = ''
         self.__api_key = ''
+        # 翻译接口客户端
+        self.__client = None
 
         # 获取配置
         self.__get_config()
 
-        self.__client = TranslateClient(
-            app_id=self.__app_id, api_key=self.__api_key, api_secret=self.__api_secret
-        )
+        # 检查翻译引擎是否就绪
+        if self.is_ready():
+            # 实例化客户端
+            self.__client = self.__init_client()
 
     def translate(self, source_txt: str, to_lang: str, **kwargs) -> str:
         '''
@@ -48,6 +51,9 @@ class XunFeiTranslation(BaseTranslation):
         - to_lang: 目标语种
         - **kwargs: 其他参数
         '''
+
+        if self.__client is None:
+            raise ToolException('TranslationAPIErr', 'API客户端未实例化！')
 
         # 源文本语种
         from_lang = kwargs.get('from_lang', 'auto')
@@ -94,42 +100,72 @@ class XunFeiTranslation(BaseTranslation):
             self._activated = False
         return self._activated
 
-    def __check_pass(self):
+    def __check_pass(self) -> bool:
         '''
         检查API密钥是否配置
         '''
 
-        def _check():
-            if self.__app_id == '' or self.__api_secret == '' or self.__api_key == '':
-                raise ToolException(
-                    'TranslationAPIErr', '小牛翻译启动失败，未配置API密钥！'
-                )
-
-        try:
-            _check()
-        except ToolException as e:
-            print_err(f'翻译引擎调用异常：{str(e)}')
-            return False
-        else:
+        if self.__app_id and self.__api_secret and self.__api_key:
             return True
+
+        keys = {}
+        if not self.__app_id:
+            inp = get_password_with_star('未配置APPID！请输入：').strip()
+            if inp == '' or not is_letters_and_digits(inp) or len(inp) < 8:
+                print_err('未输入正确参数，引擎启动失败！')
+                return False
+            self.__app_id = keys['APPID'] = inp
+        if not self.__api_secret:
+            inp = get_password_with_star('未配置APISecret！请输入：').strip()
+            if inp == '' or not is_letters_and_digits(inp) or len(inp) < 32:
+                print_err('未输入正确参数，引擎启动失败！')
+                return False
+            self.__api_secret = keys['APISecret'] = inp
+        if not self.__api_key:
+            inp = get_password_with_star('未配置APIKey！请输入：').strip()
+            if inp == '' or not is_letters_and_digits(inp) or len(inp) < 32:
+                print_err('未输入正确参数，引擎启动失败！')
+                return False
+            self.__api_key = keys['APIKey'] = inp
+
+        store = SimpleKeyStore(SimpleAPIKeyEncryptor('xunfei_api_tokens'))
+        store.add_keys(self._section, keys)
+        return True
+
+    def __init_client(self) -> TranslateClient:
+        '''
+        初始化客户端
+        '''
+        client = TranslateClient(
+            app_id=self.__app_id, api_key=self.__api_key, api_secret=self.__api_secret
+        )
+        return client
 
     def __get_config(self):
         '''
         获取配置
         '''
 
-        config_path = os.path.join(BASE_ABSPATH, 'config.ini')
-        if not os.path.isfile(config_path):
+        conf = read_config()
+        if conf is None:
             return
 
-        conf = ConfigParser()  # 调用读取配置模块中的类
-        conf.optionxform = lambda option: option
-        conf.read(config_path, encoding=get_file_encoding(config_path))
+        api_keys = {}
+        enc_key = conf.get(self._section, 'APPID')
+        if enc_key:
+            api_keys['APPID'] = enc_key
+        enc_key = conf.get(self._section, 'APISecret')
+        if enc_key:
+            api_keys['APISecret'] = enc_key
+        enc_key = conf.get(self._section, 'APIKey')
+        if enc_key:
+            api_keys['APIKey'] = enc_key
+        store = SimpleKeyStore(SimpleAPIKeyEncryptor('xunfei_api_tokens'), api_keys)
+        self.__app_id = store.get_key('APPID')
+        self.__api_secret = store.get_key('APISecret')
+        self.__api_key = store.get_key('APIKey')
 
         self._activated = conf.getboolean(self._section, 'activate')
-        self.__app_id = conf.get(self._section, 'APPID')
-        self.__api_secret = conf.get(self._section, 'APISecret')
-        self.__api_key = conf.get(self._section, 'APIKey')
         self._max_qps = conf.getint(self._section, 'max_qps')
         if self._max_qps < 1:
             self._max_qps = 1

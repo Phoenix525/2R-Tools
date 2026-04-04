@@ -16,8 +16,8 @@ import modules.rpgm_mz_extraction_writing as rpgm_mz_extraction_writing
 import modules.rpgm_vx_ace_extraction_writing as rpgm_vx_ace_extraction_writing
 import modules.single_txt_tranlsation as single_txt_tranlsation
 import modules.translated_txt_lib as translated_txt_lib
-from modules.utils import (RENPY_PROJECT_PARENT_FOLDER, get_projects_list,
-                           print_info, print_warn)
+from modules.utils import (RENPY_PROJECT_PARENT_FOLDER, get_config,
+                           get_projects_list, print_info, print_warn)
 
 
 def get_renpy_project() -> str:
@@ -218,4 +218,5 @@ def start_main(reselect='0', serial_num=''):
 
 
 if __name__ == '__main__':
+    get_config()
     start_main()

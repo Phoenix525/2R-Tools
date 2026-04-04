@@ -2,19 +2,17 @@
 # -*- coding: utf-8 -*-
 
 import ast
-import json
-import os
 import time
-from configparser import ConfigParser
 
 import volcenginesdktranslate20250301
 from volcenginesdkcore import Configuration, rest
 
+from modules.encrypt import SimpleAPIKeyEncryptor, SimpleKeyStore
 from modules.exception.tool_exception import ToolException
 from modules.translation_api.base_translation import BaseTranslation
-from modules.utils import (BASE_ABSPATH, acquire_token, check_langs,
-                           get_file_encoding, print_debug, print_err,
-                           print_info, remove_escape)
+from modules.utils import (acquire_token, check_langs, get_password_with_star,
+                           is_letters_and_digits, print_debug, print_err,
+                           print_info, read_config, remove_escape)
 
 
 class HuoshanTranslation(BaseTranslation):
@@ -33,12 +31,15 @@ class HuoshanTranslation(BaseTranslation):
         )
         self.__access_key_id = ''
         self.__secret_access_key = ''
+        # 翻译接口客户端
+        self.__client = None
 
         # 获取配置
         self.__get_config()
-
-        # API客户端
-        self.__api_instance = self.__init_client()
+        # 检查翻译引擎是否已就绪
+        if self.is_ready():
+            # 实例化客户端
+            self.__client = self.__init_client()
 
     def translate(self, source_txt: str, to_lang: str, **kwargs) -> str:
         '''
@@ -48,6 +49,9 @@ class HuoshanTranslation(BaseTranslation):
         - to_lang: 目标语种
         - **kwargs: 其他参数
         '''
+
+        if self.__client is None:
+            raise ToolException('TranslationAPIErr', 'API客户端未实例化！')
 
         # 源文本语种
         from_lang = kwargs.get('from_lang', 'auto')
@@ -68,7 +72,7 @@ class HuoshanTranslation(BaseTranslation):
             target_language=to_lang,
             text_list=[source_txt],
         )
-        
+
         # 重试次数
         retry = kwargs.get('retry', 3)
         for attempt in range(retry):
@@ -78,7 +82,7 @@ class HuoshanTranslation(BaseTranslation):
             )
 
             try:
-                response = self.__api_instance.translate_text(
+                response = self.__client.translate_text(
                     translate_txt_request
                 ).to_dict()
                 print_debug(str(response))
@@ -92,12 +96,13 @@ class HuoshanTranslation(BaseTranslation):
                     msg = err['Message']
                     print_err(f'Error Code: {err_code}，Message: {msg}')
                     # 指数退避
-                    wait = 2 ** attempt
+                    wait = 2**attempt
                     print_info(f"{wait}秒后重试……")
                     time.sleep(wait)
                 else:
                     raise ToolException(
-                        'TranslationAPIErr', f'翻译引擎出现异常！请查看报错信息：{str(e)}'
+                        'TranslationAPIErr',
+                        f'翻译引擎出现异常！请查看报错信息：{str(e)}',
                     )
         return ''
 
@@ -110,6 +115,34 @@ class HuoshanTranslation(BaseTranslation):
             self._activated = False
         return self._activated
 
+    def __check_pass(self) -> bool:
+        '''
+        检查API密钥是否配置
+        '''
+
+        if self.__access_key_id and self.__secret_access_key:
+            return True
+
+        keys = {}
+        if not self.__access_key_id:
+            inp = get_password_with_star('未配置AccessKeyID！请输入：').strip()
+            if inp == '' or not is_letters_and_digits(inp) or len(inp) < 47:
+                print_err('未输入正确参数，引擎启动失败！')
+                return False
+            self.__access_key_id = keys['AccessKeyID'] = inp
+        if not self.__secret_access_key:
+            inp = get_password_with_star(
+                '未配置SecretAccessKey！请输入（注意加上末尾两个“=”）：'
+            ).strip()
+            if inp == '' or not is_letters_and_digits(inp[:-2]) or len(inp) < 60:
+                print_err('未输入正确参数，引擎启动失败！')
+                return False
+            self.__secret_access_key = keys['SecretAccessKey'] = inp
+
+        store = SimpleKeyStore(SimpleAPIKeyEncryptor('huoshan_api_tokens'))
+        store.add_keys(self._section, keys)
+        return True
+
     def __init_client(self):
         '''
         初始化API客户端
@@ -117,47 +150,33 @@ class HuoshanTranslation(BaseTranslation):
         configuration = Configuration()
         configuration.ak = self.__access_key_id
         configuration.sk = self.__secret_access_key
-        configuration.region = 'cn-north-1'
+        configuration.region = 'cn-beijing'
         # set default configuration
         Configuration.set_default(configuration)
         # use global default configuration
         return volcenginesdktranslate20250301.TRANSLATE20250301Api()
-
-    def __check_pass(self):
-        '''
-        检查API密钥是否配置
-        '''
-
-        def _check():
-            if self.__access_key_id == '' or self.__secret_access_key == '':
-                raise ToolException(
-                    'TranslationAPIErr', '火山翻译启动失败，未配置API密钥！'
-                )
-
-        try:
-            _check()
-        except ToolException as e:
-            print_err(f'翻译引擎调用异常：{str(e)}')
-            return False
-        else:
-            return True
 
     def __get_config(self):
         '''
         获取配置
         '''
 
-        config_path = os.path.join(BASE_ABSPATH, 'config.ini')
-        if not os.path.isfile(config_path):
+        conf = read_config()
+        if conf is None:
             return
 
-        conf = ConfigParser()  # 调用读取配置模块中的类
-        conf.optionxform = lambda option: option
-        conf.read(config_path, encoding=get_file_encoding(config_path))
+        api_keys = {}
+        enc_key = conf.get(self._section, 'AccessKeyID')
+        if enc_key:
+            api_keys['AccessKeyID'] = enc_key
+        enc_key = conf.get(self._section, 'SecretAccessKey')
+        if enc_key:
+            api_keys['SecretAccessKey'] = enc_key
+        store = SimpleKeyStore(SimpleAPIKeyEncryptor('huoshan_api_tokens'), api_keys)
+        self.__access_key_id = store.get_key('AccessKeyID')
+        self.__secret_access_key = store.get_key('SecretAccessKey')
 
         self._activated = conf.getboolean(self._section, 'activate')
-        self.__access_key_id = conf.get(self._section, 'AccessKeyID')
-        self.__secret_access_key = conf.get(self._section, 'SecretAccessKey')
         self._max_qps = conf.getint(self._section, 'max_qps')
         if self._max_qps < 1:
             self._max_qps = 1

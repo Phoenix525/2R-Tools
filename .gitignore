@@ -10,3 +10,9 @@ RenPy Workspace/
 RPGM Data Input/
 RPGM Workspace/
 RPGM Workspace/bak/
+environment-dev.yml
+requirements-dev.txt
+config.ini
+test.ini
+bak_config (明文).ini
+api_config (明文).ini

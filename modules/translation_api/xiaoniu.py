@@ -2,16 +2,16 @@
 # -*- coding: utf-8 -*-
 
 import hashlib
-import os
 import time
-from configparser import ConfigParser
 
 import requests
 
+from modules.encrypt import SimpleAPIKeyEncryptor, SimpleKeyStore
 from modules.exception.tool_exception import ToolException
 from modules.translation_api.base_translation import BaseTranslation
-from modules.utils import (BASE_ABSPATH, acquire_token, get_file_encoding,
-                           print_err, print_info, remove_escape)
+from modules.utils import (acquire_token, get_password_with_star,
+                           is_letters_and_digits, print_err, print_info,
+                           read_config, remove_escape)
 
 
 class XiaoNiuTranslation(BaseTranslation):
@@ -33,6 +33,8 @@ class XiaoNiuTranslation(BaseTranslation):
 
         # 获取配置
         self.__get_config()
+        # 检查翻译引擎是否已就绪
+        self.is_ready()
 
     def translate(self, source_txt: str, to_lang: str, **kwargs) -> str:
         '''
@@ -63,7 +65,7 @@ class XiaoNiuTranslation(BaseTranslation):
             'timestamp': int(time.time()),
             'srcText': source_txt,
         }
-        data['authStr'] = self._generate_auth_str(data)
+        data['authStr'] = self.__generate_auth_str(data)
 
         # 重试次数
         retry = kwargs.get('retry', 3)
@@ -85,7 +87,7 @@ class XiaoNiuTranslation(BaseTranslation):
                     err_msg = result['errorMsg']
                     print_err(f'Error Code: {err_code}，Message: {err_msg}')
                     # 指数退避
-                    wait = 1.5 ** attempt
+                    wait = 1.5**attempt
                     print_info(f"{wait}秒后重试……")
                     time.sleep(wait)
                 else:
@@ -105,27 +107,34 @@ class XiaoNiuTranslation(BaseTranslation):
             self._activated = False
         return self._activated
 
-    def __check_pass(self):
+    def __check_pass(self) -> bool:
         '''
         检查API密钥是否配置
         '''
 
-        def _check():
-            if self.__app_id == '' or self.__api_key == '':
-                raise ToolException(
-                    'TranslationAPIErr', '小牛翻译启动失败，未配置API密钥！'
-                )
-
-        try:
-            _check()
-        except ToolException as e:
-            print_err(f'翻译引擎调用异常：{str(e)}')
-            return False
-        else:
+        if self.__app_id and self.__secret_key:
             return True
 
+        keys = {}
+        if not self.__app_id:
+            inp = get_password_with_star('未配置APPID！请输入：').strip()
+            if inp == '' or not is_letters_and_digits(inp) or len(inp) < 16:
+                print_err('未输入正确参数，引擎启动失败！')
+                return False
+            self.__app_id = keys['APPID'] = inp
+        if not self.__api_key:
+            inp = get_password_with_star('未配置API_KEY！请输入：').strip()
+            if inp == '' or not is_letters_and_digits(inp) or len(inp) < 32:
+                print_err('未输入正确参数，引擎启动失败！')
+                return False
+            self.__api_key = keys['API_KEY'] = inp
+
+        store = SimpleKeyStore(SimpleAPIKeyEncryptor('xiaoniu_api_tokens'))
+        store.add_keys(self._section, keys)
+        return True
+
     # 生成权限字符串
-    def _generate_auth_str(self, params: dict):
+    def __generate_auth_str(self, params: dict) -> str:
         sorted_params = sorted(
             list(params.items()) + [('apikey', self.__api_key)], key=lambda x: x[0]
         )
@@ -140,17 +149,22 @@ class XiaoNiuTranslation(BaseTranslation):
         获取配置
         '''
 
-        config_path = os.path.join(BASE_ABSPATH, 'config.ini')
-        if not os.path.isfile(config_path):
+        conf = read_config()
+        if conf is None:
             return
 
-        conf = ConfigParser()  # 调用读取配置模块中的类
-        conf.optionxform = lambda option: option
-        conf.read(config_path, encoding=get_file_encoding(config_path))
+        api_keys = {}
+        enc_key = conf.get(self._section, 'APPID')
+        if enc_key:
+            api_keys['APPID'] = enc_key
+        enc_key = conf.get(self._section, 'API_KEY')
+        if enc_key:
+            api_keys['API_KEY'] = enc_key
+        store = SimpleKeyStore(SimpleAPIKeyEncryptor('xiaoniu_api_tokens'), api_keys)
+        self.__app_id = store.get_key('APPID')
+        self.__api_key = store.get_key('API_KEY')
 
         self._activated = conf.getboolean(self._section, 'activate')
-        self.__app_id = conf.get(self._section, 'APPID')
-        self.__api_key = conf.get(self._section, 'API_KEY')
         self._max_qps = conf.getint(self._section, 'max_qps')
         if self._max_qps < 1:
             self._max_qps = 1

@@ -1,16 +1,16 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-import os
-from configparser import ConfigParser
 from json import dumps, loads
 
 from requests import request
 
+from modules.encrypt import SimpleAPIKeyEncryptor, SimpleKeyStore
 from modules.exception.tool_exception import ToolException
 from modules.translation_api.base_translation import BaseTranslation
-from modules.utils import (BASE_ABSPATH, acquire_token, check_langs,
-                           get_file_encoding, print_err, remove_escape)
+from modules.utils import (acquire_token, check_langs, get_password_with_star,
+                           is_letters_and_digits, print_err, read_config,
+                           remove_escape)
 
 
 class CaiyunTranslation(BaseTranslation):
@@ -28,8 +28,11 @@ class CaiyunTranslation(BaseTranslation):
             to_langs=_CAIYUN_TO_LANGS,
         )
         self.__token = ''
+
         # 获取配置
         self.__get_config()
+        # 检查翻译引擎是否已就绪
+        self.is_ready()
 
     def translate(self, source_txt: str, to_lang: str, **kwargs) -> str:
         '''
@@ -84,11 +87,15 @@ class CaiyunTranslation(BaseTranslation):
                 data=dumps(payload),
                 headers=headers,
             )
-            return loads(response.text)['target'][0]
+            text = loads(response.text)
+            if 'target' in text:
+                return text['target'][0]
+            else:
+                err_msg = text['message']
+                raise ToolException('TranslationAPIErr', f'请求出现错误！请查看报错信息：{err_msg}')
         except Exception as e:
-            raise ToolException(
-                'TranslationAPIErr', f'翻译引擎出现异常！请查看报错信息：{str(e)}'
-            )
+            print_err(f'{str(e)}')
+            return ''
 
     def is_ready(self) -> bool:
         '''
@@ -99,40 +106,41 @@ class CaiyunTranslation(BaseTranslation):
             self._activated = False
         return self._activated
 
-    def __check_pass(self):
+    def __check_pass(self) -> bool:
         '''
         检查API密钥是否配置
         '''
 
-        def _check():
-            if self.__token == '':
-                raise ToolException(
-                    'TranslationAPIErr', '彩云小译启动失败，未配置token！'
-                )
-
-        try:
-            _check()
-        except ToolException as e:
-            print_err(f'翻译引擎调用异常：{str(e)}')
-            return False
-        else:
+        if self.__token:
             return True
+
+        inp = get_password_with_star('未配置token！请输入：').strip()
+        if inp == '' or not is_letters_and_digits(inp) or len(inp) < 20:
+            print_err('未输入正确参数，引擎启动失败！')
+            return False
+        self.__token = inp
+
+        store = SimpleKeyStore(SimpleAPIKeyEncryptor('caiyun_api_tokens'))
+        store.add_keys(self._section, {'token': inp})
+        return True
 
     def __get_config(self):
         '''
         获取配置
         '''
 
-        config_path = os.path.join(BASE_ABSPATH, 'config.ini')
-        if not os.path.isfile(config_path):
+        conf = read_config()
+        if conf is None:
             return
 
-        conf = ConfigParser()  # 调用读取配置模块中的类
-        conf.optionxform = lambda option: option
-        conf.read(config_path, encoding=get_file_encoding(config_path))
+        api_keys = {}
+        enc_key = conf.get(self._section, 'token')
+        if enc_key:
+            api_keys['token'] = enc_key
+        store = SimpleKeyStore(SimpleAPIKeyEncryptor('caiyun_api_tokens'), api_keys)
+        self.__token = store.get_key('token')
 
         self._activated = conf.getboolean(self._section, 'activate')
-        self.__token = conf.get(self._section, 'token')
         self._max_qps = conf.getint(self._section, 'max_qps')
         if self._max_qps < 1:
             self._max_qps = 1

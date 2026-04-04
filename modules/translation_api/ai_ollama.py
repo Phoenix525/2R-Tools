@@ -1,14 +1,11 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-import os
-from configparser import ConfigParser
-
 from ollama import ChatResponse, chat
 
 from modules.exception.tool_exception import ToolException
 from modules.translation_api.base_translation import BaseTranslation
-from modules.utils import BASE_ABSPATH, get_file_encoding, print_err
+from modules.utils import print_err, read_config
 
 
 class OllamaTranslation(BaseTranslation):
@@ -131,16 +128,12 @@ class OllamaTranslation(BaseTranslation):
         获取配置
         '''
 
-        config_path = os.path.join(BASE_ABSPATH, 'config.ini')
-        if not os.path.isfile(config_path):
+        conf = read_config()
+        if conf is None:
             return
 
-        conf = ConfigParser()  # 调用读取配置模块中的类
-        conf.optionxform = lambda option: option
-        conf.read(config_path, encoding=get_file_encoding(config_path))
-
-        self._activated = conf.getboolean(self._section, 'activate')
         self.__model_name = conf.get(self._section, 'model_name')
+        self._activated = conf.getboolean(self._section, 'activate')
         self.__num_predict = conf.getint(self._section, 'num_predict')
         if self.__num_predict < -1:
             self.__num_predict = 2048

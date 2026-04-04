@@ -73,7 +73,7 @@ class Interpreter:
             self.__select_api_type()
 
     def translate_txt(
-        self, source_txt='', *, activate_context='-1', open_todo=False
+        self, source_txt='', *, open_todo=False, activate_context='-1'
     ) -> str:
         '''
         翻译文件或文本列表
@@ -82,7 +82,7 @@ class Interpreter:
 
         - source_txt: 输入文本
         - open_todo: 是否在句首添加TODO标记，默认由config配置
-        - **kwargs：其他参数
+        - activate_context: 是否启用上下文
         '''
 
         if source_txt.strip() == '':
@@ -201,7 +201,7 @@ class Interpreter:
             case _:
                 self.__curr_api = None
 
-        if self.__curr_api is None or not self.__curr_api.is_ready():
+        if self.__curr_api is None:
             self.clear_api_datas()
             return self.__select_api_type()
 

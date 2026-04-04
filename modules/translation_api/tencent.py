@@ -1,9 +1,7 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-import os
 import time
-from configparser import ConfigParser
 from json import dumps
 
 from tencentcloud.common import credential
@@ -15,10 +13,12 @@ from tencentcloud.common.profile.http_profile import HttpProfile
 # 导入对应产品模块的client models
 from tencentcloud.tmt.v20180321 import models, tmt_client
 
+from modules.encrypt import SimpleAPIKeyEncryptor, SimpleKeyStore
 from modules.exception.tool_exception import ToolException
 from modules.translation_api.base_translation import BaseTranslation
-from modules.utils import (BASE_ABSPATH, acquire_token, get_file_encoding,
-                           print_err, print_info, remove_escape)
+from modules.utils import (acquire_token, get_password_with_star,
+                           is_letters_and_digits, print_err, print_info,
+                           read_config, remove_escape)
 
 
 class TencentTranslation(BaseTranslation):
@@ -37,8 +37,15 @@ class TencentTranslation(BaseTranslation):
         )
         self.__secret_id = ''
         self.__secret_key = ''
+        # 翻译接口客户端
+        self.__client = ''
+
         # 获取配置
         self.__get_config()
+        # 检查翻译引擎是否已就绪
+        if self.is_ready():
+            # 实例化客户端
+            self.__client = self.__init_client()
 
     def translate(self, source_txt: str, to_lang: str, **kwargs) -> str:
         '''
@@ -48,6 +55,9 @@ class TencentTranslation(BaseTranslation):
         - to_lang: 目标语种
         - **kwargs: 其他参数
         '''
+
+        if self.__client is None:
+            raise ToolException('TranslationAPIErr', 'API客户端未实例化！')
 
         # 源文本语种
         from_lang = kwargs.get('from_lang', 'auto')
@@ -62,8 +72,6 @@ class TencentTranslation(BaseTranslation):
 
         # 删除转义符
         source_txt = remove_escape(source_txt)
-
-        client = self.__init_client()
         _params = {
             'SourceText': source_txt,
             'Source': from_lang,
@@ -83,18 +91,19 @@ class TencentTranslation(BaseTranslation):
             )
 
             try:
-                resp = client.TextTranslate(req)
+                resp = self.__client.TextTranslate(req)
                 return resp.TargetText
             except TencentCloudSDKException as e:
                 if e.get_code() == 'RequestLimitExceeded' and attempt < retry - 1:
                     print_err(str(e))
                     # 指数退避
-                    wait = 1.5 ** attempt
+                    wait = 1.5**attempt
                     print_info(f"{wait}秒后重试……")
                     time.sleep(wait)
                 else:
                     raise ToolException(
-                        'TranslationAPIErr', f'翻译引擎出现异常！请查看报错信息：{str(e)}'
+                        'TranslationAPIErr',
+                        f'翻译引擎出现异常！请查看报错信息：{str(e)}',
                     )
         return ''
 
@@ -107,25 +116,32 @@ class TencentTranslation(BaseTranslation):
             self._activated = False
         return self._activated
 
-    def __check_pass(self):
+    def __check_pass(self) -> bool:
         '''
         检查API密钥是否配置
         '''
 
-        def _check():
-            if self.__secret_id == '' or self.__secret_key == '':
-                raise ToolException(
-                    'TranslationAPIErr', '腾讯翻译启动失败，未配置token！'
-                )
-
-        try:
-            _check()
-        except ToolException as e:
-            print_err(f'翻译引擎调用异常：{str(e)}')
-            return False
-        else:
+        if self.__secret_id and self.__secret_key:
             return True
-        
+
+        keys = {}
+        if not self.__secret_id:
+            inp = get_password_with_star(prompt="未配置secretId！请输入：")
+            if inp == '' or not is_letters_and_digits(inp) or len(inp) < 36:
+                print_err('未输入正确参数，引擎启动失败！')
+                return False
+            self.__secret_id = keys['secretId'] = inp
+        if not self.__secret_key:
+            inp = get_password_with_star(prompt="未配置secretKey！请输入：")
+            if inp == '' or not is_letters_and_digits(inp) or len(inp) < 32:
+                print_err('未输入正确参数，引擎启动失败！')
+                return False
+            self.__secret_key = keys['secretKey'] = inp
+
+        store = SimpleKeyStore(SimpleAPIKeyEncryptor('tencent_api_tokens'))
+        store.add_keys(self._section, keys)
+        return True
+
     def __init_client(self):
         '''
         初始化API客户端
@@ -144,17 +160,22 @@ class TencentTranslation(BaseTranslation):
         获取配置
         '''
 
-        config_path = os.path.join(BASE_ABSPATH, 'config.ini')
-        if not os.path.isfile(config_path):
+        conf = read_config()
+        if conf is None:
             return
 
-        conf = ConfigParser()  # 调用读取配置模块中的类
-        conf.optionxform = lambda option: option
-        conf.read(config_path, encoding=get_file_encoding(config_path))
+        api_keys = {}
+        enc_key = conf.get(self._section, 'secretId')
+        if enc_key:
+            api_keys['secretId'] = enc_key
+        enc_key = conf.get(self._section, 'secretKey')
+        if enc_key:
+            api_keys['secretKey'] = enc_key
+        store = SimpleKeyStore(SimpleAPIKeyEncryptor('tencent_api_tokens'), api_keys)
+        self.__secret_id = store.get_key('secretId')
+        self.__secret_key = store.get_key('secretKey')
 
         self._activated = conf.getboolean(self._section, 'activate')
-        self.__secret_id = conf.get(self._section, 'secretId')
-        self.__secret_key = conf.get(self._section, 'secretKey')
         self._max_qps = conf.getint(self._section, 'max_qps')
         if self._max_qps < 1:
             self._max_qps = 1

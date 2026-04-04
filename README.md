@@ -1,7 +1,7 @@
 # 2R-Tools
 
 ## 工具介绍
-面向汉化者的RPG Maker & Ren'Py翻译文本提取更新管理及翻译工具。支持RPGM Ace VX、MV、MZ和Ren'Py 8及以下版本引擎，傻瓜式翻译&更新游戏文本，大大减少翻译工作量，缩短翻译时间。
+面向游戏本地化者的 RPG Maker & Ren'Py 翻译文本管理翻译工具。支持RPGM VX Ace、MV、MZ及Ren'Py引擎，一键提取、翻译、更新翻译文本，大大减少翻译工作量，缩短翻译时间。
 >注：工具仅能提取引擎原生支持的文件及语法下的翻译文本，不支持游戏作者自行编写的部分代码。
 
 ## 运行环境
@@ -15,6 +15,7 @@
 	- rpgvxace_default_library.json：RPG Maker VX Ace引擎初始简中译文。
 	- TransLib.json：本地译文库（暂时不支持区分语种）。可以通过工具进行扩充，适用于所有游戏引擎的文本翻译。译文库不宜储存存在多含义的文本，这可能会导致翻译文本词不达意。在提取待翻文本或进行文本翻译时，工具会先在本地译文库中查找。
 	- gameText.json：RPGM游戏旧版本翻译文件（暂时不支持区分语种）。在提取RPGM游戏翻译文本时，工具会扫描该文件，若存在结果，则会覆盖从TransLib.json中获取的译文，并录入新的翻译文本中。
+- modules文件夹：程序代码。
 - RPGM Workspace文件夹：RPGM项目工作区。用于存放和管理翻译文件。
 - RPGM Data Input文件夹：存放RPGM的初始json代码文件。
 - RPGM Data Output文件夹：存放RPGM的新生成json代码文件。
@@ -42,13 +43,11 @@
 ## 使用方法
 1. 启用机器翻译：
   
-   在config.ini中配置api的密钥，并修改activate为True以启用接口。
+   在config.ini中修改activate为True以启用接口。
+   在首次调用时会提示输入API通行证，并加密存入config.ini相应位置，下次再调用会自动读取config.ini已有通行证数据。
 	```ini
 	; 举例：百度翻译API
 	[baidu_api]
-	; 密钥
-	appid=2018xxxxxxxxx8382
-	secretKey=Rgb6jxxxxxxxxxxDyUE5
 	; 是否启用
 	activate=True
 	```
@@ -73,7 +72,7 @@
    - 项目未配置conda虚拟环境：
 		```Powershell
 		# 安装项目所使用的依赖
-		# 注意先将torch所依赖cuda版本130要修改成本机的cuda版本。例torch==2.11.0+cuda121
+		# 注意先将torch所依赖cuda版本130修改成本机的cuda版本。例torch==2.11.0+cuda121
 		PS D:\2R-Tools>pip install -r requirements.txt
 
 		# 启动工具
@@ -85,7 +84,7 @@
 		(base) PS D:\2R-Tools>conda activate 2rtools
 		
 		# 安装项目所使用的依赖
-		# 注意先将torch所依赖cuda版本130要修改成本机的cuda版本。例torch==2.11.0+cuda121
+		# 注意先将torch所依赖cuda版本130修改成本机的cuda版本。例torch==2.11.0+cuda121
 		(2rtools) PS D:\2R-Tools>pip install -r requirements.txt
 
 		# 启动工具
