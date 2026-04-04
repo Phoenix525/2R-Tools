@@ -1,0 +1,12 @@
+__pycache__/
+tmp/
+waiting-for-entry/
+.vscode/
+test/
+scripts/
+renpy-tl/
+libraries/gameText.json
+RenPy Workspace/
+RPGM Data Input/
+RPGM Workspace/
+RPGM Workspace/bak/
