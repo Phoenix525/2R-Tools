@@ -1,13 +1,13 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import deepl
 
-from modules.encrypt import SimpleAPIKeyEncryptor, SimpleKeyStore
-from modules.exception.tool_exception import ToolException
+from modules.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
 from modules.translation_api.base_translation import BaseTranslation
-from modules.utils import (acquire_token, check_langs, get_password_with_star,
-                           print_err, read_config, remove_escape)
+from modules.utils import (acquire_token, check_langs, enpun_2_zhpun,
+                           get_password_with_star, print_err, read_config,
+                           remove_escape)
 
 
 class DeepLTranslation(BaseTranslation):
@@ -33,28 +33,23 @@ class DeepLTranslation(BaseTranslation):
 
     def translate(self, source_txt: str, to_lang: str, **kwargs) -> str:
         '''
-        开始翻译
+        开始翻译，必定有返回值
 
         - source_txt: 输入文本
         - to_lang: 目标语种
         - **kwargs: 其他参数
         '''
 
+        # 删除转义符
+        source_txt = remove_escape(source_txt)
         # 源文本语种
         from_lang = kwargs.get('from_lang', 'auto')
         # deepl源语种无法使用auto，在未指定源语种时，获取语种
         if from_lang == 'auto':
             from_lang = check_langs(source_txt).upper()
-        if not self.check_from_and_to(from_lang, to_lang):
+        # 校验文本及语种是否符合要求，不符合则直接返回空值
+        if not self.check_text_and_lang(source_txt, from_lang, to_lang):
             return ''
-
-        # 删除转义符
-        source_txt = remove_escape(source_txt)
-        # 原文本长度超过API限制
-        if len(source_txt) > self._max_char:
-            raise ToolException(
-                'TranslationAPIErr', '文本长度超过API限制，跳过本条语句！'
-            )
 
         # 获取令牌，未获取到时自动等待
         self._tokens, self._last_refill = acquire_token(
@@ -68,11 +63,14 @@ class DeepLTranslation(BaseTranslation):
                 source_txt, source_lang=from_lang, target_lang=to_lang
             )
             target = result.text
+            # 翻译引擎返回的字符串可能存在一些\u开头的，但无法使用utf-8解码的字符串
+            # encode函数遇此问题默认是抛异常，这里修改参数调整为将字符串替换成“?”
+            target = target.encode('utf-8', 'replace').decode('utf-8')
+            target = enpun_2_zhpun(target)
         except Exception as e:
-            raise ToolException(
-                'TranslationAPIErr', f'DeepL翻译出现异常！请检查报错信息：{str(e)}'
-            )
-        else:
+            print_err(f'DeepL翻译出现异常！请检查报错信息：{str(e)}')
+            target = ''
+        finally:
             return target
 
     def is_ready(self) -> bool:

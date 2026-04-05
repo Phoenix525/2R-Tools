@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 '''
 @Author: Phoenix
@@ -9,7 +9,7 @@
 import time
 
 from modules.exception.tool_exception import ToolException
-from modules.utils import print_warn
+from modules.utils import print_err
 
 
 class BaseTranslation(object):
@@ -75,9 +75,13 @@ class BaseTranslation(object):
         '''
         return self._activated
 
-    def check_from_and_to(self, from_lang='', to_lang='') -> bool:
+    def check_text_and_lang(self, source_txt, from_lang='', to_lang='') -> bool:
         '''
-        检查源语种和目标语种是否合法
+        校验文本长度、源语种和目标语种是否符合API要求
+
+        :param source_txt: 待翻译文本
+        :param from_lang: 源语种
+        :param to_lang: 目标语种
         '''
 
         def _check():
@@ -96,11 +100,15 @@ class BaseTranslation(object):
             # 当目标语种等于源语种时，手动抛出异常
             if to_lang == from_lang:
                 raise ToolException('TranslationAPIErr', '传入的目标语种和源语种相同！')
-
+            
+            # 原文本长度超过API限制
+            if isinstance(source_txt, str) and len(source_txt) > self._max_char:
+                raise ToolException('TranslationAPIErr', '文本长度超过翻译引擎限制！')
+        
         try:
             _check()
         except ToolException as e:
-            print_warn(str(e))
+            print_err(str(e))
             return False
         else:
             return True

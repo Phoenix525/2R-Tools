@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import time
@@ -8,12 +8,13 @@ from json import loads
 from random import randint
 from urllib import parse
 
-from modules.encrypt import SimpleAPIKeyEncryptor, SimpleKeyStore
+from modules.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
 from modules.exception.tool_exception import ToolException
 from modules.translation_api.base_translation import BaseTranslation
-from modules.utils import (acquire_token, get_password_with_star,
-                           is_all_digits, is_letters_and_digits, print_err,
-                           print_info, read_config, remove_escape)
+from modules.utils import (acquire_token, enpun_2_zhpun,
+                           get_password_with_star, is_all_digits,
+                           is_letters_and_digits, print_err, print_info,
+                           read_config, remove_escape)
 
 
 class BaiduTranslation(BaseTranslation):
@@ -41,26 +42,20 @@ class BaiduTranslation(BaseTranslation):
 
     def translate(self, source_txt: str, to_lang: str, **kwargs) -> str:
         '''
-        开始翻译
+        开始翻译，必定有返回值
 
         - source_txt: 输入文本
         - to_lang: 目标语种
         - **kwargs: 其他参数
         '''
 
+        # 删除转义符
+        source_txt = remove_escape(source_txt)
         # 源文本语种
         from_lang = kwargs.get('from_lang', 'auto')
-        if not self.check_from_and_to(from_lang, to_lang):
+        # 校验文本及语种是否符合要求，不符合则直接返回空值
+        if not self.check_text_and_lang(source_txt, from_lang, to_lang):
             return ''
-
-        # 删除转义符
-        source_txt = remove_escape(source_txt)
-        # 原文本长度超过API限制
-        if len(source_txt) > self._max_char:
-            raise ToolException('TranslationAPIErr', '文本长度超过翻译引擎限制！')
-
-        # 删除转义符
-        source_txt = remove_escape(source_txt)
 
         salt = randint(32768, 65536)
         sign = self.__app_id + source_txt + str(salt) + self.__secret_key
@@ -92,28 +87,39 @@ class BaiduTranslation(BaseTranslation):
 
             try:
                 http_client.request('GET', myurl)
-
                 # response是HTTPResponse对象
                 response = http_client.getresponse()
                 result_all = response.read().decode('utf-8')
                 result = loads(result_all)
                 if 'trans_result' in result:
-                    return result['trans_result'][0].get('dst', '')
+                    trans_result = result['trans_result']
+                    target = ''
+                    for idx, value in enumerate(trans_result):
+                        src = value.get('dst', '')
+                        # 翻译引擎返回的字符串可能存在一些\u开头的，但无法使用utf-8解码的字符串
+                        # encode函数遇此问题默认是抛异常，这里修改参数调整为将字符串替换成“?”
+                        src = src.encode('utf-8', 'replace').decode('utf-8')
+                        src = enpun_2_zhpun(src)
+                        target += src
+                        if idx < len(trans_result) - 1:
+                            target += r'\n'
+                    return target
 
                 err_code = result['error_code']
+                err_msg = result['error_msg']
                 if err_code in ('52002', '54003') and attempt < retry - 1:
-                    err_code = result['error_msg']
-                    print_err(f'Error Code: {err_code}，Message: {err_code}')
+                    print_err(f'错误代码：{err_code}，报错信息：{err_msg}')
                     # 指数退避
                     wait = 1.5**attempt
                     print_info(f"{wait}秒后重试……")
                     time.sleep(wait)
                 else:
-                    raise
+                    raise ToolException(
+                        'APIRequestErr', f'错误代码：{err_code}，报错信息：{err_msg}'
+                    )
             except Exception as e:
-                raise ToolException(
-                    'TranslationAPIErr', f'翻译引擎出现异常！请查看报错信息：{str(e)}'
-                )
+                print_err(f'翻译引擎出现异常！请查看报错信息：{str(e)}')
+                break
             finally:
                 if http_client:
                     http_client.close()

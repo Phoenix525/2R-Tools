@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import json
@@ -8,12 +8,12 @@ from uuid import uuid1
 
 from requests import post
 
-from modules.encrypt import SimpleAPIKeyEncryptor, SimpleKeyStore
+from modules.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
 from modules.exception.tool_exception import ToolException
 from modules.translation_api.base_translation import BaseTranslation
-from modules.utils import (acquire_token, get_password_with_star,
-                           is_letters_and_digits, print_err, print_info,
-                           read_config, remove_escape)
+from modules.utils import (acquire_token, enpun_2_zhpun,
+                           get_password_with_star, is_letters_and_digits,
+                           print_err, print_info, read_config, remove_escape)
 
 
 class YoudaoTranslation(BaseTranslation):
@@ -39,23 +39,20 @@ class YoudaoTranslation(BaseTranslation):
 
     def translate(self, source_txt: str, to_lang: str, **kwargs) -> str:
         '''
-        开始翻译
+        开始翻译，必定有返回值
 
         - source_txt: 输入文本
         - to_lang: 目标语种
         - **kwargs: 其他参数
         '''
 
-        # 源文本语种
-        from_lang = kwargs.get('from_lang', 'auto')
-        if not self.check_from_and_to(from_lang, to_lang):
-            return ''
-
         # 删除转义符
         source_txt = remove_escape(source_txt)
-        # 原文本长度超过API限制
-        if len(source_txt) > self._max_char:
-            raise ToolException('TranslationAPIErr', '文本长度超过翻译引擎限制！')
+        # 源文本语种
+        from_lang = kwargs.get('from_lang', 'auto')
+        # 校验文本及语种是否符合要求，不符合则直接返回空值
+        if not self.check_text_and_lang(source_txt, from_lang, to_lang):
+            return ''
 
         def _encrypt(signStr: str):
             hash_algorithm = sha256()
@@ -103,23 +100,28 @@ class YoudaoTranslation(BaseTranslation):
                 # print_debug(response.text)
                 result = json.loads(response.text)
                 if 'translation' in result:
-                    return result['translation'][0]
-
+                    target = result['translation'][0]
+                    # 翻译引擎返回的字符串可能存在一些\u开头的，但无法使用utf-8解码的字符串
+                    # encode函数遇此问题默认是抛异常，这里修改参数调整为将字符串替换成“?”
+                    target = target.encode('utf-8', 'replace').decode('utf-8')
+                    target = enpun_2_zhpun(target)
+                    return target
                 err_code = result['errorCode']
+                # 请求频率超限且还有重试次数时，阻塞N秒后重新发起请求
                 if err_code == '411' and attempt < retry - 1:
                     print_err(
-                        f'Error Code: {err_code}，Message: 访问频率受限,请稍后访问！'
+                        f'错误代码：{err_code}，报错信息：访问频率受限,请稍后访问！'
                     )
                     # 指数退避
                     wait = 2**attempt
                     print_info(f"{wait}秒后重试……")
                     time.sleep(wait)
                 else:
-                    raise
+                    raise ToolException('APIRequestErr', f'错误代码：{err_code}')
             except Exception as e:
-                raise ToolException(
-                    'TranslationAPIErr', f'翻译引擎出现异常！请查看报错信息：{str(e)}'
-                )
+                print_err(f'翻译引擎出现异常！请查看报错信息：{str(e)}')
+                break
+        # 未获取到正确结果时，返回空字串
         return ''
 
     def is_ready(self) -> bool:

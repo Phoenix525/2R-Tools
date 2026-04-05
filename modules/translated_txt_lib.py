@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 '''
 @Author: Phoenix
@@ -14,9 +14,10 @@ import main
 from modules.utils import (BASE_ABSPATH, PATTERN_EMPTY_LINE,
                            PATTERN_IDENTIFIER, PATTERN_NEW, PATTERN_NEW_SAY,
                            PATTERN_OLD, PATTERN_OLD_SAY,
-                           TRANSLATED_LIB_LIBRARY, get_file_encoding,
-                           is_renpy_translation_file, merge_dicts, print_err,
-                           print_info, print_warn, read_json, write_json)
+                           TRANSLATED_LIB_LIBRARY, TRANSLATED_LIB_LIBRARY_FILE,
+                           get_file_encoding, is_renpy_translation_file,
+                           merge_dicts, print_err, print_info, print_warn,
+                           read_json, write_json)
 
 _WAITING_FOR_ENTRY = os.path.join(BASE_ABSPATH, 'waiting-for-entry')
 
@@ -157,12 +158,10 @@ def write_translib():
         or not isinstance(_txt_library_cache, dict)
         or len(_txt_library_cache) < 2
     ):
-        print_warn(f'待扩增文本为空，未写入{TRANSLATED_LIB_LIBRARY}译文库')
+        print_warn(f'待扩增文本为空，未写入{TRANSLATED_LIB_LIBRARY_FILE}译文库')
         return
 
-    translib_path = os.path.join(BASE_ABSPATH, 'libraries', TRANSLATED_LIB_LIBRARY)
-    translated_txt_lib = read_json(translib_path)
-
+    translated_txt_lib = copy.deepcopy(TRANSLATED_LIB_LIBRARY)
     for k, v in _txt_library_cache.items():
         # 译文库中已有该文本，跳过
         if k in translated_txt_lib:
@@ -174,8 +173,9 @@ def write_translib():
         translated_txt_lib[k] = v
 
     write_json(
-        translib_path,
-        translated_txt_lib, backup=False
+        os.path.join(BASE_ABSPATH, 'libraries', TRANSLATED_LIB_LIBRARY_FILE),
+        translated_txt_lib,
+        backup=False,
     )
 
 

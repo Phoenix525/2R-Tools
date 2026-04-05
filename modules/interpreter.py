@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 '''
 @Author: Phoenix
@@ -6,15 +6,13 @@
 '''
 
 
-import os
+import copy
 import sys
 
 from prettytable import PrettyTable
 
-from modules.exception.tool_exception import ToolException
-from modules.utils import (BASE_ABSPATH, GLOBAL_DATA, MARK_TODO,
-                           TRANSLATED_LIB_LIBRARY, enpun_2_zhpun,
-                           is_valid_index, print_err, read_json, to_int)
+from modules.utils import (GLOBAL_DATA, MARK_TODO, get_value_from_library,
+                           is_valid_index, print_err, to_int)
 
 # 翻译引擎表，接口名称务必要和GLOBAL_DATA里一致
 APIS = (
@@ -59,11 +57,6 @@ class Interpreter:
         # 目标语种
         self._to_lang = 'zh'
 
-        # 读取译文库文本
-        self._translation_library = read_json(
-            os.path.join(BASE_ABSPATH, 'libraries', TRANSLATED_LIB_LIBRARY)
-        )
-
         # 初始化翻译器时如果传入了合法翻译引擎名称，则直接实例化相应翻译引擎
         if api_name in self.__api_names:
             self.__curr_api_name = api_name
@@ -76,7 +69,7 @@ class Interpreter:
         self, source_txt='', *, open_todo=False, activate_context='-1'
     ) -> str:
         '''
-        翻译文件或文本列表
+        翻译文本
 
         所有可能出现的异常要在此函数处理完毕，并一定有返回值。
 
@@ -85,40 +78,119 @@ class Interpreter:
         - activate_context: 是否启用上下文
         '''
 
-        if source_txt.strip() == '':
+        if not source_txt.strip():
             return ''
 
         print(f'原文：{source_txt}')
 
-        # 译文库中有该文本，且该文本是否不为空时，直接返回译文库中文本
-        if (
-            source_txt in self._translation_library
-            and self._translation_library[source_txt] != ''
-        ):
-            target = self._translation_library[source_txt]
-            print(f'库译文：{target}\n')
-            return target
+        # 先从译文库中查找，如果有则直接取值返回
+        translated = get_value_from_library(source_txt)
+        if translated:
+            return translated
 
         try:
-            target = self.__curr_api.translate(
+            translated = self.__curr_api.translate(
                 source_txt,
                 self._to_lang,
                 from_lang=self._from_lang,
                 activate_context=activate_context,
             )
+            print(f'译文：{translated}\n')
+            if open_todo and translated:
+                translated = MARK_TODO + translated
         except Exception as e:
-            target = ''  # 翻译错误，返回空字串
-            print_err(f'{str(e)}\n')
-        else:
-            # 翻译引擎返回的字符串可能存在一些\u开头的，但无法使用utf-8解码的字符串
-            # encode函数遇此问题默认是抛异常，这里修改参数调整为将字符串替换成“?”
-            target = target.encode('utf-8', 'replace').decode('utf-8')
-            target = enpun_2_zhpun(target)
-            print(f'译文：{target}\n')
-            if open_todo:
-                target = MARK_TODO + target
+            translated = ''
+            print_err(f'{str(e)}')
+        return translated
 
-        return target
+    def translate_txt_dict(
+        self, source_txt_dict=None, *, open_todo=False, activate_context='-1'
+    ) -> dict:
+        '''
+        翻译文本字典
+
+        - source_txt_dict: 输入文本
+        - open_todo: 是否在句首添加TODO标记，默认由config配置
+        - activate_context: 是否启用上下文
+        '''
+
+        if (
+            source_txt_dict is None
+            or not isinstance(source_txt_dict, dict)
+            or len(source_txt_dict) < 1
+        ):
+            return None
+
+        tmp_source_txt = copy.deepcopy(source_txt_dict)
+        for key, text in tmp_source_txt.items():
+            print(f'原文：{text}')
+
+            # 先从译文库中查找，如果有则直接取值返回
+            translated = get_value_from_library(text)
+            if translated:
+                tmp_source_txt[key] = translated
+                continue
+
+            try:
+                translated = self.__curr_api.translate(
+                    text,
+                    self._to_lang,
+                    from_lang=self._from_lang,
+                    activate_context=activate_context,
+                )
+                print(f'译文：{translated}\n')
+                if open_todo and translated:
+                    translated = MARK_TODO + translated
+            except Exception as e:
+                translated = ''
+                print_err(f'{str(e)}')
+
+            tmp_source_txt[key] = translated
+        return tmp_source_txt
+
+    def translate_txt_list(
+        self, source_txt_list: list, *, open_todo=False, activate_context='-1'
+    ) -> list:
+        '''
+        翻译文本列表
+
+        - source_txt_list: 输入文本
+        - open_todo: 是否在句首添加TODO标记，默认由config配置
+        - activate_context: 是否启用上下文
+        '''
+
+        if (
+            source_txt_list is None
+            or not isinstance(source_txt_list, list)
+            or len(source_txt_list) < 1
+        ):
+            return None
+
+        tmp_source_txt_list = []
+        for text in source_txt_list:
+            print(f'原文：{text}')
+            # 先从译文库中查找，如果有则直接取值返回
+            translated = get_value_from_library(text)
+            if translated:
+                tmp_source_txt_list.append(translated)
+                continue
+
+            try:
+                translated = self.__curr_api.translate(
+                    text,
+                    self._to_lang,
+                    from_lang=self._from_lang,
+                    activate_context=activate_context,
+                )
+                print(f'译文：{translated}\n')
+                if open_todo and translated:
+                    translated = MARK_TODO + translated
+            except Exception as e:
+                translated = ''
+                print_err(f'{str(e)}')
+
+            tmp_source_txt_list.append(translated)
+        return tmp_source_txt_list
 
     def clear_api_datas(self):
         '''

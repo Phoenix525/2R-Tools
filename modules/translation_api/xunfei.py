@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import ast
@@ -7,12 +7,11 @@ import json
 
 from xfyunsdknlp.translate_client import TranslateClient
 
-from modules.encrypt import SimpleAPIKeyEncryptor, SimpleKeyStore
-from modules.exception.tool_exception import ToolException
+from modules.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
 from modules.translation_api.base_translation import BaseTranslation
-from modules.utils import (acquire_token, check_langs, get_password_with_star,
-                           is_letters_and_digits, print_err, read_config,
-                           remove_escape)
+from modules.utils import (acquire_token, check_langs, enpun_2_zhpun,
+                           get_password_with_star, is_letters_and_digits,
+                           print_err, read_config, remove_escape)
 
 
 class XunFeiTranslation(BaseTranslation):
@@ -45,7 +44,7 @@ class XunFeiTranslation(BaseTranslation):
 
     def translate(self, source_txt: str, to_lang: str, **kwargs) -> str:
         '''
-        开始翻译
+        开始翻译，必定有返回值
 
         - source_txt: 输入文本
         - to_lang: 目标语种
@@ -53,23 +52,19 @@ class XunFeiTranslation(BaseTranslation):
         '''
 
         if self.__client is None:
-            raise ToolException('TranslationAPIErr', 'API客户端未实例化！')
+            print_err('API客户端未实例化！')
+            return ''
 
+        # 删除转义符
+        source_txt = remove_escape(source_txt)
         # 源文本语种
         from_lang = kwargs.get('from_lang', 'auto')
         # 讯飞源语种无法使用auto，在未指定源语种时，获取语种
         if from_lang == 'auto':
             from_lang = check_langs(source_txt)
-        if not self.check_from_and_to(from_lang, to_lang):
+        # 校验文本及语种是否符合要求，不符合则直接返回空值
+        if not self.check_text_and_lang(source_txt, from_lang, to_lang):
             return ''
-
-        # 删除转义符
-        source_txt = remove_escape(source_txt)
-        # 原文本长度超过API限制
-        if len(source_txt) > self._max_char:
-            raise ToolException(
-                'TranslationAPIErr', '文本长度超过API限制，跳过本条语句！'
-            )
 
         # 重试次数
         # retry = kwargs.get('retry', 3)
@@ -79,17 +74,21 @@ class XunFeiTranslation(BaseTranslation):
             self._max_qps, self._tokens, self._last_refill
         )
         try:
+            target = ''
             resp = self.__client.send_ist_v2(source_txt, from_lang, to_lang)
             json_resp = json.loads(resp)
             if json_resp["header"]['code'] == 0:
                 result = json_resp['payload']['result']['text']
                 fd = ast.literal_eval(base64.b64decode(result).decode("utf-8"))
-                return fd['trans_result']['dst']
+                target = fd['trans_result']['dst']
+                # 翻译引擎返回的字符串可能存在一些\u开头的，但无法使用utf-8解码的字符串
+                # encode函数遇此问题默认是抛异常，这里修改参数调整为将字符串替换成“?”
+                target = target.encode('utf-8', 'replace').decode('utf-8')
+                target = enpun_2_zhpun(target)
         except Exception as e:
-            raise ToolException(
-                'TranslationAPIErr', f'翻译引擎出现异常！请查看报错信息：{str(e)}'
-            )
-        # return ''
+            print_err(f'翻译引擎出现异常！请查看报错信息：{str(e)}')
+        finally:
+            return target
 
     def is_ready(self) -> bool:
         '''

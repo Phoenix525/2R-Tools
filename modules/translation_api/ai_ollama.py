@@ -1,11 +1,11 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 from ollama import ChatResponse, chat
 
 from modules.exception.tool_exception import ToolException
 from modules.translation_api.base_translation import BaseTranslation
-from modules.utils import print_err, read_config
+from modules.utils import print_err, read_config, remove_escape
 
 
 class OllamaTranslation(BaseTranslation):
@@ -41,16 +41,19 @@ class OllamaTranslation(BaseTranslation):
 
     def translate(self, source_txt: str, to_lang: str, **kwargs) -> str:
         '''
-        开始翻译
+        开始翻译，必定有返回值
 
         - source_txt: 输入文本
         - to_lang: 目标语种
         - **kwargs: 其他参数
         '''
 
+        # 删除转义符
+        source_txt = remove_escape(source_txt)
         # 源文本语种
         from_lang = kwargs.get('from_lang', 'auto')
-        if not self.check_from_and_to(from_lang, to_lang):
+        # 校验文本及语种是否符合要求，不符合则直接返回空值
+        if not self.check_text_and_lang(source_txt, from_lang, to_lang):
             return ''
 
         # 是否启用上下文翻译。1表示启用上下文，并保存上文；0表示不启用上下文，但不清除已有上文；-1表示不启用上下文，同时清除已有上文
@@ -88,13 +91,12 @@ class OllamaTranslation(BaseTranslation):
                 },
             )
 
-            translated_text = response['message']['content'].rstrip("\n")
+            target = response['message']['content'].rstrip("\n")
         except Exception as e:
-            raise ToolException(
-                'TranslationAPIErr', f'Ollama调用失败！请检查报错信息：{str(e)}'
-            )
-        else:
-            return translated_text
+            print_err(f'Ollama调用失败！请检查报错信息：{str(e)}')
+            target = ''
+        finally:
+            return target
 
     def is_ready(self) -> bool:
         '''
@@ -159,6 +161,7 @@ class OllamaTranslation(BaseTranslation):
 
 #  所有支持的语种简写表
 _OLLAMA_COMMON_LANGS = (
+    'auto',
     'ar',
     'de',
     'ru',

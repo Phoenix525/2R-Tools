@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 '''
 @Author: Phoenix
@@ -12,8 +12,7 @@ import main
 from modules.interpreter import Interpreter
 from modules.utils import (GLOBAL_DATA, KEY_PHOENIX, MARK_TODO,
                            RPGM_PROJECT_PARENT_FOLDER, matching_langs,
-                           print_err, print_info, print_warn, read_json,
-                           write_json)
+                           print_info, print_warn, read_json, write_json)
 
 # pylint: disable=invalid-name
 # 待翻译文本

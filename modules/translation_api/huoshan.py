@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import ast
@@ -7,12 +7,12 @@ import time
 import volcenginesdktranslate20250301
 from volcenginesdkcore import Configuration, rest
 
-from modules.encrypt import SimpleAPIKeyEncryptor, SimpleKeyStore
-from modules.exception.tool_exception import ToolException
+from modules.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
 from modules.translation_api.base_translation import BaseTranslation
-from modules.utils import (acquire_token, check_langs, get_password_with_star,
-                           is_letters_and_digits, print_debug, print_err,
-                           print_info, read_config, remove_escape)
+from modules.utils import (acquire_token, check_langs, enpun_2_zhpun,
+                           get_password_with_star, is_letters_and_digits,
+                           print_debug, print_err, print_info, read_config,
+                           remove_escape)
 
 
 class HuoshanTranslation(BaseTranslation):
@@ -43,7 +43,7 @@ class HuoshanTranslation(BaseTranslation):
 
     def translate(self, source_txt: str, to_lang: str, **kwargs) -> str:
         '''
-        开始翻译
+        开始翻译，必定有返回值
 
         - source_txt: 输入文本
         - to_lang: 目标语种
@@ -51,21 +51,19 @@ class HuoshanTranslation(BaseTranslation):
         '''
 
         if self.__client is None:
-            raise ToolException('TranslationAPIErr', 'API客户端未实例化！')
+            print_err('API客户端未实例化！')
+            return ''
 
+        # 删除转义符
+        source_txt = remove_escape(source_txt)
         # 源文本语种
         from_lang = kwargs.get('from_lang', 'auto')
         # deepl源语种无法使用auto，在未指定源语种时，获取语种
         if from_lang == 'auto':
             from_lang = check_langs(source_txt)
-        if not self.check_from_and_to(from_lang, to_lang):
+        # 校验文本及语种是否符合要求，不符合则直接返回空值
+        if not self.check_text_and_lang(source_txt, from_lang, to_lang):
             return ''
-
-        # 删除转义符
-        source_txt = remove_escape(source_txt)
-        # 原文本长度超过API限制
-        if len(source_txt) > self._max_char:
-            raise ToolException('TranslationAPIErr', '文本长度超过翻译引擎限制！')
 
         translate_txt_request = volcenginesdktranslate20250301.TranslateTextRequest(
             source_language=from_lang,
@@ -82,28 +80,31 @@ class HuoshanTranslation(BaseTranslation):
             )
 
             try:
-                response = self.__client.translate_text(
-                    translate_txt_request
-                ).to_dict()
+                response = self.__client.translate_text(translate_txt_request).to_dict()
                 print_debug(str(response))
                 if response:
                     if 'translation_list' in response:
-                        return response['translation_list'][0].get('translation', '')
+                        target = response['translation_list'][0].get('translation', '')
+                        # 翻译引擎返回的字符串可能存在一些\u开头的，但无法使用utf-8解码的字符串
+                        # encode函数遇此问题默认是抛异常，这里修改参数调整为将字符串替换成“?”
+                        target = target.encode('utf-8', 'replace').decode('utf-8')
+                        target = enpun_2_zhpun(target)
+                        return target
             except rest.ApiException as e:
                 err = ast.literal_eval(e.reason)
+                # 请求频率超限且还有重试次数时，阻塞N秒后重新发起请求
                 if err.get('Code', '0') == '-429' and attempt < retry - 1:
                     err_code = err['Code']
                     msg = err['Message']
-                    print_err(f'Error Code: {err_code}，Message: {msg}')
+                    print_err(f'错误代码：{err_code}，报错信息：{msg}')
                     # 指数退避
                     wait = 2**attempt
                     print_info(f"{wait}秒后重试……")
                     time.sleep(wait)
                 else:
-                    raise ToolException(
-                        'TranslationAPIErr',
-                        f'翻译引擎出现异常！请查看报错信息：{str(e)}',
-                    )
+                    print_err(f'翻译引擎出现异常！请查看报错信息：{str(e)}')
+                    break
+        # 未获取到正确结果时，返回空字串
         return ''
 
     def is_ready(self) -> bool:

@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 '''
 @Author: Phoenix
@@ -15,23 +15,19 @@ translate chinese xxx_xxx_xxxxxxxx:
 import os
 import sys
 from datetime import datetime
-from re import escape, sub
 
 import main
 from modules.interpreter import Interpreter
 from modules.utils import (END_SAY, GLOBAL_DATA, MARK_TODO, PATTERN_EMPTY_LINE,
                            PATTERN_IDENTIFIER, PATTERN_NEW, PATTERN_NEW_SAY,
-                           PATTERN_OLD, PATTERN_OLD_SAY, PATTERN_WHO,
+                           PATTERN_OLD, PATTERN_OLD_SAY,
                            RENPY_PROJECT_PARENT_FOLDER, copy_directory,
                            get_file_encoding, is_renpy_translation_file,
-                           print_err, print_info, print_warn)
+                           print_info, print_warn)
 
 # pylint: disable=invalid-name
 _input_abspath = GLOBAL_DATA['rpy_trans_input_abspath']
 _output_abspath = ''
-
-# BAP最大缓存量
-_bap_max_cache = GLOBAL_DATA['rpy_trans_bap_max_cache']
 
 # 是否覆盖所有译文
 _rewrite_all = False
@@ -98,155 +94,87 @@ def process_file(old_path: str, new_path: str, filename: str):
     '''
 
     inp = open(old_path, 'r', encoding=get_file_encoding(old_path))
+    # todo 读出所有行，文件较大时可能会报错，需优化
     lightSen = inp.readlines()
     inp.close()
-    outp = open(new_path, 'w', encoding=get_file_encoding(new_path))
 
-    _old_say = ''  # 原文
-    _identifier = 'strings'  # 标识符
-    _tmp_lines = ''  # 缓存文本
-    _bap_count = 0  # BAP缓存计数
+    # 待翻译文本字典，将文本提取出来统一翻译。键为源文本的行索引，值为文本
+    translate_txts = {}
+    # 原文
+    _old_say = ''
+    # 标识符
+    _identifier = 'strings'
 
-    for line in lightSen:
+    # 获取要翻译的文本列表
+    for idx, line in enumerate(lightSen):
         # 空行
         if PATTERN_EMPTY_LINE.match(line) is not None:
-            _tmp_lines += line
             continue
 
         # 标志符行
         identifier_match = PATTERN_IDENTIFIER.match(line)
         if identifier_match is not None:
-            _tmp_lines += line
             _identifier = identifier_match.group(1)
-            # 进入新的BAP，缓存计数+1
-            _bap_count += 1
-            # 扫描到标志符行，说明进入了新的BAP，清空原文
+            # 扫描到标志符行，说明进入了新的BAP，原文清空
             # 此步非常重要，避免在没有原文且选择覆盖的情况下出错
             _old_say = ''
             continue
 
         # 原文行
         old_say_match = PATTERN_OLD_SAY.match(line)
-        if old_say_match is not None and _identifier not in ['', 'strings']:
-            _tmp_lines += line
+        if old_say_match is not None and _identifier not in ('', 'strings'):
             # 跳过cv语音行
-            if old_say_match.group(1) == 'voice':
-                continue
-
-            _old_say = old_say_match.group(2)
+            if old_say_match.group(1) != 'voice':
+                _old_say = old_say_match.group(2)
             continue
 
         # 译文行
         new_say_match = PATTERN_NEW_SAY.match(line)
-        if new_say_match is not None and _identifier not in ['', 'strings']:
-            group = new_say_match.groups()
-            _err_code = ''
+        if new_say_match is not None and _identifier not in ('', 'strings'):
             _who = new_say_match.group(1)
             # 跳过cv语音行
             if _who == 'voice':
-                _tmp_lines += line
                 continue
 
-            # 原文为空，直接写入
+            # 跳过空原文
             if _old_say.strip() == '':
-                _tmp_lines += line
-                if _bap_count >= _bap_max_cache:
-                    outp.write(_tmp_lines)
-                    outp.flush()
-                    _tmp_lines = ''
-                    _bap_count = 0
                 continue
 
-            # 如果原文为END_SAY，说明当前BAP已结束，现在是多出来的译文行
+            # 如果原文为END_SAY，说明当前BAP已结束，现在是多出来的译文行，跳过
             if _old_say == END_SAY:
-                # 如果覆盖所有译文为开，则删除多余的译文行；反之保留
-                if not _rewrite_all:
-                    _tmp_lines += line
-                    if _bap_count >= _bap_max_cache:
-                        outp.write(_tmp_lines)
-                        outp.flush()
-                        _tmp_lines = ''
-                        _bap_count = 0
                 continue
 
-            # 存在字符串形式的who
-            who_match = PATTERN_WHO.match(_who)
-            if who_match is not None and who_match.group(1) != '':
-                who = who_match.group(1)
-                who_new = _interpreter.translate_txt(who, activate_context='0')
-                if who_new.strip() != '':
-                    _who = sub(escape(repr(who))[1:-1], who_new, _who)
+            # 存在字符串形式的who，先不作翻译
+            # who_match = PATTERN_WHO.match(_who)
+            # if who_match is not None and who_match.group(1) != '':
+            #     who = who_match.group(1)
+            #     translate_txts[index]['who'] = who
 
             original_new_say = new_say_match.group(2)
-            with_transition = new_say_match.group(3)
-            # 当译文不为空时，根据覆盖写入开关进行相应操作
-            if original_new_say != '':
-                # 当覆盖所有译文为开,或者译文为TODO，或者覆盖TODO译文为开，且已有译文开头为TODO时，发出翻译请求
-                if (
-                    _rewrite_all
-                    or original_new_say.upper() == MARK_TODO
-                    or (
-                        _rewrite_todo and original_new_say.upper().startswith(MARK_TODO)
-                    )
-                ):
-                    new_say = _interpreter.translate_txt(
-                        _old_say,
-                        activate_context='1',
-                        open_todo=GLOBAL_DATA['mark_todo'],
-                    )
-                    # 如果翻译错误，则保持原样
-                    if new_say.strip() == '':
-                        _tmp_lines += line
-                    else:
-                        _tmp_lines += (
-                            '    '
-                            + ((_who + ' ') if _who != '' else _who)
-                            + '\"'
-                            + new_say
-                            + '\"'
-                            + (
-                                (' ' + with_transition)
-                                if with_transition != ''
-                                else with_transition
-                            )
-                            + '\n'
-                        )
-                else:
-                    _tmp_lines += line
-            else:
-                new_say = _interpreter.translate_txt(
-                    _old_say, activate_context='1', open_todo=GLOBAL_DATA['mark_todo']
+            if (
+                original_new_say != ''  # 当译文不为空
+                and not _rewrite_all  # 当未启用覆盖所有译文
+                and original_new_say.upper() != MARK_TODO  # 当译文不为TODO
+                and (
+                    not _rewrite_todo  # 当未启用覆盖TODO译文
+                    or not original_new_say.upper().startswith(
+                        MARK_TODO
+                    )  # 或当译文开头不为TODO
                 )
-                # 如果翻译错误，则保持原样
-                if new_say.strip() == '':
-                    _tmp_lines += line
-                else:
-                    _tmp_lines += (
-                        '    '
-                        + ((_who + ' ') if _who != '' else _who)
-                        + '\"'
-                        + new_say
-                        + '\"'
-                        + (
-                            (' ' + with_transition)
-                            if with_transition != ''
-                            else with_transition
-                        )
-                        + '\n'
-                    )
-            if _bap_count >= _bap_max_cache:
-                outp.write(_tmp_lines)
-                outp.flush()
-                _tmp_lines = ''
-                _bap_count = 0
-            # 当前BAP处理结束，若当前BAP的译文是多行翻译，除第一行外均删除
+            ):
+                continue
+
+            translate_txts[idx] = {
+                'line': line,
+                'identifier': _identifier,
+                'src': _old_say,
+            }
             _old_say = END_SAY
             continue
 
         # old行
         old_match = PATTERN_OLD.match(line)
         if old_match is not None and _identifier == 'strings':
-            _tmp_lines += line
             _old_say = old_match.group(1)
             continue
 
@@ -254,58 +182,65 @@ def process_file(old_path: str, new_path: str, filename: str):
         new_match = PATTERN_NEW.match(line)
         if new_match is not None and _identifier == 'strings':
             if _old_say == '':
-                _tmp_lines += line
-                if _bap_count >= _bap_max_cache:
-                    outp.write(_tmp_lines)
-                    outp.flush()
-                    _tmp_lines = ''
-                    _bap_count = 0
                 continue
 
             original_new = new_match.group(1)  # 译文
-            # 当译文不为空时，根据覆盖写入开关进行相应操作
-            if original_new != '':
-                # 当覆盖所有译文为开,或者译文为TODO，或者覆盖TODO译文为开，且已有译文开头为TODO时，发出翻译请求
-                if (
-                    _rewrite_all
-                    or original_new.upper() == MARK_TODO
-                    or (_rewrite_todo and original_new.upper().startswith(MARK_TODO))
-                ):
-                    new = _interpreter.translate_txt(
-                        _old_say,
-                        activate_context='-1',
-                        open_todo=GLOBAL_DATA['mark_todo'],
-                    )
-                    # 如果翻译错误，则保持原样
-                    if new.strip() == '':
-                        _tmp_lines += line
-                    else:
-                        _tmp_lines += '    new \"' + new + '\"\n'
-                else:
-                    _tmp_lines += line
-            else:
-                new = _interpreter.translate_txt(
-                    _old_say, activate_context='-1', open_todo=GLOBAL_DATA['mark_todo']
+            if (
+                original_new != ''  # 当译文不为空
+                and not _rewrite_all  # 当未启用覆盖所有译文
+                and original_new.upper() != MARK_TODO  # 当译文不为TODO
+                and (
+                    not _rewrite_todo  # 当未启用覆盖TODO译文
+                    or not original_new.upper().startswith(
+                        MARK_TODO
+                    )  # 或当译文开头不为TODO
                 )
-                if new.strip() == '':
-                    _tmp_lines += line
-                else:
-                    _tmp_lines += '    new \"' + new + '\"\n'
-            if _bap_count >= _bap_max_cache:
-                outp.write(_tmp_lines)
-                outp.flush()
-                _tmp_lines = ''
-                _bap_count = 0
+            ):
+                continue
+            translate_txts[idx] = {
+                'line': line,
+                'identifier': _identifier,
+                'src': _old_say,
+            }
             _old_say = ''
-            continue
 
-        # 其他行
-        _tmp_lines += line
+    # 待翻文本字典为空，不需要翻译
+    if len(translate_txts) < 1:
+        print_info(f'{filename} 无需翻译！\n')
+        return
 
-    if _tmp_lines != '':
-        outp.write(_tmp_lines)
+    tmp_translate_txts = {}
+    for idx, key in enumerate(translate_txts.keys()):
+        # 待翻文本
+        tmp_translate_txts[key] = value = translate_txts[key]
+        # 翻译文本
+        translated = _interpreter.translate_txt(
+            value['src'], activate_context='1', open_todo=GLOBAL_DATA['open_todo']
+        )
+        tmp_translate_txts[key]['dst'] = translated
+
+        # 当为最后一个索引或缓存已达设定值，则写入文件，避免意外退出导致翻译结果完全丢失
+        if (
+            idx == len(translate_txts) - 1
+            or len(tmp_translate_txts) == GLOBAL_DATA['rpy_trans_bap_max_cache']
+        ):
+            for tmp_key, tmp_value in tmp_translate_txts.items():
+                src = tmp_value['src']
+                dst = tmp_value['dst']
+                if dst == '' or dst == src:
+                    continue
+                reverse_line = tmp_value['line'][::-1]
+                reverse_dst = dst[::-1]
+                new_line = reverse_line.replace('""', f'"{reverse_dst}"')
+                reverse_line = new_line[::-1]
+                lightSen[tmp_key] = reverse_line
+            # 新逻辑会将未翻译文本也写回文件，避免意外退出导致文件中的翻译文本被截断
+            with open(new_path, 'w', encoding=get_file_encoding(new_path)) as outp:
+                outp.writelines(lightSen)
+                outp.close()
+            tmp_translate_txts = {}
+
     print_info(f'{filename} 翻译完成！\n')
-    outp.close()
 
 
 def input_path(reselect=False):

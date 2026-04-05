@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 '''
 @Author: Phoenix
@@ -61,7 +61,7 @@ def print_warn(value: str):
 # 全局变量
 GLOBAL_DATA = {
     'debug': False,
-    'mark_todo': False,
+    'open_todo': False,
     'rpy_trans_input_abspath': '',
     'rpy_trans_bap_max_cache': 0,
     'rpy_update_old_abspath': '',
@@ -102,7 +102,7 @@ RPGM_INPUT_ABSPATH = os.path.join(BASE_ABSPATH, 'RPGM Data Input')
 RPGM_OUTPUT_ABSPATH = os.path.join(BASE_ABSPATH, 'RPGM Data Output')
 
 # 译文库
-TRANSLATED_LIB_LIBRARY = 'TransLib.json'
+TRANSLATED_LIB_LIBRARY_FILE = 'TransLib.json'
 
 # 待处理标记，此处写死，避免用户修改导致文本不通用
 MARK_TODO = 'TODO'
@@ -134,6 +134,8 @@ PATTERN_OLD_SAY = re.compile(r'^\s*#+\s*(".*?[^\\]"|[\S\s]*?)\s*"(.*)"')
 PATTERN_NEW_SAY = re.compile(r'(?!\s*#+)\s*(".*?[^\\]"|[\S\s]*?)\s*"(.*)"\s*(.*)')
 # 正则：匹配rpy的who
 PATTERN_WHO = re.compile(r'^"(.*?[^\\])"')
+# 正则：匹配注释符号
+PATTERN_ANNOTATION = re.compile(r'^\s*#\s*')
 
 # 正则：匹配rpg的Mapxxx.json文件
 PATTERN_MAP = re.compile(r'^Map\d{3}$')
@@ -538,7 +540,7 @@ def enpun_2_zhpun(txt: str, no_blank=False) -> str:
     def _obj2():
         return next(cycle(['“', '”']))
 
-    txt = re.sub(r"[\"]", _obj2(), txt)
+    txt = re.sub(r'[\"]', _obj2(), txt)
 
     # 处理常用标点符号
     # E_pun = u',.!?:;[]()<>'
@@ -875,6 +877,21 @@ def get_password_with_star(prompt='请输入密码: '):
     return ''.join(password)
 
 
+def get_value_from_library(source_txt: str):
+    '''
+    从译文库中获取译文
+    '''
+
+    if (
+        source_txt in TRANSLATED_LIB_LIBRARY
+        and TRANSLATED_LIB_LIBRARY[source_txt] != ''
+    ):
+        target = TRANSLATED_LIB_LIBRARY[source_txt]
+        print(f'库译文：{target}\n')
+        return target
+    return ''
+
+
 def get_config():
     '''
     调用get方法，获取配置的数据
@@ -885,7 +902,7 @@ def get_config():
         return
 
     GLOBAL_DATA['debug'] = conf.getboolean('common_settings', 'debug')
-    GLOBAL_DATA['mark_todo'] = conf.getboolean('common_settings', 'mark_todo')
+    GLOBAL_DATA['open_todo'] = conf.getboolean('common_settings', 'open_todo')
     GLOBAL_DATA['none_filter'] = conf.get('filter_texts', 'none_filter')
     GLOBAL_DATA['pass_filter'] = (
         conf.get('filter_texts', 'pass_filter').upper().split(',')
@@ -939,3 +956,6 @@ def get_config():
     GLOBAL_DATA['youdao'] = conf.getboolean('youdao_api', 'activate')
     GLOBAL_DATA['ollama'] = conf.getboolean('ollama_api', 'activate')
     GLOBAL_DATA['hunyuan_mt'] = conf.getboolean('hunyuan_mt_api', 'activate')
+
+
+TRANSLATED_LIB_LIBRARY = read_json(os.path.join(BASE_ABSPATH, 'libraries', TRANSLATED_LIB_LIBRARY_FILE))
