@@ -20,8 +20,7 @@
 
 - Anaconda 或 Miniconda：用于安装、更新和管理Python包，及创建隔离的Python环境
 - Python 3.10.x：最兼容本项目的版本
-- CUDA 12.1+：NVIDIA显卡的加速库
-- Git：用来下载代码和模型
+- CUDA 12.1+：NVIDIA显卡的加速库，一般已随显卡驱动安装好
 - Visual Studio Build Tools：编译一些Python包需要
 
 # 开始部署
