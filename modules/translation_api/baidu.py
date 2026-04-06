@@ -23,7 +23,7 @@ class BaiduTranslation(BaseTranslation):
     不包含词典、tts语音合成等资源，如有相关需求请联系translate_api@baidu.com
     '''
 
-    def __init__(self, *, section='baidu_api'):
+    def __init__(self, *, section='baidu'):
 
         BaseTranslation.__init__(
             self,
@@ -37,8 +37,6 @@ class BaiduTranslation(BaseTranslation):
 
         # 获取配置
         self.__get_config()
-        # 检查翻译引擎是否已就绪
-        self.is_ready()
 
     def translate(self, source_txt: str, to_lang: str, **kwargs) -> str:
         '''

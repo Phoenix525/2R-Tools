@@ -20,7 +20,7 @@ class HuoshanTranslation(BaseTranslation):
     火山翻译引擎
     '''
 
-    def __init__(self, *, section='huoshan_api'):
+    def __init__(self, *, section='huoshan'):
 
         BaseTranslation.__init__(
             self,
@@ -36,10 +36,6 @@ class HuoshanTranslation(BaseTranslation):
 
         # 获取配置
         self.__get_config()
-        # 检查翻译引擎是否已就绪
-        if self.is_ready():
-            # 实例化客户端
-            self.__client = self.__init_client()
 
     def translate(self, source_txt: str, to_lang: str, **kwargs) -> str:
         '''
@@ -114,6 +110,9 @@ class HuoshanTranslation(BaseTranslation):
 
         if not self.__check_pass():
             self._activated = False
+        else:
+            # 实例化客户端
+            self.__client = self.__init_client()
         return self._activated
 
     def __check_pass(self) -> bool:

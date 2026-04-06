@@ -22,8 +22,8 @@ from modules.utils import (END_SAY, GLOBAL_DATA, MARK_TODO, PATTERN_EMPTY_LINE,
                            PATTERN_IDENTIFIER, PATTERN_NEW, PATTERN_NEW_SAY,
                            PATTERN_OLD, PATTERN_OLD_SAY,
                            RENPY_PROJECT_PARENT_FOLDER, copy_directory,
-                           get_file_encoding, is_renpy_translation_file,
-                           print_info, print_warn)
+                           get_file_encoding, print_info, print_warn,
+                           validate_renpy_trans_file)
 
 # pylint: disable=invalid-name
 _input_abspath = GLOBAL_DATA['rpy_trans_input_abspath']
@@ -53,7 +53,7 @@ def walk_file():
 
     if os.path.isfile(_input_abspath):
         # 跳过非renPy翻译文本
-        if not is_renpy_translation_file(_input_abspath):
+        if not validate_renpy_trans_file(_input_abspath):
             return
 
         root, f = os.path.split(_input_abspath)
@@ -80,7 +80,7 @@ def walk_file():
             out_path = os.path.join(new_path, f)
 
             # 非renPy翻译文本直接拷贝至新目录
-            if not is_renpy_translation_file(in_path):
+            if not validate_renpy_trans_file(in_path):
                 copy_directory(in_path, out_path)
                 continue
 
@@ -93,10 +93,9 @@ def process_file(old_path: str, new_path: str, filename: str):
     读取文本、翻译并写入
     '''
 
-    inp = open(old_path, 'r', encoding=get_file_encoding(old_path))
-    # todo 读出所有行，文件较大时可能会报错，需优化
-    lightSen = inp.readlines()
-    inp.close()
+    with open(old_path, 'r', encoding=get_file_encoding(old_path)) as inp:
+        # todo 读出所有行，文件较大时可能会报错，需优化
+        lightSen = inp.readlines()
 
     # 待翻译文本字典，将文本提取出来统一翻译。键为源文本的行索引，值为文本
     translate_txts = {}
@@ -209,6 +208,8 @@ def process_file(old_path: str, new_path: str, filename: str):
         print_info(f'{filename} 无需翻译！\n')
         return
 
+    outp = open(new_path, 'w', encoding=get_file_encoding(new_path))
+
     tmp_translate_txts = {}
     for idx, key in enumerate(translate_txts.keys()):
         # 待翻文本
@@ -235,62 +236,51 @@ def process_file(old_path: str, new_path: str, filename: str):
                 reverse_line = new_line[::-1]
                 lightSen[tmp_key] = reverse_line
             # 新逻辑会将未翻译文本也写回文件，避免意外退出导致文件中的翻译文本被截断
-            with open(new_path, 'w', encoding=get_file_encoding(new_path)) as outp:
-                outp.writelines(lightSen)
-                outp.close()
+            outp.writelines(lightSen)
+            outp.flush()
             tmp_translate_txts = {}
-
+    outp.close()
     print_info(f'{filename} 翻译完成！\n')
 
 
-def input_path(reselect=False):
+def input_path(first_select=True):
     '''
     输入待翻文件/文件夹的绝对路径
     '''
 
     global _input_abspath, _output_abspath
 
-    if not reselect:
+    #用户输入内容
+    _inp = ''
+    # 首次输入路径
+    if first_select:
         if _input_abspath:
+            print_info('正在验证默认路径……')
             # 若路径不存在，则重新手动输入
             if not os.path.exists(_input_abspath):
                 print_warn('config.ini配置的翻译文本路径不存在！请手动输入路径！\n')
                 _input_abspath = ''
-                input_path()
+                input_path(False)
                 return
 
             _input_abspath, _output_abspath = verify_path(
                 _input_abspath, _output_abspath
             )
             return
+        _inp = input('请输入翻译文本的绝对路径或回车关闭程序：').strip()
+    else:
+        _inp = input('路径错误，请重新输入正确的路径或回车关闭程序：').strip()
 
-        inp = input('请输入翻译文本的绝对路径：').strip()
-        # 输入为空，重新输入
-        if inp == '':
-            input_path(True)
-            return
-        # 规范路径，不调整大小写
-        inp = os.path.normpath(inp)
-        # 若路径不存在，重新输入
-        if not os.path.exists(inp):
-            input_path(True)
-            return
-
-        _input_abspath, _output_abspath = verify_path(inp, _output_abspath)
-        return
-
-    tmp = input('路径错误，请重新输入正确的路径或回车关闭程序：').strip()
     # 输入为空，退出程序
-    if tmp == '':
-        sys.exit(0)
+    if _inp == '':
+        sys.exit()
     # 规范路径，不调整大小写
-    tmp = os.path.normpath(tmp)
+    _inp = os.path.normpath(_inp)
     # 若路径不存在，重新输入
-    if not os.path.exists(tmp):
-        input_path(True)
+    if not os.path.exists(_inp):
+        input_path(False)
         return
-
-    _input_abspath, _output_abspath = verify_path(tmp, _output_abspath)
+    _input_abspath, _output_abspath = verify_path(_inp, _output_abspath)
 
 
 def verify_path(input_abspath: str, output_abspath: str) -> tuple:
@@ -364,39 +354,38 @@ def is_rewrite_todo() -> bool:
     return False
 
 
-def _select_serial_num(reselect=False, serial_num=''):
+def _select_serial_num(serial_num='', first_select=True):
     '''
     输入序号选择对应的操作
+
+    - serial_num: 选定的操作序号
+    - first_select: 是否为重新选择
     '''
 
-    if not reselect:
+    # 用户输入内容
+    _inp = ''
+    # 首次进入选项
+    if first_select:
         print(
             '''1) 翻译文本
 0) 返回上一级
 '''
         )
-
-        _inp = input('请输入要操作的序号：').strip()
-        if _inp == '1':
-            return
-        if _inp == '0':
-            main.start_main()
-        else:
-            _select_serial_num(True, _inp)
-        return
-
-    _tmp = input(
-        f'列表中不存在序号 {serial_num}，请重新输入正确序号或回车退出程序：'
-    ).strip()
-    if _tmp == '':
-        sys.exit(0)
-
-    if _tmp == '1':
-        return
-    if _tmp == '0':
-        main.start_main()
+        _inp = input('请输入要操作的序号或回车退出程序：').strip()
     else:
-        _select_serial_num(True, _tmp)
+        _inp = input(
+            f'列表中不存在序号 {serial_num}，请重新输入正确序号或回车退出程序：'
+        ).strip()
+
+    match _inp:
+        case '':
+            sys.exit()
+        case '0':
+            main.start_main()
+        case '1':
+            return
+        case _:
+            _select_serial_num(_inp, False)
 
 
 def start():
@@ -434,4 +423,4 @@ def start():
 
     walk_file()
     print_info('翻译已全部完成，请前往原路径查看翻译文本！')
-    sys.exit(0)
+    sys.exit()

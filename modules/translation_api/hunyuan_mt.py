@@ -10,7 +10,8 @@ from transformers import (AutoModelForCausalLM, AutoTokenizer,
 
 from modules.exception.tool_exception import ToolException
 from modules.translation_api.base_translation import BaseTranslation
-from modules.utils import print_err, print_info, read_config, remove_escape
+from modules.utils import (print_err, print_info, print_warn, read_config,
+                           remove_escape)
 
 # 量化加载类型
 FLAGS = {
@@ -30,7 +31,7 @@ class HunYuanMTTranslation(BaseTranslation):
     系统Windows 11；Python 3.10.x；Transformers 4.56.0，PyTorch 2.11.0+（需与本机Cuda版本对应）及其他相应依赖
     '''
 
-    def __init__(self, *, section='hunyuan_mt_api'):
+    def __init__(self, *, section='hunyuan_mt'):
 
         BaseTranslation.__init__(
             self,
@@ -40,7 +41,7 @@ class HunYuanMTTranslation(BaseTranslation):
             to_langs=_HUNYUAN_MT_TO_LANGS,
         )
         self.__model_path = ''  # AI模型的绝对路径
-        self.__load_flag = '0'  # 启用哪种量化加载
+        self.__load_flag = ''  # 启用哪种量化加载
         self.__tokenizer = None  # 加载完毕的分词器
         self.__model = None  # 加载完毕的模型
         self.__max_new_tokens = 2048  # 设置生成的最大 token 数（即输出长度上限）
@@ -163,7 +164,8 @@ class HunYuanMTTranslation(BaseTranslation):
         if self.__tokenizer is not None and self.__model is not None:
             return
 
-        print('正在加载模型和分词器...')
+        print_warn('请确保已关闭其他占用大量显存及内存的程序，否则可能加载失败!')
+        print('正在加载模型和分词器……')
         start_time = time.time()
 
         try:
@@ -173,36 +175,31 @@ class HunYuanMTTranslation(BaseTranslation):
             )
 
             config: BitsAndBytesConfig
-            # 启用8位量化加载
-            if self.__load_flag == 'load_in_8bit':
-                config = BitsAndBytesConfig(
-                    load_in_8bit=True,
-                    llm_int8_threshold=6.0,  # 阈值，用于处理异常大的权重值
-                )
-            # 启用4位量化加载
-            elif self.__load_flag == 'load_in_4bit':
-                config = BitsAndBytesConfig(load_in_4bit=True)
-            # 启用NF4量化加载
-            elif self.__load_flag == 'nf4':
-                config = BitsAndBytesConfig(
-                    load_in_4bit=True, bnb_4bit_quant_type="nf4"
-                )
-            # 启用双量化加载
-            elif self.__load_flag == 'double_quant':
-                config = BitsAndBytesConfig(
-                    load_in_4bit=True, bnb_4bit_use_double_quant=True
-                )
-            # 启用QLoRA量化加载
-            elif self.__load_flag == 'QLoRA':
-                config = BitsAndBytesConfig(
-                    load_in_4bit=True,
-                    bnb_4bit_use_double_quant=True,
-                    bnb_4bit_quant_type="nf4",
-                    bnb_4bit_compute_dtype=torch.bfloat16,
-                )
-            # 完整加载
-            else:
-                config = None
+            match FLAGS[self.__load_flag]:
+                case 'load_in_8bit':        # 启用8位量化加载
+                    config = BitsAndBytesConfig(
+                        load_in_8bit=True,
+                        llm_int8_threshold=6.0,  # 阈值，用于处理异常大的权重值
+                    )
+                case 'load_in_4bit':        # 启用4位量化加载
+                    config = BitsAndBytesConfig(load_in_4bit=True)
+                case 'nf4': # 启用NF4量化加载
+                    config = BitsAndBytesConfig(
+                        load_in_4bit=True, bnb_4bit_quant_type="nf4"
+                    )
+                case 'double_quant':        # 启用双量化加载
+                    config = BitsAndBytesConfig(
+                        load_in_4bit=True, bnb_4bit_use_double_quant=True
+                    )
+                case 'QLoRA':               # 启用QLoRA量化加载
+                    config = BitsAndBytesConfig(
+                        load_in_4bit=True,
+                        bnb_4bit_use_double_quant=True,
+                        bnb_4bit_quant_type="nf4",
+                        bnb_4bit_compute_dtype=torch.bfloat16,
+                    )
+                case _:                     # 完整加载
+                    config = None
 
             # 加载模型
             self.__model = AutoModelForCausalLM.from_pretrained(
@@ -233,9 +230,7 @@ class HunYuanMTTranslation(BaseTranslation):
 
         self.__model_path = conf.get(self._section, 'model_path')
         self._activated = conf.getboolean(self._section, 'activate')
-        _flag = conf.get(self._section, 'load_flag')
-        if _flag in FLAGS:
-            self.__load_flag = FLAGS[_flag]
+        self.__load_flag = conf.get(self._section, 'load_flag')
         self.__max_new_tokens = conf.getint(self._section, 'max_new_tokens')
         if self.__max_new_tokens < 0 or self.__max_new_tokens > 2048:
             self.__max_new_tokens = 2048

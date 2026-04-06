@@ -19,7 +19,7 @@ class XiaoNiuTranslation(BaseTranslation):
     小牛翻译引擎
     '''
 
-    def __init__(self, *, section='xiaoniu_api'):
+    def __init__(self, *, section='xiaoniu'):
 
         BaseTranslation.__init__(
             self,
@@ -33,8 +33,6 @@ class XiaoNiuTranslation(BaseTranslation):
 
         # 获取配置
         self.__get_config()
-        # 检查翻译引擎是否已就绪
-        self.is_ready()
 
     def translate(self, source_txt: str, to_lang: str, **kwargs) -> str:
         '''

@@ -13,7 +13,7 @@ class GoogleTranslation(BaseTranslation):
     谷歌翻译第三方API
     '''
 
-    def __init__(self, *, section='google_api'):
+    def __init__(self, *, section='google'):
 
         BaseTranslation.__init__(
             self,
@@ -27,10 +27,6 @@ class GoogleTranslation(BaseTranslation):
 
         # 获取配置
         self.__get_config()
-        # 检查翻译引擎是否已就绪
-        if self.is_ready():
-            # 初始化谷歌翻译
-            self.__translator = google_trans_new.google_translator()
 
     def translate(self, source_txt: str, to_lang: str, **kwargs) -> str:
         '''
@@ -71,6 +67,15 @@ class GoogleTranslation(BaseTranslation):
             target = ''
         finally:
             return target
+
+    def is_ready(self) -> bool:
+        '''
+        查询翻译引擎是否就绪
+        '''
+        if self._activated:
+            # 初始化谷歌翻译
+            self.__translator = google_trans_new.google_translator()
+        return self._activated
 
     def __get_config(self):
         '''

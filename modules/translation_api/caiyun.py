@@ -18,7 +18,7 @@ class CaiyunTranslation(BaseTranslation):
     彩云小译翻译引擎
     '''
 
-    def __init__(self, *, section='caiyun_api'):
+    def __init__(self, *, section='caiyun'):
 
         BaseTranslation.__init__(
             self,
@@ -31,8 +31,6 @@ class CaiyunTranslation(BaseTranslation):
 
         # 获取配置
         self.__get_config()
-        # 检查翻译引擎是否已就绪
-        self.is_ready()
 
     def translate(self, source_txt: str, to_lang: str, **kwargs) -> str:
         '''

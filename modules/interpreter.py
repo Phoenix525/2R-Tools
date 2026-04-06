@@ -12,19 +12,20 @@ import sys
 from prettytable import PrettyTable
 
 from modules.utils import (GLOBAL_DATA, MARK_TODO, get_value_from_library,
-                           is_valid_index, print_err, to_int)
+                           print_err, to_int, validate_index)
 
 # 翻译引擎表，接口名称务必要和GLOBAL_DATA里一致
 APIS = (
     ('tencent', '传统机翻：腾讯翻译（每月免费500W字符）'),
+    ('alibaba', '传统机翻：阿里翻译（每月免费100W字符）'),
     ('baidu', '传统机翻：百度翻译（高级版每月免费100W字符）'),
     ('caiyun', '传统机翻：彩云小译（新用户免费100W字符，有效期一月）'),
-    ('deepL', '传统机翻：DeepL翻译（免费版每月免费50W字符，注册需非大陆信用卡）'),
-    ('google', '传统机翻：谷歌翻译（第三方，已失效）'),
     ('huoshan', '传统机翻：火山翻译（每月免费200W字符）'),
     ('xiaoniu', '传统机翻：小牛翻译（每日免费20W字符）'),
     ('xunfei', '传统机翻：讯飞翻译（新用户免费200W字符，有效期一年）'),
     ('youdao', '传统机翻：有道智云（新用户免费100W字符）'),
+    ('deepL', '传统机翻：DeepL翻译（免费版每月免费50W字符，注册需非大陆信用卡）'),
+    ('google', '传统机翻：Google翻译（第三方，已失效）'),
     (
         'ollama',
         '本地AI翻译：基于Ollama框架，可切换多种模型（完全免费，部署难度小，运行速度快）',
@@ -109,6 +110,8 @@ class Interpreter:
         '''
         翻译文本字典
 
+        所有可能出现的异常要在此函数处理完毕，并一定有返回值。
+
         - source_txt_dict: 输入文本
         - open_todo: 是否在句首添加TODO标记，默认由config配置
         - activate_context: 是否启用上下文
@@ -153,6 +156,8 @@ class Interpreter:
     ) -> list:
         '''
         翻译文本列表
+
+        所有可能出现的异常要在此函数处理完毕，并一定有返回值。
 
         - source_txt_list: 输入文本
         - open_todo: 是否在句首添加TODO标记，默认由config配置
@@ -219,6 +224,11 @@ class Interpreter:
                 from modules.translation_api.tencent import TencentTranslation
 
                 self.__curr_api = TencentTranslation()
+            # 阿里翻译
+            case 'alibaba':
+                from modules.translation_api.alibaba import ALiBaBaTranslation
+
+                self.__curr_api = ALiBaBaTranslation()
             # 百度翻译
             case 'baidu':
                 from modules.translation_api.baidu import BaiduTranslation
@@ -229,16 +239,6 @@ class Interpreter:
                 from modules.translation_api.caiyun import CaiyunTranslation
 
                 self.__curr_api = CaiyunTranslation()
-            # DeepL翻译
-            case 'deepL':
-                from modules.translation_api.deepL import DeepLTranslation
-
-                self.__curr_api = DeepLTranslation()
-            # 谷歌翻译
-            case 'google':
-                from modules.translation_api.google import GoogleTranslation
-
-                self.__curr_api = GoogleTranslation()
             # 火山翻译
             case 'huoshan':
                 from modules.translation_api.huoshan import HuoshanTranslation
@@ -259,38 +259,52 @@ class Interpreter:
                 from modules.translation_api.youdao import YoudaoTranslation
 
                 self.__curr_api = YoudaoTranslation()
+            # DeepL翻译
+            case 'deepL':
+                from modules.translation_api.deepL import DeepLTranslation
+
+                self.__curr_api = DeepLTranslation()
+            # 谷歌翻译
+            case 'google':
+                from modules.translation_api.google import GoogleTranslation
+
+                self.__curr_api = GoogleTranslation()
             # Ollama平台
             case 'ollama':
-                from modules.translation_api.ai_ollama import OllamaTranslation
+                from modules.translation_api.ollama import OllamaTranslation
 
                 self.__curr_api = OllamaTranslation()
             # 腾讯Hunyuan-MT
             case 'hunyuan_mt':
-                from modules.translation_api.ai_hunyuan_mt import \
+                from modules.translation_api.hunyuan_mt import \
                     HunYuanMTTranslation
 
                 self.__curr_api = HunYuanMTTranslation()
             case _:
                 self.__curr_api = None
 
-        if self.__curr_api is None:
+        # 如果翻译器实例不存在或翻译器未就绪，重新返回引擎选项列表
+        if self.__curr_api is None or not self.__curr_api.is_ready():
             self.clear_api_datas()
             return self.__select_api_type()
 
         self.__select_lang_type()
 
-    def __select_api_type(self, first_select=True, serial_num=1, *, api_titles=[]):
+    def __select_api_type(self, serial_num=1, first_select=True, *, api_titles=[]):
         '''
         选择翻译引擎
 
-        - first_select: 是否首次进入选择列表
         - serial_num: 选中的翻译引擎序号
+        - first_select: 是否首次进入选择列表
         - api_titles: 可选参数。翻译引擎标题列表，用于输出供用户查看
         '''
 
+        # 用户输入内容
+        _inp = ''
         # 首次进入选择列表
         if first_select:
             str_api = '''
+===========================================================================================
 翻译引擎列表如下：
 '''
             for idx, item in enumerate(APIS):
@@ -313,68 +327,51 @@ class Interpreter:
                 # 实例化翻译器
                 self.__get_interpreter()
                 return
-
-            _serial_inp = to_int(_inp)
-            # 如果输入序号不在列表中，重新进入选择
-            if not is_valid_index(self.__api_names, _serial_inp - 1, False):
-                self.__select_api_type(False, _serial_inp, api_titles=api_titles)
-                return
-
-            # 若翻译引擎未启用则重新选择
-            if GLOBAL_DATA[f'{self.__api_names[_serial_inp - 1]}'] is False:
-                self.__select_api_type(False, _serial_inp, api_titles=api_titles)
-                return
-
-            print(
-                f'''
-===========================================================================================
-当前翻译引擎：【{api_titles[_serial_inp - 1]}】'''
+        else:
+            # 再次进入选择列表
+            prin = (
+                f'翻译引擎列表中不存在序号 {serial_num}，请重新输入正确序号或回车退出程序：'
             )
-            self.__curr_api_name = self.__api_names[_serial_inp - 1]
-            # 实例化翻译器
-            self.__get_interpreter()
-            return
+            if validate_index(self.__api_names, serial_num - 1, False):
+                if GLOBAL_DATA[f'{self.__api_names[serial_num - 1]}'] is False:
+                    prin = '当前翻译引擎未启用，请重新输入正确序号或回车退出程序：'
+            _inp = input(prin).strip()
+            if _inp == '':
+                sys.exit()
 
-        # 再次进入选择列表
-        prin = (
-            f'翻译引擎列表中不存在序号 {serial_num}，请重新输入正确序号或回车退出程序：'
-        )
-        if is_valid_index(self.__api_names, serial_num - 1, False):
-            if GLOBAL_DATA[f'{self.__api_names[serial_num - 1]}'] is False:
-                prin = '当前翻译引擎未启用，请重新输入正确序号或回车退出程序：'
-        _tmp = input(prin).strip()
-        if _tmp == '':
-            sys.exit(0)
-
-        _serial_tmp = to_int(_tmp)
-        if not is_valid_index(self.__api_names, _serial_tmp, False):
-            self.__select_api_type(False, _serial_tmp, api_titles=api_titles)
+        _serial_inp = to_int(_inp)
+        # 若序号不存在，重新选择
+        if not validate_index(self.__api_names, _serial_inp, False):
+            self.__select_api_type(False, _serial_inp, api_titles=api_titles)
             return
 
         # 若翻译引擎未启用则重新选择
-        if GLOBAL_DATA[f'{self.__api_names[_serial_tmp - 1]}'] is False:
-            self.__select_api_type(False, _serial_tmp, api_titles=api_titles)
+        if GLOBAL_DATA[f'{self.__api_names[_serial_inp - 1]}'] is False:
+            self.__select_api_type(False, _serial_inp, api_titles=api_titles)
             return
 
         print(
             f'''
 ===========================================================================================
-当前翻译引擎：【{api_titles[_serial_tmp - 1]}】'''
+当前翻译引擎：【{api_titles[_serial_inp - 1]}】'''
         )
 
-        self.__curr_api_name = self.__api_names[_serial_tmp - 1]
+        self.__curr_api_name = self.__api_names[_serial_inp - 1]
         # 实例化翻译器
         self.__get_interpreter()
 
-    def __select_lang_type(self, first_select=True, serial_num='', *, target_langs=()):
+    def __select_lang_type(self, serial_num='', first_select=True, *, target_langs=()):
         '''
         选择目标语种
 
-        - first_select: 是否为首次选择
         - serial_num: 选定的操作序号
+        - first_select: 是否为首次选择
         - target_langs 语种表
         '''
 
+        # 用户输入内容
+        _inp = ''
+        # 首次进入选项
         if first_select:
             # 获取目标语种
             curr_langs = self.__curr_api.get_to_langs()
@@ -417,35 +414,22 @@ class Interpreter:
                 )
                 self._to_lang = curr_langs[default][-1]
                 return
-
-            _inp_serial = to_int(_inp) - 1
-            if _inp_serial < 0 or _inp_serial >= len(curr_langs):
-                self.__select_lang_type(False, _inp, target_langs=curr_langs)
-                return
-
-            print(
-                f'''
-===========================================================================================
-当前目标语种：【{curr_langs[_inp_serial][0]}】'''
-            )
-            self._to_lang = curr_langs[_inp_serial][-1]
-            return
-
-        _tmp = input(
-            f'语种列表中不存在序号 {serial_num}，请重新输入正确序号或回车退出程序：'
-        ).strip()
-        if _tmp == '':
-            sys.exit(0)
+        else:
+            _inp = input(
+                f'语种列表中不存在序号 {serial_num}，请重新输入正确序号或回车退出程序：'
+            ).strip()
+            if _inp == '':
+                sys.exit()
 
         # 输入的序号转换成整型
-        _tmp_serial = to_int(_tmp) - 1
-        if _tmp_serial < 0 or _tmp_serial >= len(target_langs):
-            self.__select_lang_type(False, _tmp, target_langs=target_langs)
+        _inp_serial = to_int(_inp) - 1
+        if _inp_serial < 0 or _inp_serial >= len(_inp_serial):
+            self.__select_lang_type(_inp, False, target_langs=target_langs)
             return
 
         print(
             f'''
 ===========================================================================================
-当前目标语种：【{target_langs[_tmp_serial][0]}】'''
+当前目标语种：【{target_langs[_inp_serial][0]}】'''
         )
-        self._to_lang = target_langs[_tmp_serial][-1]
+        self._to_lang = target_langs[_inp_serial][-1]

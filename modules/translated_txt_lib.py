@@ -15,13 +15,13 @@ from modules.utils import (BASE_ABSPATH, PATTERN_EMPTY_LINE,
                            PATTERN_IDENTIFIER, PATTERN_NEW, PATTERN_NEW_SAY,
                            PATTERN_OLD, PATTERN_OLD_SAY,
                            TRANSLATED_LIB_LIBRARY, TRANSLATED_LIB_LIBRARY_FILE,
-                           get_file_encoding, is_renpy_translation_file,
-                           merge_dicts, print_err, print_info, print_warn,
-                           read_json, write_json)
+                           get_file_encoding, merge_dicts, print_info,
+                           print_warn, read_json, validate_renpy_trans_file,
+                           write_json)
 
 _WAITING_FOR_ENTRY = os.path.join(BASE_ABSPATH, 'waiting-for-entry')
 
-_txt_library_cache = {}
+_txt_library_cache = None
 
 
 def walk_file():
@@ -29,144 +29,142 @@ def walk_file():
     遍历文件夹内所有文件
     '''
 
-    global _txt_library_cache
-
     # 如果文件夹不存在，新建一个
-    pathlib.Path(_WAITING_FOR_ENTRY).mkdir(parents=True, exist_ok=True)
+    if not os.path.exists(_WAITING_FOR_ENTRY):
+        print('无待录入文本，译文库无需更新！')
+        os.makedirs(_WAITING_FOR_ENTRY)
+        return
 
+    print('正在更新译文库……\n')
+    global _txt_library_cache
     for root, dirs, files in os.walk(_WAITING_FOR_ENTRY, topdown=False):
         # 遍历所有文件
         for _file in files:
             _file_path = os.path.join(root, _file)
-            # 扫描rpy文件
-            if is_renpy_translation_file(_file_path):
+            # 扫描renpy翻译文件
+            if validate_renpy_trans_file(_file_path):
                 print(f'当前扫描文本：{_file}')
-                _txt_library_cache = scanning_rpy_file(
-                    root, _file, _txt_library_cache, True
-                )
-
-            # 扫描json文件
-            elif _file.endswith('.json'):
-                _txt_library_cache = read_json(_file_path)
-
-
-def scanning_rpy_file(
-    file_path: str, filename: str, txt_list=None, rewrite=False
-) -> dict:
-    '''
-    扫描原翻译文本，将需要的数据存入缓存器
-
-    - file_path: 文件路径
-    - filename: 文件名称
-    - txt_list: 文本字典
-    - rewrite: 是否覆盖文本字典内已有的值。默认不覆盖
-    '''
-
-    _tmp_txt_list = None
-    if txt_list is None:
-        _tmp_txt_list = {}
-    else:
-        _tmp_txt_list = copy.deepcopy(txt_list)
-
-    inp = open(
-        os.path.join(file_path, filename),
-        'r',
-        encoding=get_file_encoding(os.path.join(file_path, filename)),
-    )
-    light_sen = inp.readlines()
-    inp.close()
-
-    _old_say = ''  # 原文
-    _identifier = 'strings'  # 标识符
-
-    try:
-        for line in light_sen:
-            # 空行
-            if PATTERN_EMPTY_LINE.match(line) is not None:
+                scanning_rpy_file(root, _file, _txt_library_cache, True)
+                print(f'{_file} 扫描完成！\n')
                 continue
 
-            # 标志符行
-            identifier_match = PATTERN_IDENTIFIER.match(line)
-            if identifier_match is not None:
-                _identifier = identifier_match.group(1)
-                # 扫描到标志符行，说明进入了新的原译组，则初始化原文
-                # 此步非常重要，避免在没有原文且选择覆盖的情况下出错
-                _old_say = ''
-                continue
-
-            # 原文本行
-            old_say_match = PATTERN_OLD_SAY.match(line)
-            if (
-                old_say_match is not None
-                and old_say_match.group(1) != 'voice'
-                and _identifier not in ['', 'strings']
-            ):
-                _old_say = old_say_match.group(2)
-                continue
-
-            # 译文行
-            new_say_match = PATTERN_NEW_SAY.match(line)
-            if (
-                new_say_match is not None
-                and new_say_match.group(1) != 'voice'
-                and _identifier not in ['', 'strings']
-            ):
-                if _old_say.strip() == '':
-                    continue
-                new_say = new_say_match.group(2)  # 译文
-                if new_say == '':
-                    continue
-                if not _old_say in _tmp_txt_list or rewrite:
-                    _tmp_txt_list[_old_say] = new_say
-                # 如果单条语句中有多行译文，只扫描第一行的译文
-                _old_say = ''
-                continue
-
-            # old行
-            old_match = PATTERN_OLD.match(line)
-            if old_match is not None and _identifier == 'strings':
-                _old_say = old_match.group(1)
-                continue
-
-            # new 行
-            new_match = PATTERN_NEW.match(line)
-            if new_match is not None and _identifier == 'strings':
-                if _old_say.strip() == '':
-                    continue
-                new_say = new_match.group(1)  # 译文
-                if new_say == '':
-                    continue
-                if not _old_say in _tmp_txt_list or rewrite:
-                    _tmp_txt_list[_old_say] = new_say
-                _old_say = ''
-    except Exception as e:
-        print_err(f'{filename} 数据读写异常：{str(e)}！\n扫描终止！\n')
-        sys.exit(0)
-    else:
-        print_info(f'{filename} 扫描完成！\n')
-
-    return _tmp_txt_list
-
-
-def write_translib():
-    '''
-    写入译文库
-    '''
+            # 扫描json文件，这里即便是扩展名非json的文件，只要内容符合标准json格式也进行处理
+            json_datas = read_json(_file_path)
+            if json_datas is not None:
+                print(f'当前扫描文本：{_file}')
+                _txt_library_cache = merge_dicts(_txt_library_cache, json_datas)
+                print(f'{_file} 扫描完成！\n')
 
     if (
         _txt_library_cache is None
         or not isinstance(_txt_library_cache, dict)
         or len(_txt_library_cache) < 2
     ):
-        print_warn(f'待扩增文本为空，未写入{TRANSLATED_LIB_LIBRARY_FILE}译文库')
+        print_info(f'待录入文本为空，译文库无需更新！')
         return
 
+    write_translib()
+    print_info('译文库已完成更新！')
+
+
+def scanning_rpy_file(
+    file_path: str, filename: str, txt_libraries=None, rewrite=False
+) -> dict:
+    '''
+    扫描原翻译文本，将需要的数据存入缓存器
+
+    - file_path: 文件路径
+    - filename: 文件名称
+    - txt_libraries: 文本字典
+    - rewrite: 是否覆盖文本字典内已有的值。默认不覆盖
+    '''
+
+    if txt_libraries is None:
+        txt_libraries = {}
+
+    with open(
+        os.path.join(file_path, filename),
+        'r',
+        encoding=get_file_encoding(os.path.join(file_path, filename)),
+    ) as inp:
+        # todo 读出所有行，文件较大时可能会报错，需优化
+        light_sen = inp.readlines()
+
+    _old_say = ''  # 原文
+    _identifier = 'strings'  # 标识符
+    for line in light_sen:
+        # 空行
+        if PATTERN_EMPTY_LINE.match(line) is not None:
+            continue
+
+        # 标志符行
+        identifier_match = PATTERN_IDENTIFIER.match(line)
+        if identifier_match is not None:
+            _identifier = identifier_match.group(1)
+            # 扫描到标志符行，说明进入了新的原译组，则初始化原文
+            # 此步非常重要，避免在没有原文且选择覆盖的情况下出错
+            _old_say = ''
+            continue
+
+        # 原文本行
+        old_say_match = PATTERN_OLD_SAY.match(line)
+        if (
+            old_say_match is not None
+            and old_say_match.group(1) != 'voice'
+            and _identifier not in ['', 'strings']
+        ):
+            _old_say = old_say_match.group(2)
+            continue
+
+        # 译文行
+        new_say_match = PATTERN_NEW_SAY.match(line)
+        if (
+            new_say_match is not None
+            and new_say_match.group(1) != 'voice'
+            and _identifier not in ['', 'strings']
+        ):
+            if _old_say.strip() == '':
+                continue
+            new_say = new_say_match.group(2)  # 译文
+            if new_say == '':
+                continue
+            if _old_say not in txt_libraries or rewrite:
+                txt_libraries[_old_say] = new_say
+            # 如果单条语句中有多行译文，只扫描第一行的译文
+            _old_say = ''
+            continue
+
+        # old行
+        old_match = PATTERN_OLD.match(line)
+        if old_match is not None and _identifier == 'strings':
+            _old_say = old_match.group(1)
+            continue
+
+        # new 行
+        new_match = PATTERN_NEW.match(line)
+        if new_match is not None and _identifier == 'strings':
+            if _old_say.strip() == '':
+                continue
+            new_say = new_match.group(1)  # 译文
+            if new_say == '':
+                continue
+            if not _old_say in txt_libraries or rewrite:
+                txt_libraries[_old_say] = new_say
+            _old_say = ''
+
+
+def write_translib():
+    '''
+    写入译文库
+    '''
     translated_txt_lib = copy.deepcopy(TRANSLATED_LIB_LIBRARY)
     for k, v in _txt_library_cache.items():
+        # 如果缓存库查询到的键或值不是字串，为错误数据，跳过以屏蔽
+        if not isinstance(k, str) or not isinstance(v, str):
+            continue
         # 译文库中已有该文本，跳过
         if k in translated_txt_lib:
             continue
-
         if v.strip() == '':
             continue
 
@@ -179,34 +177,41 @@ def write_translib():
     )
 
 
-def _select_serial_num(reselect=False, serial_num=''):
+def _select_serial_num(serial_num='', first_select=True):
     '''
     输入序号选择对应的操作
 
-    - reselect: 是否为重新选择
     - serial_num: 选定的操作序号
+    - first_select: 是否为重新选择
     '''
 
-    if not reselect:
+    # 用户输入内容
+    _inp = ''
+    # 首次进入选项
+    if first_select:
         print(
-            '''1) 写入译文库
-2) 更新基础文本库
+            '''1) 更新译文库（待录入文本务必是标准rpy或json翻译文件，以免污染译文库）
+2) 更新JSON文本（试验功能，仅可输入合法文本路径，暂不支持路径验证及输入目录）
 0) 返回上一级
 '''
         )
+        _inp = input('请输入要操作的序号（如1）或回车退出程序：').strip()
+    else:
+        _inp = input(
+            f'列表中不存在序号 {serial_num}，请重新输入正确序号或回车退出程序：'
+        ).strip()
 
-        _inp = input('请输入要操作的序号（如1）：').strip()
-        if _inp == '1':
-            print('正在更新译文库中，请稍候……\n')
+    match _inp:
+        case '':
+            sys.exit()
+        case '0':
+            main.start_main()
+        case '1':
             walk_file()
-            write_translib()
-            print_info('译文库更新已完成！')
-            return
-
-        if _inp == '2':
+        case '2':
             _file1 = input('\n请输入原文本库路径：').strip()
             _file2 = input('\n请输入新文本库路径：').strip()
-            print('扫描中，请稍等……')
+            print('正在扫描JSON文件……')
             _dict1 = read_json(_file1)
             _dict2 = read_json(_file2)
             merge_dicts([_dict1, _dict2])
@@ -217,47 +222,9 @@ def _select_serial_num(reselect=False, serial_num=''):
                 ),
                 _file2,
             )
-            return
-
-        if _inp == '0':
-            main.start_main()
-        else:
-            _select_serial_num(True, _inp)
-        return
-
-    _tmp = input(
-        f'列表中不存在序号 {serial_num}，请重新输入正确序号或回车退出程序：'
-    ).strip()
-    if _tmp == '':
-        sys.exit(0)
-
-    if _tmp == '1':
-        print('正在更新译文库中，请稍候……\n')
-        walk_file()
-        write_translib()
-        print_info('译文库更新已完成！')
-        return
-
-    if _tmp == '2':
-        _file1 = input('\n请输入原文本库路径：').strip()
-        _file2 = input('\n请输入新文本库路径：').strip()
-        print('扫描中，请稍等……')
-        _dict1 = read_json(_file1)
-        _dict2 = read_json(_file2)
-        merge_dicts([_dict1, _dict2])
-        file_2_path = pathlib.Path(_file2)
-        write_json(
-            os.path.join(
-                file_2_path.parent, file_2_path.stem + '_new' + file_2_path.suffix
-            ),
-            _file2,
-        )
-        return
-
-    if _tmp == '0':
-        main.start_main()
-    else:
-        _select_serial_num(True, _tmp)
+            print('JSON文本已完成更新！')
+        case _:
+            _select_serial_num(_inp, False)
 
 
 def start():
@@ -274,4 +241,4 @@ def start():
 
     _select_serial_num()
 
-    sys.exit(0)
+    sys.exit()

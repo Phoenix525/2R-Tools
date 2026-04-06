@@ -28,17 +28,18 @@
 	- 基于Ollama框架。可切换多种模型（部署极简，运行速度快）
 	- 基于Transformers库。调用腾讯Hunyuan-MT模型（部署难度中等，运行速度较慢），部署教程点击[此处](https://gitee.com/aeolus314/2R-Tools/blob/master/Windows%2011%E9%83%A8%E7%BD%B2%20HY-MT1.5-7B%20%E6%95%99%E7%A8%8B.md)。
 - 机器翻译平台（非AI大模型翻译）：
-	- [腾讯翻译](https://cloud.tencent.com/product/tmt)
+	- [腾讯翻译](https://console.cloud.tencent.com/tmt)
+	- [阿里翻译](https://mt.console.aliyun.com/basic)
 	- [百度翻译](https://fanyi-api.baidu.com/register)
 	- [彩云小译](https://docs.caiyunapp.com/lingocloud-api/index.html)
-	- [火山翻译](https://www.volcengine.com/product/machine-translation)
+	- [火山翻译](https://www.volcengine.com/docs/4640/127682?lang=zh)
 	- [小牛翻译](https://niutrans.com/documents/contents/transapi_text_v2#accessMode)
-	- [讯飞翻译](https://www.xfyun.cn/doc/nlp/xftrans/API.html#%E6%8E%A5%E5%8F%A3%E8%AF%B4%E6%98%8E)
+	- [讯飞翻译](https://console.xfyun.cn/services/its)
 	- [有道智云](https://ai.youdao.com/doc.s#guide)
-	- [DeepL翻译](https://www.deepl.com/zh/pro-api)
-	- 谷歌翻译（第三方，已失效）
+	- [DeepL翻译](https://www.deepl.com/zh/pro-api#api-pricing)
+	- Google翻译（第三方，已失效）
  
-	机器翻译平台API所需密钥需自行申请，首次调用时输入密钥（密钥自动加密存入config.ini配置文件）即可启用相应翻译引擎。各平台收费标准不一，且时常有变动，使用前请先去官网查询相关资费。
+	机器翻译平台API所需密钥需自行申请，将申请到的相关数据填入config.ini对应位置，即可启用相应翻译引擎。各平台收费标准不一，且时常有变动，使用前请先去官网查询相关资费。
 
 ## 使用方法
 1. 启用机器翻译：
@@ -47,14 +48,14 @@
    在首次调用时会提示输入API通行证，并加密存入config.ini相应位置，下次再调用会自动读取config.ini已有通行证数据。
 	```ini
 	; 举例：百度翻译API
-	[baidu_api]
+	[baidu]
 	; 是否启用
 	activate=True
 	```
 2. 启用本地AI翻译（前提环境已部署）：
 	- Ollama需要在config.ini填写模型名称（model_name），调用哪个模型就填入相应的完整名称，并修改activate为True以启用接口。
 		```ini
-		[ollama_api]
+		[ollama]
 		; Ollama调用的模型名称
 		model_name=gemma3:4b
 		; 是否启用
@@ -62,7 +63,7 @@
 		```
 	- Hunyuan-MT模型需要在config.ini填写模型所在绝对路径，并修改activate为True以启用接口。
 		```ini
-		[hunyuan_mt_api]
+		[hunyuan_mt]
 		; Hunyuan-MT模型所在路径
 		model_path=D:\AI_Projects\Hunyuan-MT\Hunyuan-MT1.5-7B
 		; 是否启用

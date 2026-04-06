@@ -75,17 +75,18 @@ GLOBAL_DATA = {
     'rpg_type_array_object': [],
     'rpg_script_regexp': [],
     'rpg_game_default_txt': 'gameText.json',
-    'tencent': True,
-    'baidu': True,
-    'deepL': False,
-    'google': False,
+    'tencent': False,
+    'alibaba': False,
+    'baidu': False,
     'caiyun': False,
-    'youdao': False,
+    'huoshan': False,
     'xiaoniu': False,
     'xunfei': False,
+    'youdao': False,
+    'deepL': False,
+    'google': False,
     'ollama': False,
     'hunyuan_mt': False,
-    'huoshan': False,
 }
 
 # 项目所在绝对路径
@@ -170,15 +171,13 @@ def merge_dicts(dicts: list[dict], rewrite=True) -> dict:
     '''
 
     if dicts is None or len(dicts) < 1:
-        return {}
+        return None
 
     if len(dicts) == 1:
-        _dict = copy.deepcopy(dicts[0])
-        if not isinstance[_dict, dict]:
-            _dict = {}
-        return _dict
+        if dicts[0] is None or not isinstance[dicts[0], dict] or len(dicts[0]) < 1:
+            return None
 
-    # 如果不覆盖，则反转传入的字典列表
+    # 若要后面字典的值不覆盖前面字典的值，则反转传入的字典列表
     if rewrite is False:
         dicts = dicts.reverse()
 
@@ -214,34 +213,29 @@ def del_key_from_dict(key: str, datas=None) -> bool:
     return _dict
 
 
-def read_json(_file: str, encod='utf-8-sig') -> any:
+def read_json(file_path: str):
     '''
     读取JSON文件，并将其转换成python对象
 
     - _file: 文件的绝对路径
-    - encod: 文本打开编码格式
     '''
 
-    if not os.path.exists(_file):
-        print_warn(f'路径不存在：{_file}')
-        return {}
+    filename = os.path.basename(file_path)
+    if not os.path.exists(file_path):
+        print_warn(f'{filename}的路径不存在！')
+        return None
+    if not os.path.isfile(file_path):
+        print_warn(f'{filename}不是文件')
+        return None
 
-    if not os.path.isfile(_file):
-        print_warn(f'非文件路径：{_file}')
-        return {}
-
-    json_datas = {}
     try:
-        with open(_file, 'r', encoding=encod) as j:
-            json_datas = json.load(j)
+        with open(file_path, 'r', encoding=get_file_encoding(file_path)) as f:
+            json_data = json.load(f)
+        print_debug(f'{filename}是标准JSON文件！')
+        return json_data
     except json.JSONDecodeError:
-        json_datas = {}
-        file_name = os.path.basename(_file)
-        print_err(f'read_json()读取数据异常：{file_name}不是合法的JSON文件！')
-    finally:
-        j.close()
-
-    return json_datas
+        print_err(f'{filename}不是标准JSON文件！')
+        return None
 
 
 def write_json(_file: str, datas=None, *, indent=4, backup=True):
@@ -285,8 +279,6 @@ def write_json(_file: str, datas=None, *, indent=4, backup=True):
         raise ToolException(
             'WriteFileErr', f'write_json()写入{_filename}异常：{str(e)}'
         ) from e
-    finally:
-        fp.close()
 
 
 def copy_file(source_file: str, target_dir: str, time_mark=True):
@@ -298,7 +290,7 @@ def copy_file(source_file: str, target_dir: str, time_mark=True):
     - time_mark: 是否在文件名后面加上拷贝日期时间。默认添加
     '''
 
-    if not os.path.isfile(source_file) or os.path.isdir(target_dir):
+    if not os.path.isfile(source_file) or not os.path.isdir(target_dir):
         return
 
     pathlib.Path(target_dir).mkdir(parents=True, exist_ok=True)
@@ -640,7 +632,6 @@ def get_file_encoding(file_path: str) -> str:
     try:
         with open(file_path, 'rb') as f:
             raw_data = f.read()
-            f.close()
             result = chardet.detect(raw_data)
             encoding = result['encoding']
 
@@ -659,7 +650,7 @@ def get_file_encoding(file_path: str) -> str:
     return encoding
 
 
-def is_renpy_translation_file(file_path: str) -> bool:
+def validate_renpy_trans_file(file_path: str) -> bool:
     '''
     判断指定文件是否是Ren'Py翻译文件。
 
@@ -674,9 +665,9 @@ def is_renpy_translation_file(file_path: str) -> bool:
     if not f.endswith(('.rpy', '.rpym')):
         return False
 
-    inp = open(file_path, 'r', encoding=get_file_encoding(file_path))
-    lines = inp.readlines()
-    inp.close()
+    with open(file_path, 'r', encoding=get_file_encoding(file_path)) as inp:
+        # 只需要读取开头部分用来判断即可
+        lines = inp.read(1024)
     for line in lines:
         # 如果能匹配到translate标识符，则返回True
         if PATTERN_IDENTIFIER.match(line) is not None:
@@ -764,7 +755,7 @@ def get_tuple_values_for_index(tup: tuple, idx=0) -> tuple:
     return tuple(value_list)
 
 
-def is_valid_index(lst: list | tuple | str, index=0, with_negative=True) -> bool:
+def validate_index(lst: list | tuple | str, index=0, with_negative=True) -> bool:
     '''
     判断索引是否有效（支持负索引）
     - lst: 要查询的对象
@@ -849,7 +840,10 @@ def write_config(section: str, keys=None, add=True) -> bool:
             conf.set(section, key, item)
         else:
             conf.remove_option(section, key)
-    conf.write(open(CONFIG_ABSPATH, 'w', encoding=get_file_encoding(CONFIG_ABSPATH)))
+    
+    copy_file(CONFIG_ABSPATH, BASE_ABSPATH)
+    with open(CONFIG_ABSPATH, 'w', encoding=get_file_encoding(CONFIG_ABSPATH)) as f:
+        conf.write(f)
     return True
 
 
@@ -945,17 +939,18 @@ def get_config():
     GLOBAL_DATA['rpg_script_regexp'] = conf.get(
         'rpgm_extraction_writing', 'rpg_script_regexp'
     ).split(',')
-    GLOBAL_DATA['tencent'] = conf.getboolean('tencent_api', 'activate')
-    GLOBAL_DATA['baidu'] = conf.getboolean('baidu_api', 'activate')
-    GLOBAL_DATA['caiyun'] = conf.getboolean('caiyun_api', 'activate')
-    GLOBAL_DATA['deepL'] = conf.getboolean('deepL_api', 'activate')
-    GLOBAL_DATA['google'] = conf.getboolean('google_api', 'activate')
-    GLOBAL_DATA['huoshan'] = conf.getboolean('huoshan_api', 'activate')
-    GLOBAL_DATA['xiaoniu'] = conf.getboolean('xiaoniu_api', 'activate')
-    GLOBAL_DATA['xunfei'] = conf.getboolean('xunfei_api', 'activate')
-    GLOBAL_DATA['youdao'] = conf.getboolean('youdao_api', 'activate')
-    GLOBAL_DATA['ollama'] = conf.getboolean('ollama_api', 'activate')
-    GLOBAL_DATA['hunyuan_mt'] = conf.getboolean('hunyuan_mt_api', 'activate')
+    GLOBAL_DATA['tencent'] = conf.getboolean('tencent', 'activate')
+    GLOBAL_DATA['alibaba'] = conf.getboolean('alibaba', 'activate')
+    GLOBAL_DATA['baidu'] = conf.getboolean('baidu', 'activate')
+    GLOBAL_DATA['caiyun'] = conf.getboolean('caiyun', 'activate')
+    GLOBAL_DATA['huoshan'] = conf.getboolean('huoshan', 'activate')
+    GLOBAL_DATA['xiaoniu'] = conf.getboolean('xiaoniu', 'activate')
+    GLOBAL_DATA['xunfei'] = conf.getboolean('xunfei', 'activate')
+    GLOBAL_DATA['youdao'] = conf.getboolean('youdao', 'activate')
+    GLOBAL_DATA['deepL'] = conf.getboolean('deepL', 'activate')
+    GLOBAL_DATA['google'] = conf.getboolean('google', 'activate')
+    GLOBAL_DATA['ollama'] = conf.getboolean('ollama', 'activate')
+    GLOBAL_DATA['hunyuan_mt'] = conf.getboolean('hunyuan_mt', 'activate')
 
 
 TRANSLATED_LIB_LIBRARY = read_json(os.path.join(BASE_ABSPATH, 'libraries', TRANSLATED_LIB_LIBRARY_FILE))

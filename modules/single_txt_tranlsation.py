@@ -32,45 +32,44 @@ def _translate(reselect='0'):
 
     tmp = input('未输入文本或输入文本无意义，请重新输入或回车退出程序：').strip()
     if tmp == '':
-        sys.exit(0)
+        sys.exit()
 
     _interpreter.translate_txt(tmp)
     _translate()
 
 
-def _select_serial_num(reselect=False, serial_num=''):
+def _select_serial_num(serial_num='', first_select=True):
     '''
     输入序号选择对应的操作
+
+    - serial_num: 选定的操作序号
+    - first_select: 是否为重新选择
     '''
 
-    if not reselect:
+    # 用户输入内容
+    _inp = ''
+    # 首次进入选项
+    if first_select:
         print(
             '''1) 翻译文本
 0) 返回上一级
 '''
         )
-
-        _inp = input('请输入要操作的序号：').strip()
-        if _inp == '1':
-            return
-        if _inp == '0':
-            main.start_main()
-        else:
-            _select_serial_num(True, _inp)
-        return
-
-    _tmp = input(
-        f'列表中不存在序号 {serial_num}，请重新输入正确序号或回车退出程序：'
-    ).strip()
-    if _tmp == '':
-        sys.exit(0)
-
-    if _tmp == '1':
-        return
-    if _tmp == '0':
-        main.start_main()
+        _inp = input('请输入要操作的序号或回车退出程序：').strip()
     else:
-        _select_serial_num(True, _tmp)
+        _inp = input(
+            f'列表中不存在序号 {serial_num}，请重新输入正确序号或回车退出程序：'
+        ).strip()
+
+    match _inp:
+        case '':
+            sys.exit()
+        case '0':
+            main.start_main()
+        case '1':
+            return
+        case _:
+            _select_serial_num(_inp, False)
 
 
 def start():

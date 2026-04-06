@@ -15,7 +15,7 @@ class DeepLTranslation(BaseTranslation):
     DeepL翻译引擎
     '''
 
-    def __init__(self, *, section='deepL_api'):
+    def __init__(self, *, section='deepL'):
 
         BaseTranslation.__init__(
             self,
@@ -28,8 +28,6 @@ class DeepLTranslation(BaseTranslation):
 
         # 获取配置
         self.__get_config()
-        # 检查翻译引擎是否已就绪
-        self.is_ready()
 
     def translate(self, source_txt: str, to_lang: str, **kwargs) -> str:
         '''

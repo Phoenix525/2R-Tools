@@ -83,14 +83,12 @@ class SimpleKeyStore:
             return
         for key, value in keys.items():
             encrypted = self.__encryptor.encrypt(value)
-
+            self.__keys[key] = encrypted
             if GLOBAL_DATA['debug']:
                 leng = len(value)
                 msg = value.replace(value[3:-3], '*' * (leng - 6))
                 print_debug(f'原始{key}数据：{msg}')
-                self.__keys[key] = encrypted
-                encry_leng = len(encrypted)
-                msg = encrypted.replace(encrypted[10:-10], '*' * (encry_leng - 20))
+                msg = encrypted.replace(encrypted[10:-10], '*' * 20)
                 print_debug(f'加密{key}数据：{msg}')
         self.__save(section)
 
@@ -110,12 +108,12 @@ class SimpleKeyStore:
 
             if GLOBAL_DATA['debug']:
                 encrypted = self.__keys[key]
-                encry_leng = len(encrypted)
-                msg = encrypted.replace(encrypted[10:-10], '*' * (encry_leng - 20))
-                print_debug(f'待解密{key}数据：{msg}')
-                leng = len(decrypted)
-                msg = decrypted.replace(decrypted[3:-3], '*' * (leng - 6))
-                print_debug(f'解密{key}数据：{msg}')
+                if GLOBAL_DATA['debug']:
+                    msg = encrypted.replace(encrypted[10:-10], '*' * 20)
+                    print_debug(f'待解密{key}数据：{msg}')
+                    leng = len(decrypted)
+                    msg = decrypted.replace(decrypted[3:-3], '*' * (leng - 6))
+                    print_debug(f'解密{key}数据：{msg}')
         except Exception as e:
             print_err(f"解密失败: {e}")
             decrypted = ''

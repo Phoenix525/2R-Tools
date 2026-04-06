@@ -13,6 +13,7 @@ translate chinese xxx_xxx_xxxxxxxx:
 
 import copy
 import os
+import pathlib
 import sys
 from datetime import datetime
 
@@ -22,26 +23,24 @@ from modules.utils import (END_SAY, GLOBAL_DATA, MARK_TODO, PATTERN_EMPTY_LINE,
                            PATTERN_OLD, PATTERN_OLD_SAY,
                            RENPY_PROJECT_PARENT_FOLDER, del_key_from_dict,
                            get_file_encoding, has_lower_letter, is_int,
-                           is_renpy_translation_file, print_err, print_info)
+                           print_err, print_info, validate_renpy_trans_file)
 
 # pylint: disable=invalid-name
-
 # 旧版本翻译文本路径
-_old_abspath = GLOBAL_DATA['rpy_update_old_abspath']
-# 新版本翻译文本路径
-_new_abspath = GLOBAL_DATA['rpy_update_new_abspath']
-
+_pre_trans_project_path = GLOBAL_DATA['rpy_update_old_abspath']
+# 等待更新的翻译文本路径
+_wait_trans_project_path = GLOBAL_DATA['rpy_update_new_abspath']
 # 更新后的翻译文本路径
-_output_abspath = ''
+_new_trans_project_path = ''
 
-# 标识符缓存库。以标识符作为key进行储存，不可储存who和strings。格式：{identifier:[new_say,new_say]}
-_identifier_library_cache = {}
-# 文本缓存库。以文本作为key进行储存，可储存who和strings。格式：{old_say:{identifier:[new_say,new_say]}}
+# 译文缓存库。key为原文，可储存who和strings。格式：{old_say:{identifier:[str,str]}}
 _txt_library_cache = {}
+# 标识符译文缓存库。key为标识符作，不可储存who和strings。格式：{identifier:[str,str]}
+_identifier_library_cache = {}
 
-# 当前renpy项目名称
+# 当前翻译项目名称
 curr_renpy_project_name = 'Test_v0.1'
-# 当前renpy项目的绝对路径
+# 当前翻译项目的绝对路径
 curr_renpy_project_abspath = os.path.join(
     RENPY_PROJECT_PARENT_FOLDER, curr_renpy_project_name
 )
@@ -52,59 +51,57 @@ def walk_file():
     遍历文件夹内所有内容
     '''
 
-    if os.path.isfile(_old_abspath):
+    # 扫描旧版本翻译项目，将符合要求的译文存入缓存库
+    if os.path.isfile(_pre_trans_project_path):
         # 跳过非renPy翻译文本
-        if not is_renpy_translation_file(_old_abspath):
+        if not validate_renpy_trans_file(_pre_trans_project_path):
             return
 
-        root, f = os.path.split(_old_abspath)
+        root, f = os.path.split(_pre_trans_project_path)
         print(f'当前扫描文本：{f}')
         scanning_file(root, f)
     else:
-        for root, dirs, files in os.walk(_old_abspath, topdown=False):
+        for root, dirs, files in os.walk(_pre_trans_project_path, topdown=False):
             for f in files:
                 # 跳过非renPy翻译文本
-                if not is_renpy_translation_file(os.path.join(root, f)):
+                if not validate_renpy_trans_file(os.path.join(root, f)):
                     continue
 
                 print(f'当前扫描文本：{f}')
                 scanning_file(root, f)
 
-    # if len(_txt_library_cache) < 1 and len(_identifier_library_cache) < 1:
-    #     return
-
-    if os.path.isfile(_new_abspath):
+    # 更新翻译项目
+    if os.path.isfile(_wait_trans_project_path):
         # 跳过非renPy翻译文本
-        if not is_renpy_translation_file(_new_abspath):
+        if not validate_renpy_trans_file(_wait_trans_project_path):
             return
 
-        root, f = os.path.split(_new_abspath)
+        f = os.path.split(_wait_trans_project_path)[-1]
         print(f'当前更新文本：{f}')
-        process_file(_new_abspath, _output_abspath, f)
+        process_file(_wait_trans_project_path, _new_trans_project_path, f)
         return
 
-    for root, dirs, files in os.walk(_new_abspath, topdown=False):
+    for root, dirs, files in os.walk(_wait_trans_project_path, topdown=False):
 
         # 创建文件所在目录
-        relative_path = os.path.relpath(root, _new_abspath)
-        output_path = (
-            _output_abspath
+        relative_path = os.path.relpath(root, _wait_trans_project_path)
+        new_trans_folder_path = (
+            _new_trans_project_path
             if relative_path == '.'
-            else os.path.join(_output_abspath, relative_path)
+            else os.path.join(_new_trans_project_path, relative_path)
         )
         # 若新目录不存在，创建它
-        if not os.path.exists(output_path):
-            os.makedirs(output_path)
+        pathlib.Path(new_trans_folder_path).mkdir(parents=True, exist_ok=True)
 
         # 遍历所有文件
         for f in files:
-            new_path = os.path.join(root, f)
+            wait_trans_file_path = os.path.join(root, f)
             # 跳过非renPy翻译文本
-            if not is_renpy_translation_file(new_path):
+            if not validate_renpy_trans_file(wait_trans_file_path):
                 continue
 
             print(f'当前更新文本：{f}')
-            process_file(new_path, os.path.join(output_path, f), f)
+            process_file(wait_trans_file_path, os.path.join(new_trans_folder_path, f), f)
 
 
 def scanning_file(file_path: str, filename: str):
@@ -112,14 +109,13 @@ def scanning_file(file_path: str, filename: str):
     扫描旧版本翻译文本，将需要的数据存入缓存器
     '''
 
-    inp = open(
+    with open(
         os.path.join(file_path, filename),
         'r',
         encoding=get_file_encoding(os.path.join(file_path, filename)),
-    )
-    # todo 读出所有行，文件较大时可能会报错，需优化
-    lightSen = inp.readlines()
-    inp.close()
+    ) as inp:
+        # todo 读出所有行，文件较大时可能会报错，需优化
+        lightSen = inp.readlines()
 
     # _old_who = ''  # 字符串形式的who
     _old_say = ''  # 原文say
@@ -212,15 +208,15 @@ def scanning_file(file_path: str, filename: str):
     print_info(f'{filename} 扫描完成！\n')
 
 
-def process_file(new_path: str, output_path: str, filename: str):
+def process_file(wait_trans_path: str, new_trans_path: str, filename: str):
     '''
     将缓存区中原文相匹配的译文写入到新翻译文本中
     '''
 
-    inp = open(new_path, 'r', encoding=get_file_encoding(new_path))
-    # todo 读出所有行，文件较大时可能会报错，需优化
-    lightSen = inp.readlines()
-    inp.close()
+    with open(wait_trans_path, 'r', encoding=get_file_encoding(wait_trans_path)) as inp:
+        # todo 读出所有行，文件较大时可能会报错，需优化
+        lightSen = inp.readlines()
+    outp = open(new_trans_path, 'w', encoding=get_file_encoding(new_trans_path))
 
     # 临时文本列表，写入文件用
     _tmp_lightSen = copy.copy(lightSen)
@@ -287,11 +283,8 @@ def process_file(new_path: str, output_path: str, filename: str):
                             _tmp_lightSen.insert(_tmp_idx, reverse_line)
 
                 if _bap_count >= GLOBAL_DATA['rpy_update_bap_max_cache']:
-                    with open(
-                        output_path, 'w', encoding=get_file_encoding(output_path)
-                    ) as outp:
-                        outp.writelines(_tmp_lightSen)
-                        outp.close()
+                    outp.writelines(_tmp_lightSen)
+                    outp.flush()
                     # 清空BAP缓存
                     _bap_count = 0
                 # 当前BAP处理结束，若当前BAP的译文是多行翻译，除第一行外均删除
@@ -334,11 +327,8 @@ def process_file(new_path: str, output_path: str, filename: str):
                         _tmp_lightSen.insert(_tmp_idx, reverse_line)
 
             if _bap_count >= GLOBAL_DATA['rpy_update_bap_max_cache']:
-                with open(
-                    output_path, 'w', encoding=get_file_encoding(output_path)
-                ) as outp:
-                    outp.writelines(_tmp_lightSen)
-                    outp.close()
+                outp.writelines(_tmp_lightSen)
+                outp.flush()
                 # 清空BAP缓存
                 _bap_count = 0
             # 当前BAP处理结束，若当前BAP的译文是多行翻译，除第一行外均删除
@@ -356,11 +346,8 @@ def process_file(new_path: str, output_path: str, filename: str):
         if new_match is not None and _identifier == 'strings':
             if _old_say == '':
                 if _bap_count >= GLOBAL_DATA['rpy_update_bap_max_cache']:
-                    with open(
-                        output_path, 'w', encoding=get_file_encoding(output_path)
-                    ) as outp:
-                        outp.writelines(_tmp_lightSen)
-                        outp.close()
+                    outp.writelines(_tmp_lightSen)
+                    outp.flush()
                     # 清空BAP缓存
                     _bap_count = 0
                 continue
@@ -374,19 +361,15 @@ def process_file(new_path: str, output_path: str, filename: str):
                     _tmp_lightSen[_tmp_idx] = '    new \"' + translated_list[0] + '\"\n'
 
             if _bap_count >= GLOBAL_DATA['rpy_update_bap_max_cache']:
-                with open(
-                    output_path, 'w', encoding=get_file_encoding(output_path)
-                ) as outp:
-                    outp.writelines(_tmp_lightSen)
-                    outp.close()
+                outp.writelines(_tmp_lightSen)
+                outp.flush()
                 # 清空BAP缓存
                 _bap_count = 0
             _old_say = ''
 
     if _bap_count > 0:
-        with open(output_path, 'w', encoding=get_file_encoding(output_path)) as outp:
-            outp.writelines(_tmp_lightSen)
-            outp.close()
+        outp.writelines(_tmp_lightSen)
+        outp.close()
     print_info(f'{filename} 更新完成！\n')
 
 
@@ -630,23 +613,22 @@ def get_identifier(ident: str) -> str:
     return identifier + '_' + identifier_last
 
 
-def input_path(folder_type='OLD', reselect=False):
+def input_path(project='OLD', reselect=False):
     '''
     输入待翻文件/文件夹的绝对路径
     '''
 
-    global _old_abspath, _new_abspath, _output_abspath
+    global _pre_trans_project_path, _wait_trans_project_path, _new_trans_project_path
 
     if not reselect:
-        inp = ''
-        if folder_type == 'OLD':
+        if project == 'OLD':
             # 若存在默认路径
-            if _old_abspath != '':
+            if _pre_trans_project_path != '':
                 # 若路径不存在，重新手动输入
-                if not os.path.exists(_old_abspath):
-                    print_err('config.ini配置的旧翻译文本路径不存在！\n')
-                    _old_abspath = ''
-                    input_path(folder_type)
+                if not os.path.exists(_pre_trans_project_path):
+                    print_err('默认的旧版本翻译项目路径不存在！\n')
+                    _pre_trans_project_path = ''
+                    input_path(project)
                     return
 
                 print_info('路径验证成功！\n')
@@ -655,134 +637,135 @@ def input_path(folder_type='OLD', reselect=False):
             inp = input('请输入旧翻译文本的绝对路径：').strip()
             # 输入为空，重新输入
             if inp == '':
-                input_path(folder_type, True)
+                input_path(project, True)
                 return
             # 规范路径，不调整大小写
             inp = os.path.normpath(inp)
             # 若路径不存在，重新输入
             if not os.path.exists(inp):
-                input_path(folder_type, True)
+                input_path(project, True)
                 return
-            _old_abspath = inp
+            _pre_trans_project_path = inp
             print_info('路径验证成功！\n')
 
-        elif folder_type == 'NEW':
+        elif project == 'NEW':
             # 若存在默认路径
-            if _new_abspath != '':
+            if _wait_trans_project_path != '':
                 # 若路径不存在，则重新手动输入
-                if not os.path.exists(_new_abspath):
+                if not os.path.exists(_wait_trans_project_path):
                     print_err('config.ini配置的新翻译文本路径不存在！\n')
-                    _new_abspath = ''
-                    input_path(folder_type)
+                    _wait_trans_project_path = ''
+                    input_path(project)
                     return
 
-                _output_abspath = verify_path(_new_abspath, _output_abspath)
+                _new_trans_project_path = verify_path(_wait_trans_project_path)
+                print_info('路径验证成功！\n')
                 return
 
             inp = input('请输入新翻译文本的绝对路径：').strip()
             # 输入为空，重新输入
             if inp == '':
-                input_path(folder_type, True)
+                input_path(project, True)
                 return
             # 规范路径，不调整大小写
             inp = os.path.normpath(inp)
             # 若路径不存在，重新输入
             if not os.path.exists(inp):
-                input_path(folder_type, True)
+                input_path(project, True)
                 return
-            _new_abspath = inp
-            _output_abspath = verify_path(_new_abspath, _output_abspath)
+            _wait_trans_project_path = inp
+            _new_trans_project_path = verify_path(_wait_trans_project_path)
+            print_info('路径验证成功！\n')
         return
 
     tmp = input('不存在该路径，请重新输入正确的路径或回车关闭程序：').strip()
     # 输入为空，退出程序
     if tmp == '':
-        sys.exit(0)
+        sys.exit()
     # 规范路径，不调整大小写
     tmp = os.path.normpath(tmp)
     # 若路径不存在，重新输入
     if not os.path.exists(tmp):
-        input_path(folder_type, True)
+        input_path(project, True)
         return
 
-    if folder_type == 'OLD':
-        _old_abspath = tmp
-        print_info('路径验证成功！\n')
+    if project == 'OLD':
+        _pre_trans_project_path = tmp
     else:
-        _new_abspath = tmp
-        _output_abspath = verify_path(_new_abspath, _output_abspath)
+        _wait_trans_project_path = tmp
+        _new_trans_project_path = verify_path(_wait_trans_project_path)
+    print_info('路径验证成功！\n')
 
 
-def verify_path(new_abspath: str, output_abspath: str) -> str:
+def verify_path(wait_trans_path: str) -> str:
     '''
-    验证待翻文本路径和目标路径是否正确
+    验证待翻译项目路径是否正确，并新建更新后的项目路径，已存在的项目先改名备份
 
-    :param new_abspath: 待翻译文本路径
-    :param output_abspath: 新翻译文本路径
+    :param wait_trans_path: 待翻译项目路径
     '''
 
-    # 如果输入路径是文件夹
-    if os.path.isdir(new_abspath):
-        # 输出路径也生成文件夹
-        output_abspath = new_abspath + '-new'
-        # 如果输出文件夹已存在，先将其更名，再新建空文件夹
-        if os.path.exists(output_abspath):
+    # 如果待翻译项目是文件夹
+    if os.path.isdir(wait_trans_path):
+        # 新建更新的项目文件夹
+        new_trans_path = wait_trans_path + '-new'
+        # 如果更新的项目路径存在，先将其更名，再新建空文件夹
+        if os.path.exists(new_trans_path):
             os.rename(
-                output_abspath,
-                output_abspath + '_' + datetime.now().strftime('%Y_%m_%d_%H_%M_%S'),
+                new_trans_path,
+                new_trans_path + '_' + datetime.now().strftime('%Y_%m_%d_%H_%M_%S'),
             )
-        os.makedirs(output_abspath)
+        os.makedirs(new_trans_path)
+        return new_trans_path
 
-    # 如果输入路径是文件
-    elif os.path.isfile(new_abspath):
-        _inp = os.path.splitext(new_abspath)
-        output_abspath = _inp[0] + '-new' + _inp[-1]
-        # 如果输出文件已存在，将其更名备份
-        if os.path.exists(output_abspath):
-            bak_output_abspath = (
+    # 如果待翻译项目是文件
+    if os.path.isfile(wait_trans_path):
+        _inp = os.path.splitext(wait_trans_path)
+        new_trans_file = _inp[0] + '-new' + _inp[-1]
+        # 如果更新的项目路径存在，将其更名备份
+        if os.path.exists(new_trans_file):
+            bak_new_trans_file = (
                 _inp[0]
                 + '-new_'
                 + datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
                 + _inp[-1]
             )
-            os.rename(output_abspath, bak_output_abspath)
-    print_info('路径验证成功！\n')
-    return output_abspath
+            os.rename(new_trans_file, bak_new_trans_file)
+        return new_trans_file
 
 
-def _select_serial_num(reselect=False, serial_num=''):
+
+def _select_serial_num(serial_num='', first_select=True):
     '''
     输入序号选择对应的操作
+
+    - serial_num: 选定的操作序号
+    - first_select: 是否为重新选择
     '''
 
-    if not reselect:
+    # 用户输入内容
+    _inp = ''
+    # 首次进入选项
+    if first_select:
         print(
             '''1) 更新翻译文本
 0) 返回上一级
 '''
         )
-
-        _inp = input('请输入要操作的序号：').strip()
-        if _inp == '1':
-            return
-        if _inp == '0':
-            main.start_main()
-        else:
-            _select_serial_num(True, _inp)
-        return
-
-    _tmp = input(
-        f'列表中不存在序号 {serial_num}，请重新输入正确序号或回车退出程序：'
-    ).strip()
-    if _tmp == '':
-        sys.exit(0)
-
-    if _tmp == '1':
-        return
-    if _tmp == '0':
-        main.start_main()
+        _inp = input('请输入要操作的序号或回车退出程序：').strip()
     else:
-        _select_serial_num(True, _tmp)
+        _inp = input(
+            f'列表中不存在序号 {serial_num}，请重新输入正确序号或回车退出程序：'
+        ).strip()
+
+    match _inp:
+        case '':
+            sys.exit()
+        case '0':
+            main.start_main()
+        case '1':
+            return
+        case _:
+            _select_serial_num(_inp, False)
 
 
 def start():
@@ -803,7 +786,6 @@ def start():
     input_path('OLD')
     input_path('NEW')
 
-    print('正在更新翻译文本中，请稍候……\n')
     walk_file()
-    print_info('翻译文本更新已完成！')
-    sys.exit(0)
+    print_info('翻译文本已完成更新！')
+    sys.exit()

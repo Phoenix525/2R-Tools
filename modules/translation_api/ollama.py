@@ -15,7 +15,7 @@ class OllamaTranslation(BaseTranslation):
     使用该翻译引擎，需要先启动Ollama。
     '''
 
-    def __init__(self, *, section='ollama_api'):
+    def __init__(self, *, section='ollama'):
 
         BaseTranslation.__init__(
             self,

@@ -30,14 +30,16 @@ def _translate(_filter=''):
     扫描缓存，逐条翻译并覆写
     '''
 
+    print_info('正在翻译……')
     # 读取指定项目的翻译文件，未找到时返回
     if not _read_game_txt():
+        print_warn('未找到需要翻译的项目，翻译结束！')
         return
 
     _count = 0
     _bak = True
     for k, v in _game_txt_cache.items():
-        if not isinstance(v, str):
+        if not isinstance(k, str) or not isinstance(v, str):  # 键或值非字串的跳过
             continue
         v = v.strip()
         if v.upper() == GLOBAL_DATA['none_filter']:  # 无需显示的行，不翻译
@@ -74,19 +76,19 @@ def _add_todo(_filter=''):
     查找漏翻字段，添加TODO
     '''
 
-    print('扫描中，请稍候……')
-
+    print('正在扫描……')
     if not _read_game_txt():
-        print_warn(f'当前目录中不存在{_curr_rpgm_project_name}文件，检索已结束！')
+        print_warn(f'未找到需要扫描的项目，扫描结束！')
         return
 
     # 漏翻字段数量
     _count = 0
     for k, v in _game_txt_cache.items():
-        # 如果已有值则pass
-        # 这里只考虑值（且不去除首尾空格）是否不为空，不考虑键的情况。
+        if not isinstance(k, str) or not isinstance(v, str):  # 键或值非字串的跳过
+            continue
+        # 这里只考虑值是否不为空，不考虑键的情况。
         # 因为某些情况下有可能会有翻译的值和键不对应的情况。比如键不为空，但值为空或只有换行符。
-        if v != '':
+        if v != '': # 如果已有值则pass
             continue
 
         # 若传入_filter，则只处理指定的语种
@@ -116,15 +118,17 @@ def _add_pass(_filter='ru'):
             _filter = 'ru'
 
     print(f'当前指定语种为{_filter}\n')
-    print('扫描中，请稍候……')
 
+    print('正在扫描……')
     if not _read_game_txt():
-        print_warn('检索已结束！')
+        print_warn('未找到需要扫描的项目，扫描结束！')
         return
 
     # 漏翻字段数量
     _count = 0
     for k, v in _game_txt_cache.items():
+        if not isinstance(k, str) or not isinstance(v, str):  # 键或值非字串的跳过
+            continue
         # 如果已有值则pass
         if v != '':
             continue
@@ -148,12 +152,13 @@ def _read_game_txt() -> bool:
     '''
 
     # 读取待翻译文本
-    global _game_txt_cache
-    _game_txt_cache = read_json(_curr_rpgm_project_abspath)
+    cache = read_json(_curr_rpgm_project_abspath)
 
-    if len(_game_txt_cache) < 1:
-        print_warn(f'{_game_txt_cache} 不存在或内容为空！')
+    if cache is None or len(cache) < 1:
         return False
+
+    global _game_txt_cache
+    _game_txt_cache = cache
 
     # 将更新标记设置为False
     _change_phoenix_mark()
@@ -182,12 +187,18 @@ def _wirte_in_file(bak=True):
     write_json(_curr_rpgm_project_abspath, _game_txt_cache, backup=bak)
 
 
-def _select_serial_num(reselect=False, serial_num=''):
+def _select_serial_num(serial_num='', first_select=True):
     '''
     输入序号选择对应的操作
+
+    - serial_num: 选定的操作序号
+    - first_select: 是否为重新选择
     '''
 
-    if not reselect:
+    # 用户输入内容
+    _inp = ''
+    # 首次进入选项
+    if first_select:
         print(
             f'''1) 翻译JSON文本
 2) 检索值为空的字段，并添加{MARK_TODO}
@@ -195,36 +206,25 @@ def _select_serial_num(reselect=False, serial_num=''):
 0) 返回上一级
 '''
         )
-
-        _inp = input('请输入要操作的序号：').strip()
-        if _inp == '1':
-            _initialize()
-        elif _inp == '2':
-            _add_todo()
-        elif _inp == '3':
-            _add_pass()
-        elif _inp == '0':
-            main.start_main()
-        else:
-            _select_serial_num(True, _inp)
-        return
-
-    _tmp = input(
-        f'列表中不存在序号 {serial_num}，请重新输入正确序号或回车退出程序：'
-    ).strip()
-    if _tmp == '':
-        sys.exit(0)
-
-    if _tmp == '1':
-        _initialize()
-    elif _tmp == '2':
-        _add_todo()
-    elif _tmp == '3':
-        _add_pass()
-    elif _tmp == '0':
-        main.start_main()
+        _inp = input('请输入要操作的序号或回车退出程序：').strip()
     else:
-        _select_serial_num(True, _tmp)
+        _inp = input(
+            f'列表中不存在序号 {serial_num}，请重新输入正确序号或回车退出程序：'
+        ).strip()
+
+    match _inp:
+        case '':
+            sys.exit()
+        case '0':
+            main.start_main()
+        case '1':
+            _initialize()
+        case '2':
+            _add_todo()
+        case '3':
+            _add_pass()
+        case _:
+            _select_serial_num(_inp, False)
 
 
 def _initialize():
@@ -261,4 +261,4 @@ def start(project_name: str):
 
     _select_serial_num()
 
-    sys.exit(0)
+    sys.exit()

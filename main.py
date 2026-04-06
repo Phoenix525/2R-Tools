@@ -66,7 +66,7 @@ def get_rpgm_project(select: str) -> str:
     '''
 
     _projects = get_projects_list('rpgm')
-    if len(_projects) <= 0:
+    if len(_projects) < 1:
         # 当选择翻译rpgm翻译文件时，若工作区无项目则直接返回
         if select == '6':
             print_warn('RPGM工作区无项目！')
@@ -100,10 +100,15 @@ def get_rpgm_project(select: str) -> str:
     return f'{_project_name}.json'
 
 
-def start_main(reselect='0', serial_num=''):
-    if reselect == '0':
+def start_main(serial_num='', first_select=True):
+
+    # 用户输入内容
+    _inp = ''
+    # 首次进入选项
+    if first_select:
         print(
-            r'''===========================================================================================
+            r'''
+===========================================================================================
           ______  _____  _   _ ______ __   __      ______ ______  _____ ___  ___
           | ___ \|  ___|| \ | || ___ \\ \ / /___   | ___ \| ___ \|  __ \|  \/  |
           | |_/ /| |__  |  \| || |_/ / \ V /( _ )  | |_/ /| |_/ /| |  \/| .  . |
@@ -123,98 +128,52 @@ def start_main(reselect='0', serial_num=''):
 6) JSON 文本翻译
 7) 单语句翻译
 8) rpy/json 写入译文库
-0) 退出
 '''
         )
-        inp = input('请输入要操作的序号：').strip()
+        _inp = input('请输入要操作的序号或回车退出程序：').strip()
+    else:
+        _inp = input(
+            f'列表中不存在序号 {serial_num}，请重新输入正确序号或回车退出程序：'
+        ).strip()
 
-        if inp == '1':
+    match _inp:
+        case '':
+            sys.exit()
+        case '1':
             # 选择renpy项目文件夹
             # _curr_renpy_project = get_renpy_project()
             # print_info(f'当前项目: {_curr_renpy_project}')
             renpy_translation.start()
-        elif inp == '2':
+        case '2':
             # 选择renpy项目文件夹
             # _curr_renpy_project = get_renpy_project()
             renpy_update.start()
-        elif inp == '3':
+        case '3':
             # 选择rpgm翻译文件
-            _curr_rpgm_project = get_rpgm_project(inp)
-            print_info(f'当前RPGM翻译项目：{_curr_rpgm_project}')
+            _curr_rpgm_project = get_rpgm_project(_inp)
             rpgm_mz_extraction_writing.start(_curr_rpgm_project)
-        elif inp == '4':
+        case '4':
             # 选择rpgm翻译文件
-            _curr_rpgm_project = get_rpgm_project(inp)
-            print_info(f'当前RPGM翻译项目：{_curr_rpgm_project}')
+            _curr_rpgm_project = get_rpgm_project(_inp)
             rpgm_mv_extraction_writing.start(_curr_rpgm_project)
-        elif inp == '5':
+        case '5':
             # 选择rpgm翻译文件
-            _curr_rpgm_project = get_rpgm_project(inp)
-            print_info(f'当前RPGM翻译项目：{_curr_rpgm_project}')
+            _curr_rpgm_project = get_rpgm_project(_inp)
             rpgm_vx_ace_extraction_writing.start(_curr_rpgm_project)
-        elif inp == '6':
+        case '6':
             # 选择rpgm翻译文件
-            _curr_rpgm_project = get_rpgm_project(inp)
+            _curr_rpgm_project = get_rpgm_project(_inp)
             if _curr_rpgm_project == '':
-                print_info('返回主界面！')
+                print_info('未选择翻译项目，返回主界面！')
                 start_main()
             else:
-                print_info(f'当前RPGM翻译项目：{_curr_rpgm_project}')
                 json_translation.start(_curr_rpgm_project)
-        elif inp == '7':
+        case '7':
             single_txt_tranlsation.start()
-        elif inp == '8':
+        case '8':
             translated_txt_lib.start()
-        elif inp == '0':
-            sys.exit(0)
-        else:
-            start_main('1', inp)
-        return
-
-    tmp = input(
-        f'列表中不存在序号 {serial_num}，请重新输入正确序号或回车退出程序：'
-    ).strip()
-    if tmp == '':
-        sys.exit(0)
-
-    if tmp == '1':
-        # 选择renpy项目文件夹
-        # _curr_renpy_project = get_renpy_project()
-        # print_info(f'当前项目: {_curr_renpy_project}')
-        renpy_translation.start()
-    elif tmp == '2':
-        # 选择renpy项目文件夹
-        # _curr_renpy_project = get_renpy_project()
-        renpy_update.start()
-    elif tmp == '3':
-        # 选择rpgm翻译文件
-        _curr_rpgm_project = get_rpgm_project(tmp)
-        rpgm_mz_extraction_writing.start(_curr_rpgm_project)
-    elif tmp == '4':
-        # 选择rpgm翻译文件
-        _curr_rpgm_project = get_rpgm_project(tmp)
-        rpgm_mv_extraction_writing.start(_curr_rpgm_project)
-    elif tmp == '5':
-        # 选择rpgm翻译文件
-        _curr_rpgm_project = get_rpgm_project(tmp)
-        rpgm_vx_ace_extraction_writing.start(_curr_rpgm_project)
-    elif tmp == '6':
-        # 选择rpgm翻译文件
-        _curr_rpgm_project = get_rpgm_project(tmp)
-        if _curr_rpgm_project == '':
-            print_info('返回主界面！')
-            start_main()
-        else:
-            print_info(f'当前RPGM翻译项目：{_curr_rpgm_project}')
-        json_translation.start(_curr_rpgm_project)
-    elif tmp == '7':
-        single_txt_tranlsation.start()
-    elif tmp == '8':
-        translated_txt_lib.start()
-    elif tmp == '0':
-        sys.exit(0)
-    else:
-        start_main('1', tmp)
+        case _:
+            start_main(_inp, False)
 
 
 if __name__ == '__main__':
