@@ -19,7 +19,7 @@ class XunFeiTranslation(BaseTranslation):
     讯飞翻译引擎
     '''
 
-    def __init__(self, *, section='xunfei'):
+    def __init__(self, section='xunfei'):
 
         BaseTranslation.__init__(
             self,
@@ -54,11 +54,9 @@ class XunFeiTranslation(BaseTranslation):
         source_txt = remove_escape(source_txt)
         # 源文本语种
         from_lang = kwargs.get('from_lang', 'auto')
-        # 讯飞源语种无法使用auto，在未指定源语种时，获取语种
-        if from_lang == 'auto':
-            from_lang = check_langs(source_txt)
         # 校验文本及语种是否符合要求，不符合则直接返回空值
-        if not self.check_text_and_lang(source_txt, from_lang, to_lang):
+        from_lang = self.check_text_and_lang(source_txt, from_lang, to_lang)
+        if not from_lang:
             return ''
 
         # 重试次数

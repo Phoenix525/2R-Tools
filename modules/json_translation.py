@@ -16,29 +16,66 @@ from modules.utils import (GLOBAL_DATA, KEY_PHOENIX, MARK_TODO,
 
 # pylint: disable=invalid-name
 # 待翻译文本
-_game_txt_cache = None
+__game_txt_cache = None
 # 翻译器实例
-_interpreter = None
+__interpreter = None
 # 当前rpgm项目名称
-_curr_rpgm_project_name = ''
+__curr_rpgm_project_name = ''
 # 当前rpgm翻译文件的绝对路径
-_curr_rpgm_project_abspath = ''
+__curr_rpgm_project_path = ''
 
 
-def _translate(_filter=''):
+def start(project_name: str):
+    '''
+    启动界面
+    '''
+
+    global __curr_rpgm_project_name, __curr_rpgm_project_path
+
+    __curr_rpgm_project_name = project_name
+    __curr_rpgm_project_path = os.path.join(RPGM_PROJECT_PARENT_FOLDER, project_name)
+
+    print(
+        '''
+===========================================================================================
+                                   JSON文本机翻工具
+                                      作者：Phoenix
+                                      版权归作者所有
+===========================================================================================
+'''
+    )
+
+    __select_serial_num()
+
+    sys.exit()
+
+
+def __initialize():
+    '''
+    初始化翻译器
+    '''
+
+    # 实例化翻译引擎
+    global __interpreter
+    __interpreter = Interpreter()
+    # 开始翻译
+    __translate()
+
+
+def __translate(_filter=''):
     '''
     扫描缓存，逐条翻译并覆写
     '''
 
     print_info('正在翻译……')
     # 读取指定项目的翻译文件，未找到时返回
-    if not _read_game_txt():
+    if not __read_game_txt():
         print_warn('未找到需要翻译的项目，翻译结束！')
         return
 
     _count = 0
     _bak = True
-    for k, v in _game_txt_cache.items():
+    for k, v in __game_txt_cache.items():
         if not isinstance(k, str) or not isinstance(v, str):  # 键或值非字串的跳过
             continue
         v = v.strip()
@@ -59,36 +96,36 @@ def _translate(_filter=''):
         if not matching_langs(txt, _filter):
             continue
 
-        _game_txt_cache[k] = _interpreter.translate_txt(txt)
-        _change_phoenix_mark(True)
+        __game_txt_cache[k] = __interpreter.translate_txt(txt)
+        __update_phoenix_mark(True)
         _count += 1
         if _count >= GLOBAL_DATA['json_max_cache']:
-            _wirte_in_file(_bak)
+            __wirte_in_file(_bak)
             _bak = False
             _count = 0
     if _count > 0:
-        _wirte_in_file(_bak)
+        __wirte_in_file(_bak)
     print_info('翻译完成！\n')
 
 
-def _add_todo(_filter=''):
+def __add_todo(_filter=''):
     '''
     查找漏翻字段，添加TODO
     '''
 
     print('正在扫描……')
-    if not _read_game_txt():
+    if not __read_game_txt():
         print_warn(f'未找到需要扫描的项目，扫描结束！')
         return
 
     # 漏翻字段数量
     _count = 0
-    for k, v in _game_txt_cache.items():
+    for k, v in __game_txt_cache.items():
         if not isinstance(k, str) or not isinstance(v, str):  # 键或值非字串的跳过
             continue
         # 这里只考虑值是否不为空，不考虑键的情况。
         # 因为某些情况下有可能会有翻译的值和键不对应的情况。比如键不为空，但值为空或只有换行符。
-        if v != '': # 如果已有值则pass
+        if v != '':  # 如果已有值则pass
             continue
 
         # 若传入_filter，则只处理指定的语种
@@ -96,16 +133,16 @@ def _add_todo(_filter=''):
             continue
 
         _count += 1
-        _game_txt_cache[k] = MARK_TODO
+        __game_txt_cache[k] = MARK_TODO
 
     if _count > 0:
-        _game_txt_cache[KEY_PHOENIX] = True
+        __game_txt_cache[KEY_PHOENIX] = True
     print_info(f'空值字段扫描结果为：{_count}\n')
 
-    _wirte_in_file()
+    __wirte_in_file()
 
 
-def _add_pass(_filter='ru'):
+def __add_pass(_filter='ru'):
     '''
     查找指定语种，添加PASS
     '''
@@ -120,13 +157,13 @@ def _add_pass(_filter='ru'):
     print(f'当前指定语种为{_filter}\n')
 
     print('正在扫描……')
-    if not _read_game_txt():
+    if not __read_game_txt():
         print_warn('未找到需要扫描的项目，扫描结束！')
         return
 
     # 漏翻字段数量
     _count = 0
-    for k, v in _game_txt_cache.items():
+    for k, v in __game_txt_cache.items():
         if not isinstance(k, str) or not isinstance(v, str):  # 键或值非字串的跳过
             continue
         # 如果已有值则pass
@@ -137,57 +174,57 @@ def _add_pass(_filter='ru'):
             continue
 
         _count += 1
-        _game_txt_cache[k] = MARK_TODO + '_' + GLOBAL_DATA['pass_filter'][0]
+        __game_txt_cache[k] = MARK_TODO + '_' + GLOBAL_DATA['pass_filter'][0]
 
     if _count > 0:
-        _game_txt_cache[KEY_PHOENIX] = True
+        __game_txt_cache[KEY_PHOENIX] = True
     print_info(f'指定字段扫描结果为：{_count}\n')
 
-    _wirte_in_file()
+    __wirte_in_file()
 
 
-def _read_game_txt() -> bool:
+def __read_game_txt() -> bool:
     '''
     读取指定项目的JSON翻译文件
     '''
 
     # 读取待翻译文本
-    cache = read_json(_curr_rpgm_project_abspath)
+    cache = read_json(__curr_rpgm_project_path)
 
     if cache is None or len(cache) < 1:
         return False
 
-    global _game_txt_cache
-    _game_txt_cache = cache
+    global __game_txt_cache
+    __game_txt_cache = cache
 
     # 将更新标记设置为False
-    _change_phoenix_mark()
+    __update_phoenix_mark()
 
     return True
 
 
-def _change_phoenix_mark(mark=False):
+def __update_phoenix_mark(update=False):
     '''
     切换更新标记
     '''
 
-    _game_txt_cache[KEY_PHOENIX] = mark
+    __game_txt_cache[KEY_PHOENIX] = update
 
 
-def _wirte_in_file(bak=True):
+def __wirte_in_file(bak=True):
     '''
     将结果写入文件
     '''
 
-    if not _game_txt_cache[KEY_PHOENIX]:
-        print(f'{_curr_rpgm_project_name} 未发生更改，无需写入！\n')
+    if not __game_txt_cache[KEY_PHOENIX]:
+        print(f'{__curr_rpgm_project_name} 未发生更改，无需写入！\n')
         return
 
-    _change_phoenix_mark()
-    write_json(_curr_rpgm_project_abspath, _game_txt_cache, backup=bak)
+    __update_phoenix_mark()
+    write_json(__curr_rpgm_project_path, __game_txt_cache, backup=bak)
 
 
-def _select_serial_num(serial_num='', first_select=True):
+def __select_serial_num(serial_num='', first_select=True):
     '''
     输入序号选择对应的操作
 
@@ -218,47 +255,10 @@ def _select_serial_num(serial_num='', first_select=True):
         case '0':
             main.start_main()
         case '1':
-            _initialize()
+            __initialize()
         case '2':
-            _add_todo()
+            __add_todo()
         case '3':
-            _add_pass()
+            __add_pass()
         case _:
-            _select_serial_num(_inp, False)
-
-
-def _initialize():
-    '''
-    初始化翻译器
-    '''
-
-    # 实例化翻译引擎
-    global _interpreter
-    _interpreter = Interpreter()
-    # 开始翻译
-    _translate()
-
-
-def start(project_name: str):
-    '''
-    启动界面
-    '''
-
-    global _curr_rpgm_project_name, _curr_rpgm_project_abspath
-
-    _curr_rpgm_project_name = project_name
-    _curr_rpgm_project_abspath = os.path.join(RPGM_PROJECT_PARENT_FOLDER, project_name)
-
-    print(
-        '''
-===========================================================================================
-                                   JSON文本机翻工具
-                                      作者：Phoenix
-                                      版权归作者所有
-===========================================================================================
-'''
-    )
-
-    _select_serial_num()
-
-    sys.exit()
+            __select_serial_num(_inp, False)

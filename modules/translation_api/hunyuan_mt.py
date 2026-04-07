@@ -31,7 +31,7 @@ class HunYuanMTTranslation(BaseTranslation):
     系统Windows 11；Python 3.10.x；Transformers 4.56.0，PyTorch 2.11.0+（需与本机Cuda版本对应）及其他相应依赖
     '''
 
-    def __init__(self, *, section='hunyuan_mt'):
+    def __init__(self, section='hunyuan_mt'):
 
         BaseTranslation.__init__(
             self,
@@ -73,7 +73,8 @@ class HunYuanMTTranslation(BaseTranslation):
         # 源文本语种
         from_lang = kwargs.get('from_lang', 'auto')
         # 校验文本及语种是否符合要求，不符合则直接返回空值
-        if not self.check_text_and_lang(source_txt, from_lang, to_lang):
+        from_lang = self.check_text_and_lang(source_txt, from_lang, to_lang)
+        if not from_lang:
             return ''
 
         # 是否启用上下文翻译。1表示启用上下文，并保存上文；0表示不启用上下文，但不清除已有上文；-1表示不启用上下文，同时清除已有上文

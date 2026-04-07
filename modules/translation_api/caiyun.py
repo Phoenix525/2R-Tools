@@ -18,7 +18,7 @@ class CaiyunTranslation(BaseTranslation):
     彩云小译翻译引擎
     '''
 
-    def __init__(self, *, section='caiyun'):
+    def __init__(self, section='caiyun'):
 
         BaseTranslation.__init__(
             self,
@@ -45,11 +45,9 @@ class CaiyunTranslation(BaseTranslation):
         source_txt = remove_escape(source_txt)
         # 源文本语种
         from_lang = kwargs.get('from_lang', 'auto')
-        # 由于彩云源语言无法使用auto，故在此检测语言语种
-        if from_lang == 'auto':
-            from_lang = check_langs(source_txt).lower()
         # 校验文本及语种是否符合要求，不符合则直接返回空值
-        if not self.check_text_and_lang(source_txt, from_lang, to_lang):
+        from_lang = self.check_text_and_lang(source_txt, from_lang, to_lang)
+        if not from_lang:
             return ''
 
         # 删除转义符

@@ -12,10 +12,34 @@ import main
 from modules.interpreter import Interpreter
 
 # pylint: disable=invalid-name
-_interpreter = None  # 翻译器实例
+__interpreter = None  # 翻译器实例
 
 
-def _translate(reselect='0'):
+def start():
+    '''
+    翻译单条语句模式
+    '''
+
+    print(
+        '''
+===========================================================================================
+                                       机器翻译工具
+                                      作者：Phoenix
+                                      版权归作者所有
+===========================================================================================
+'''
+    )
+
+    __select_serial_num()
+
+    # 实例化翻译引擎
+    global __interpreter
+    __interpreter = Interpreter()
+    # 开始翻译
+    __translate()
+
+
+def __translate(reselect='0'):
     '''
     开始翻译
     '''
@@ -23,22 +47,22 @@ def _translate(reselect='0'):
     if reselect == '0':
         tmp = input('\n原文：').strip()
         if tmp == '':
-            _translate('1')
+            __translate('1')
             return
 
-        _interpreter.translate_txt(tmp)
-        _translate()
+        __interpreter.translate_txt(tmp)
+        __translate()
         return
 
     tmp = input('未输入文本或输入文本无意义，请重新输入或回车退出程序：').strip()
     if tmp == '':
         sys.exit()
 
-    _interpreter.translate_txt(tmp)
-    _translate()
+    __interpreter.translate_txt(tmp)
+    __translate()
 
 
-def _select_serial_num(serial_num='', first_select=True):
+def __select_serial_num(serial_num='', first_select=True):
     '''
     输入序号选择对应的操作
 
@@ -69,28 +93,4 @@ def _select_serial_num(serial_num='', first_select=True):
         case '1':
             return
         case _:
-            _select_serial_num(_inp, False)
-
-
-def start():
-    '''
-    翻译单条语句模式
-    '''
-
-    print(
-        '''
-===========================================================================================
-                                       机器翻译工具
-                                      作者：Phoenix
-                                      版权归作者所有
-===========================================================================================
-'''
-    )
-
-    _select_serial_num()
-
-    # 实例化翻译引擎
-    global _interpreter
-    _interpreter = Interpreter()
-    # 开始翻译
-    _translate()
+            __select_serial_num(_inp, False)

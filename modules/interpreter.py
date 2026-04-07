@@ -70,7 +70,7 @@ class Interpreter:
         self, source_txt='', *, open_todo=False, activate_context='-1'
     ) -> str:
         '''
-        翻译文本
+        翻译单条文本
 
         所有可能出现的异常要在此函数处理完毕，并一定有返回值。
 
@@ -108,7 +108,7 @@ class Interpreter:
         self, source_txt_dict=None, *, open_todo=False, activate_context='-1'
     ) -> dict:
         '''
-        翻译文本字典
+        翻译多条文本【字典格式】
 
         所有可能出现的异常要在此函数处理完毕，并一定有返回值。
 
@@ -155,7 +155,7 @@ class Interpreter:
         self, source_txt_list: list, *, open_todo=False, activate_context='-1'
     ) -> list:
         '''
-        翻译文本列表
+        翻译多条文本【列表格式】
 
         所有可能出现的异常要在此函数处理完毕，并一定有返回值。
 

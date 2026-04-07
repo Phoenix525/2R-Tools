@@ -13,7 +13,7 @@ class GoogleTranslation(BaseTranslation):
     谷歌翻译第三方API
     '''
 
-    def __init__(self, *, section='google'):
+    def __init__(self, section='google'):
 
         BaseTranslation.__init__(
             self,
@@ -46,7 +46,8 @@ class GoogleTranslation(BaseTranslation):
         # 源文本语种
         from_lang = kwargs.get('from_lang', 'auto')
         # 校验文本及语种是否符合要求，不符合则直接返回空值
-        if not self.check_text_and_lang(source_txt, from_lang, to_lang):
+        from_lang = self.check_text_and_lang(source_txt, from_lang, to_lang)
+        if not from_lang:
             return ''
 
         # 获取令牌，未获取到时自动等待

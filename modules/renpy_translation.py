@@ -18,57 +18,98 @@ from datetime import datetime
 
 import main
 from modules.interpreter import Interpreter
-from modules.utils import (END_SAY, GLOBAL_DATA, MARK_TODO, PATTERN_EMPTY_LINE,
+from modules.utils import (GLOBAL_DATA, MARK_TODO, PATTERN_EMPTY_LINE,
                            PATTERN_IDENTIFIER, PATTERN_NEW, PATTERN_NEW_SAY,
                            PATTERN_OLD, PATTERN_OLD_SAY,
                            RENPY_PROJECT_PARENT_FOLDER, copy_directory,
                            get_file_encoding, print_info, print_warn,
                            validate_renpy_trans_file)
 
+# 标准原译组结束标识符
+END_SAY = '-*- END -*-'
+
 # pylint: disable=invalid-name
-_input_abspath = GLOBAL_DATA['rpy_trans_input_abspath']
-_output_abspath = ''
+__input_abspath = GLOBAL_DATA['rpy_trans_input_abspath']
+__output_abspath = ''
 
 # 是否覆盖所有译文
-_rewrite_all = False
+__rewrite_all = False
 
 # 是否覆盖TODO译文
-_rewrite_todo = False
+__rewrite_todo = False
 
 # 翻译器实例
-_interpreter = None
+__interpreter = None
 
 # 当前renpy项目名称
-curr_renpy_project_name = 'Test_v0.1'
+__curr_renpy_project_name = 'Test_v0.1'
 # 当前renpy项目的绝对路径
-curr_renpy_project_abspath = os.path.join(
-    RENPY_PROJECT_PARENT_FOLDER, curr_renpy_project_name
+__curr_renpy_project_path = os.path.join(
+    RENPY_PROJECT_PARENT_FOLDER, __curr_renpy_project_name
 )
 
 
-def walk_file():
+def start():
+    '''
+    翻译文本模式
+    '''
+
+    print(
+        r'''
+===========================================================================================
+                                  Ren'Py 翻译文本机翻工具
+                                      作者：Phoenix
+                                      版权归作者所有
+                            PS：本工具所有操作均不会影响原文件！
+===========================================================================================
+'''
+    )
+
+    # 选择操作选项
+    __select_serial_num()
+
+    # 输入待处理对象路径
+    __input_path()
+
+    global __interpreter, __rewrite_all, __rewrite_todo
+
+    __interpreter = Interpreter()
+
+    # 是否开启覆盖所有译文
+    __rewrite_all = __rewrite_all()
+
+    # 如果不覆盖所有译文，再询问是否开启覆盖TODO译文
+    if not __rewrite_all:
+        __rewrite_todo = __rewrite_todo()
+
+    __walk_file()
+    print_info('翻译已全部完成，请前往原路径查看翻译文本！')
+    sys.exit()
+
+
+def __walk_file():
     '''
     遍历文件夹内所有内容
     '''
 
-    if os.path.isfile(_input_abspath):
+    if os.path.isfile(__input_abspath):
         # 跳过非renPy翻译文本
-        if not validate_renpy_trans_file(_input_abspath):
+        if not validate_renpy_trans_file(__input_abspath):
             return
 
-        root, f = os.path.split(_input_abspath)
+        root, f = os.path.split(__input_abspath)
         print(f'当前翻译文本：{f}')
-        process_file(_input_abspath, _output_abspath, f)
+        __process_file(__input_abspath, __output_abspath, f)
         return
 
-    for root, dirs, files in os.walk(_input_abspath, topdown=False):
+    for root, dirs, files in os.walk(__input_abspath, topdown=False):
 
         # 新文件目录
-        relative_path = os.path.relpath(root, _input_abspath)
+        relative_path = os.path.relpath(root, __input_abspath)
         new_path = (
-            _output_abspath
+            __output_abspath
             if relative_path == '.'
-            else os.path.join(_output_abspath, relative_path)
+            else os.path.join(__output_abspath, relative_path)
         )
         # 若新目录不存在，创建它
         if not os.path.exists(new_path):
@@ -85,10 +126,10 @@ def walk_file():
                 continue
 
             print(f'当前翻译文本：{f}')
-            process_file(in_path, out_path, f)
+            __process_file(in_path, out_path, f)
 
 
-def process_file(old_path: str, new_path: str, filename: str):
+def __process_file(old_path: str, new_path: str, filename: str):
     '''
     读取文本、翻译并写入
     '''
@@ -135,7 +176,7 @@ def process_file(old_path: str, new_path: str, filename: str):
             if _who == 'voice':
                 continue
 
-            # 跳过空原文
+            # rpy翻译文件原文本质上是注释，有些rpy翻译文件因一些原因删除了原文注释，所以原文say为空，表明找不到原文注释，这种情况无法获取原文进行翻译，只能跳过
             if _old_say.strip() == '':
                 continue
 
@@ -152,10 +193,10 @@ def process_file(old_path: str, new_path: str, filename: str):
             original_new_say = new_say_match.group(2)
             if (
                 original_new_say != ''  # 当译文不为空
-                and not _rewrite_all  # 当未启用覆盖所有译文
+                and not __rewrite_all  # 当未启用覆盖所有译文
                 and original_new_say.upper() != MARK_TODO  # 当译文不为TODO
                 and (
-                    not _rewrite_todo  # 当未启用覆盖TODO译文
+                    not __rewrite_todo  # 当未启用覆盖TODO译文
                     or not original_new_say.upper().startswith(
                         MARK_TODO
                     )  # 或当译文开头不为TODO
@@ -186,10 +227,10 @@ def process_file(old_path: str, new_path: str, filename: str):
             original_new = new_match.group(1)  # 译文
             if (
                 original_new != ''  # 当译文不为空
-                and not _rewrite_all  # 当未启用覆盖所有译文
+                and not __rewrite_all  # 当未启用覆盖所有译文
                 and original_new.upper() != MARK_TODO  # 当译文不为TODO
                 and (
-                    not _rewrite_todo  # 当未启用覆盖TODO译文
+                    not __rewrite_todo  # 当未启用覆盖TODO译文
                     or not original_new.upper().startswith(
                         MARK_TODO
                     )  # 或当译文开头不为TODO
@@ -215,7 +256,8 @@ def process_file(old_path: str, new_path: str, filename: str):
         # 待翻文本
         tmp_translate_txts[key] = value = translate_txts[key]
         # 翻译文本
-        translated = _interpreter.translate_txt(
+        # 虽然翻译接口大多支持一次翻译多条文本，但存在翻译失败，个别文本丢失的情况，无法保证传入的文本和传回的结果对上号，所以这里还是一条文本发起一次请求
+        translated = __interpreter.translate_txt(
             value['src'], activate_context='1', open_todo=GLOBAL_DATA['open_todo']
         )
         tmp_translate_txts[key]['dst'] = translated
@@ -243,28 +285,28 @@ def process_file(old_path: str, new_path: str, filename: str):
     print_info(f'{filename} 翻译完成！\n')
 
 
-def input_path(first_select=True):
+def __input_path(first_select=True):
     '''
     输入待翻文件/文件夹的绝对路径
     '''
 
-    global _input_abspath, _output_abspath
+    global __input_abspath, __output_abspath
 
-    #用户输入内容
+    # 用户输入内容
     _inp = ''
     # 首次输入路径
     if first_select:
-        if _input_abspath:
+        if __input_abspath:
             print_info('正在验证默认路径……')
             # 若路径不存在，则重新手动输入
-            if not os.path.exists(_input_abspath):
+            if not os.path.exists(__input_abspath):
                 print_warn('config.ini配置的翻译文本路径不存在！请手动输入路径！\n')
-                _input_abspath = ''
-                input_path(False)
+                __input_abspath = ''
+                __input_path(False)
                 return
 
-            _input_abspath, _output_abspath = verify_path(
-                _input_abspath, _output_abspath
+            __input_abspath, __output_abspath = __verify_path(
+                __input_abspath, __output_abspath
             )
             return
         _inp = input('请输入翻译文本的绝对路径或回车关闭程序：').strip()
@@ -278,12 +320,12 @@ def input_path(first_select=True):
     _inp = os.path.normpath(_inp)
     # 若路径不存在，重新输入
     if not os.path.exists(_inp):
-        input_path(False)
+        __input_path(False)
         return
-    _input_abspath, _output_abspath = verify_path(_inp, _output_abspath)
+    __input_abspath, __output_abspath = __verify_path(_inp, __output_abspath)
 
 
-def verify_path(input_abspath: str, output_abspath: str) -> tuple:
+def __verify_path(input_abspath: str, output_abspath: str) -> tuple:
     '''
     验证原路径和目标路径是否正确
 
@@ -320,7 +362,7 @@ def verify_path(input_abspath: str, output_abspath: str) -> tuple:
     return input_abspath, output_abspath
 
 
-def is_rewrite_all() -> bool:
+def __rewrite_all() -> bool:
     '''
     是否覆盖所有译文。如果提取翻译文本未勾选“为翻译生成空字串”，则务必选择覆盖写入
     '''
@@ -338,7 +380,7 @@ def is_rewrite_all() -> bool:
     return False
 
 
-def is_rewrite_todo() -> bool:
+def __rewrite_todo() -> bool:
     '''
     是否覆盖TODO译文
     '''
@@ -354,7 +396,7 @@ def is_rewrite_todo() -> bool:
     return False
 
 
-def _select_serial_num(serial_num='', first_select=True):
+def __select_serial_num(serial_num='', first_select=True):
     '''
     输入序号选择对应的操作
 
@@ -385,42 +427,4 @@ def _select_serial_num(serial_num='', first_select=True):
         case '1':
             return
         case _:
-            _select_serial_num(_inp, False)
-
-
-def start():
-    '''
-    翻译文本模式
-    '''
-
-    print(
-        r'''
-===========================================================================================
-                                  Ren'Py 翻译文本机翻工具
-                                      作者：Phoenix
-                                      版权归作者所有
-                            PS：本工具所有操作均不会影响原文件！
-===========================================================================================
-'''
-    )
-
-    # 选择操作选项
-    _select_serial_num()
-
-    # 输入待处理对象路径
-    input_path()
-
-    global _interpreter, _rewrite_all, _rewrite_todo
-
-    _interpreter = Interpreter()
-
-    # 是否开启覆盖所有译文
-    _rewrite_all = is_rewrite_all()
-
-    # 如果不覆盖所有译文，再询问是否开启覆盖TODO译文
-    if not _rewrite_all:
-        _rewrite_todo = is_rewrite_todo()
-
-    walk_file()
-    print_info('翻译已全部完成，请前往原路径查看翻译文本！')
-    sys.exit()
+            __select_serial_num(_inp, False)

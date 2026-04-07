@@ -114,13 +114,11 @@ EXTRACT = 'EXTRACT'
 WRITEIN = 'WRITEIN'
 
 # json更新标记
-KEY_PHOENIX = '__Phoenix__'
+KEY_PHOENIX = '__PHOENIX__'
 
-KEY_MARK1 = '=====*'
-KEY_MARK2 = '*====='
+# JSON翻译文本中标记当前率属于的文件名
+TRANSLATED_FILE_MARK = '<==M==A==R==K==> '
 
-# rpy中标准原译组结束标识符
-END_SAY = '-*- END -*-'
 # 正则：匹配空行
 PATTERN_EMPTY_LINE = re.compile(r'^\s*$')
 # 正则：匹配rpy的文本标识符行
@@ -605,15 +603,15 @@ def remove_escape(txt: str) -> str:
     return txt
 
 
-def change_phoenix_mark(datas=None, mark=False):
+def update_phoenix_mark(datas=None, update=False):
     '''
-    切换更新标记
+    切换JSON文本更新标记
     '''
 
     if datas is None or not isinstance(datas, dict) or KEY_PHOENIX not in datas:
         return
 
-    datas[KEY_PHOENIX] = mark
+    datas[KEY_PHOENIX] = update
 
 
 def switch_change_mark(base=False, change=False) -> bool:
@@ -840,7 +838,7 @@ def write_config(section: str, keys=None, add=True) -> bool:
             conf.set(section, key, item)
         else:
             conf.remove_option(section, key)
-    
+
     copy_file(CONFIG_ABSPATH, BASE_ABSPATH)
     with open(CONFIG_ABSPATH, 'w', encoding=get_file_encoding(CONFIG_ABSPATH)) as f:
         conf.write(f)
@@ -953,4 +951,6 @@ def get_config():
     GLOBAL_DATA['hunyuan_mt'] = conf.getboolean('hunyuan_mt', 'activate')
 
 
-TRANSLATED_LIB_LIBRARY = read_json(os.path.join(BASE_ABSPATH, 'libraries', TRANSLATED_LIB_LIBRARY_FILE))
+TRANSLATED_LIB_LIBRARY = read_json(
+    os.path.join(BASE_ABSPATH, 'libraries', TRANSLATED_LIB_LIBRARY_FILE)
+)

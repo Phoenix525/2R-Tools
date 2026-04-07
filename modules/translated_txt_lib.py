@@ -16,35 +16,51 @@ from modules.utils import (BASE_ABSPATH, PATTERN_EMPTY_LINE,
                            PATTERN_OLD, PATTERN_OLD_SAY,
                            TRANSLATED_LIB_LIBRARY, TRANSLATED_LIB_LIBRARY_FILE,
                            get_file_encoding, merge_dicts, print_info,
-                           print_warn, read_json, validate_renpy_trans_file,
-                           write_json)
+                           read_json, validate_renpy_trans_file, write_json)
 
-_WAITING_FOR_ENTRY = os.path.join(BASE_ABSPATH, 'waiting-for-entry')
+__WAITING_FOR_ENTRY = os.path.join(BASE_ABSPATH, 'waiting-for-entry')
 
-_txt_library_cache = None
+__txt_library_cache = None
 
 
-def walk_file():
+def start():
+
+    print(
+        r'''
+===========================================================================================
+                                  rpy/json 写入译文库工具
+                                      作者：Phoenix
+                                      版权归作者所有
+===========================================================================================
+'''
+    )
+
+    __select_serial_num()
+
+    sys.exit()
+
+
+def __walk_file():
     '''
     遍历文件夹内所有文件
     '''
 
     # 如果文件夹不存在，新建一个
-    if not os.path.exists(_WAITING_FOR_ENTRY):
+    if not os.path.exists(__WAITING_FOR_ENTRY):
         print('无待录入文本，译文库无需更新！')
-        os.makedirs(_WAITING_FOR_ENTRY)
+        os.makedirs(__WAITING_FOR_ENTRY)
         return
 
     print('正在更新译文库……\n')
-    global _txt_library_cache
-    for root, dirs, files in os.walk(_WAITING_FOR_ENTRY, topdown=False):
+    global __txt_library_cache
+    for root, dirs, files in os.walk(__WAITING_FOR_ENTRY, topdown=False):
         # 遍历所有文件
         for _file in files:
             _file_path = os.path.join(root, _file)
             # 扫描renpy翻译文件
             if validate_renpy_trans_file(_file_path):
                 print(f'当前扫描文本：{_file}')
-                scanning_rpy_file(root, _file, _txt_library_cache, True)
+                __scanning_rpy_file(root, _file, __txt_library_cache, True)
                 print(f'{_file} 扫描完成！\n')
                 continue
 
@@ -52,22 +68,22 @@ def walk_file():
             json_datas = read_json(_file_path)
             if json_datas is not None:
                 print(f'当前扫描文本：{_file}')
-                _txt_library_cache = merge_dicts(_txt_library_cache, json_datas)
+                __txt_library_cache = merge_dicts(__txt_library_cache, json_datas)
                 print(f'{_file} 扫描完成！\n')
 
     if (
-        _txt_library_cache is None
-        or not isinstance(_txt_library_cache, dict)
-        or len(_txt_library_cache) < 2
+        __txt_library_cache is None
+        or not isinstance(__txt_library_cache, dict)
+        or len(__txt_library_cache) < 2
     ):
         print_info(f'待录入文本为空，译文库无需更新！')
         return
 
-    write_translib()
+    __write_translib()
     print_info('译文库已完成更新！')
 
 
-def scanning_rpy_file(
+def __scanning_rpy_file(
     file_path: str, filename: str, txt_libraries=None, rewrite=False
 ) -> dict:
     '''
@@ -153,12 +169,12 @@ def scanning_rpy_file(
             _old_say = ''
 
 
-def write_translib():
+def __write_translib():
     '''
     写入译文库
     '''
     translated_txt_lib = copy.deepcopy(TRANSLATED_LIB_LIBRARY)
-    for k, v in _txt_library_cache.items():
+    for k, v in __txt_library_cache.items():
         # 如果缓存库查询到的键或值不是字串，为错误数据，跳过以屏蔽
         if not isinstance(k, str) or not isinstance(v, str):
             continue
@@ -177,7 +193,7 @@ def write_translib():
     )
 
 
-def _select_serial_num(serial_num='', first_select=True):
+def __select_serial_num(serial_num='', first_select=True):
     '''
     输入序号选择对应的操作
 
@@ -207,7 +223,7 @@ def _select_serial_num(serial_num='', first_select=True):
         case '0':
             main.start_main()
         case '1':
-            walk_file()
+            __walk_file()
         case '2':
             _file1 = input('\n请输入原文本库路径：').strip()
             _file2 = input('\n请输入新文本库路径：').strip()
@@ -224,21 +240,4 @@ def _select_serial_num(serial_num='', first_select=True):
             )
             print('JSON文本已完成更新！')
         case _:
-            _select_serial_num(_inp, False)
-
-
-def start():
-
-    print(
-        r'''
-===========================================================================================
-                                  rpy/json 写入译文库工具
-                                      作者：Phoenix
-                                      版权归作者所有
-===========================================================================================
-'''
-    )
-
-    _select_serial_num()
-
-    sys.exit()
+            __select_serial_num(_inp, False)

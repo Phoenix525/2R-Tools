@@ -23,7 +23,7 @@ class BaiduTranslation(BaseTranslation):
     不包含词典、tts语音合成等资源，如有相关需求请联系translate_api@baidu.com
     '''
 
-    def __init__(self, *, section='baidu'):
+    def __init__(self, section='baidu'):
 
         BaseTranslation.__init__(
             self,
@@ -52,7 +52,8 @@ class BaiduTranslation(BaseTranslation):
         # 源文本语种
         from_lang = kwargs.get('from_lang', 'auto')
         # 校验文本及语种是否符合要求，不符合则直接返回空值
-        if not self.check_text_and_lang(source_txt, from_lang, to_lang):
+        from_lang = self.check_text_and_lang(source_txt, from_lang, to_lang)
+        if not from_lang:
             return ''
 
         salt = randint(32768, 65536)
@@ -108,7 +109,7 @@ class BaiduTranslation(BaseTranslation):
                 if err_code in ('52002', '54003') and attempt < retry - 1:
                     print_err(f'错误代码：{err_code}，报错信息：{err_msg}')
                     # 指数退避
-                    wait = 1.5**attempt
+                    wait = 2**attempt
                     print_info(f"{wait}秒后重试……")
                     time.sleep(wait)
                 else:
@@ -204,7 +205,7 @@ _BAIDU_ERROR_CODES = {
     '90107': '认证未通过或未生效！请前往我的认证查看认证进度。',
 }
 
-# 所有支持的语种简写表
+# 常见语种简写表
 _BAIDU_COMMON_LANGS = (
     'auto',
     'zh',
@@ -237,7 +238,7 @@ _BAIDU_COMMON_LANGS = (
     'swe',
 )
 
-# 常见源语种表
+# 常见源语种表，更多语种支持需要更高级的认证
 _BAIDU_FROM_LANGS = (
     ('自动检测', 'auto'),
     ('中文', 'zh'),

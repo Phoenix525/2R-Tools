@@ -9,7 +9,7 @@
 import time
 
 from modules.exception.tool_exception import ToolException
-from modules.utils import print_err
+from modules.utils import check_langs, print_err
 
 
 class BaseTranslation(object):
@@ -75,40 +75,51 @@ class BaseTranslation(object):
         '''
         return self._activated
 
-    def check_text_and_lang(self, source_txt, from_lang='', to_lang='') -> bool:
+    def check_text_and_lang(self, source_txt, from_lang='', to_lang='') -> str:
         '''
         校验文本长度、源语种和目标语种是否符合API要求
+        传入的源语种不在支持范围内，会尝试通过文本识别语种，再校验一次
+        如果校验不通过，会返回空值，校验通过，返回from_lang
 
         :param source_txt: 待翻译文本
         :param from_lang: 源语种
         :param to_lang: 目标语种
         '''
 
-        def _check():
-            # 当源语言不在受支持的语种范围内时，手动抛出异常
-            if from_lang not in self.__api_comment_langs:
-                raise ToolException(
-                    'TranslationAPIErr', '传入的源语言语种不在受支持的语种范围内！'
-                )
+        try:
+            # 当目标语种等于源语种时，手动抛出异常
+            if to_lang.casefold() == from_lang.casefold():
+                raise ToolException('TranslationAPIErr', '传入的目标语种和源语种相同！')
+
+            # 当源语言不在受支持的语种范围内时
+            if not any(
+                lang.casefold() == from_lang.casefold()
+                for lang in self.__api_comment_langs
+            ):
+                # 尝试获取源文本语种，然后再次判断，若依旧不符合，手动抛出异常
+                from_lang = check_langs(source_txt)
+                if not any(
+                    lang.casefold() == from_lang.casefold()
+                    for lang in self.__api_comment_langs
+                ):
+                    raise ToolException(
+                        'TranslationAPIErr', '源语言语种不在受支持的语种范围内！'
+                    )
 
             # 当源语言不在受支持的语种范围内时，手动抛出异常
-            if to_lang not in self.__api_comment_langs:
+            if not any(
+                lang.casefold() == to_lang.casefold()
+                for lang in self.__api_comment_langs
+            ):
                 raise ToolException(
                     'TranslationAPIErr', '传入的目标语言语种不在受支持的语种范围内！'
                 )
 
-            # 当目标语种等于源语种时，手动抛出异常
-            if to_lang == from_lang:
-                raise ToolException('TranslationAPIErr', '传入的目标语种和源语种相同！')
-            
             # 原文本长度超过API限制
             if isinstance(source_txt, str) and len(source_txt) > self._max_char:
                 raise ToolException('TranslationAPIErr', '文本长度超过翻译引擎限制！')
-        
-        try:
-            _check()
         except ToolException as e:
+            from_lang = ''
             print_err(str(e))
-            return False
-        else:
-            return True
+        finally:
+            return from_lang

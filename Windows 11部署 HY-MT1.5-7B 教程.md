@@ -26,7 +26,7 @@
 # 开始部署
 ## 创建虚拟环境
 
-虚拟Python环境是个好东西，能隔离不同项目的依赖，避免版本冲突。
+虚拟Python环境是个好东西，能隔离不同项目的依赖，避免版本冲突。如果不使用虚拟环境，此步可省略。
 
 1. 打开Powershell窗口，后续操作大部分都要在这个窗口中运行。
 2. 创建虚拟环境：
@@ -107,7 +107,7 @@ PyTorch是运行大模型的基础框架，安装时要注意选对CUDA版本。
     print(f"模型下载到: {model_dir}")
     ```
 
-    在命令行窗口中执行py文件下载模型。
+    在命令行窗口中执行py文件下载模型，下载过程中请勿关闭命令行窗口。
     ```Powershell
     # 下载模型
     (2rtools) PS C:\Users\xxx\Desktop>python download.py
@@ -119,7 +119,7 @@ PyTorch是运行大模型的基础框架，安装时要注意选对CUDA版本。
     # 安装ModelScope
     (2rtools) PS C:\Users\xxx\Desktop>pip install modelscope
 
-    # 下载模型
+    # 下载模型，下载过程中请勿关闭命令行窗口
     (2rtools) PS C:\Users\xxx\Desktop>python -c "from modelscope import snapshot_download; snapshot_download('Tencent-Hunyuan/Hunyuan-MT-7B', cache_dir='./models')"
     ```
 
