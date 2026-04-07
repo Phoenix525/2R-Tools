@@ -205,7 +205,7 @@
     "Could not verify update signature.": "无法验证更新签名。",
     "The update file was not downloaded.": "更新文件未能下载。",
     "The update file does not have the correct digest - it may have been corrupted.": "更新文件校验失败。文件可能已损坏。",
-    "While unpacking {}, unknown type {}.": "解压 {} 时出现未知错误 {}。",
+    "While unpacking {}, unknown type {}.": "解压 {} 时出现错误 {}。",
     "Updater": "更新器",
     "An error has occured:": "发生错误：",
     "Checking for updates.": "正在检查更新：",
