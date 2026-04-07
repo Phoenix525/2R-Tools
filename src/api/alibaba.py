@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import json
 import time
 
 from alibabacloud_alimt20181012 import models as alimt_20181012_models
@@ -11,14 +10,13 @@ from alibabacloud_credentials.client import Client as CredentialClient
 from alibabacloud_tea_openapi import models as open_api_models
 from alibabacloud_tea_util import models as util_models
 
-from modules.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
-from modules.exception.tool_exception import ToolException
-from modules.translation_api.base_translation import BaseTranslation
-from modules.utils import (
+from src.utils.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
+from src.exception.tool_exception import ToolException
+from src.api.base_translation import BaseTranslation
+from src.utils.utils import (
     acquire_token,
     get_password_with_star,
     is_letters_and_digits,
-    print_debug,
     print_err,
     print_info,
     read_config,

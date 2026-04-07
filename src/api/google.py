@@ -3,8 +3,8 @@
 
 import google_trans_new
 
-from modules.translation_api.base_translation import BaseTranslation
-from modules.utils import (
+from src.api.base_translation import BaseTranslation
+from src.utils.utils import (
     acquire_token,
     enpun_2_zhpun,
     print_err,

@@ -9,13 +9,13 @@ import os
 import sys
 
 import main
-from modules.interpreter import Interpreter
-from modules.utils import (
+from src.core.interpreter import Interpreter
+from src.utils.utils import (
     GLOBAL_DATA,
     KEY_PHOENIX,
     MARK_TODO,
     RPGM_PROJECT_PARENT_FOLDER,
-    matching_langs,
+    match_lang,
     print_info,
     print_warn,
     read_json,
@@ -43,15 +43,13 @@ def start(project_name: str):
     __curr_rpgm_project_name = project_name
     __curr_rpgm_project_path = os.path.join(RPGM_PROJECT_PARENT_FOLDER, project_name)
 
-    print(
-        """
+    print("""
 ===========================================================================================
                                    JSON文本机翻工具
                                       作者：Phoenix
                                       版权归作者所有
 ===========================================================================================
-"""
-    )
+""")
 
     __select_serial_num()
 
@@ -101,7 +99,7 @@ def __translate(_filter=""):
         txt = k.split("_")[-1]
 
         # 过滤指定语种文本
-        if not matching_langs(txt, _filter):
+        if not match_lang(txt, _filter):
             continue
 
         __game_txt_cache[k] = __interpreter.translate_txt(txt)
@@ -137,7 +135,7 @@ def __add_todo(_filter=""):
             continue
 
         # 若传入_filter，则只处理指定的语种
-        if not matching_langs(k.split("_")[-1], _filter):
+        if not match_lang(k.split("_")[-1], _filter):
             continue
 
         _count += 1
@@ -178,7 +176,7 @@ def __add_pass(_filter="ru"):
         if v != "":
             continue
         # 处理指定语种
-        if not matching_langs(k.split("_")[-1], _filter):
+        if not match_lang(k.split("_")[-1], _filter):
             continue
 
         _count += 1
@@ -244,13 +242,11 @@ def __select_serial_num(serial_num="", first_select=True):
     _inp = ""
     # 首次进入选项
     if first_select:
-        print(
-            f"""1) 翻译JSON文本
+        print(f"""1) 翻译JSON文本
 2) 检索值为空的字段，并添加{MARK_TODO}
 3) 检索指定语种字段，并添加{GLOBAL_DATA["pass_filter"][0]}
 0) 返回上一级
-"""
-        )
+""")
         _inp = input("请输入要操作的序号或回车退出程序：").strip()
     else:
         _inp = input(

@@ -7,8 +7,8 @@
 
 import time
 
-from modules.exception.tool_exception import ToolException
-from modules.utils import check_langs, print_err
+from src.exception.tool_exception import ToolException
+from src.utils.utils import print_err, validate_lang
 
 
 class BaseTranslation(object):
@@ -96,7 +96,7 @@ class BaseTranslation(object):
                 for lang in self.__api_comment_langs
             ):
                 # 尝试获取源文本语种，然后再次判断，若依旧不符合，手动抛出异常
-                from_lang = check_langs(source_txt)
+                from_lang = validate_lang(source_txt)
                 if not any(
                     lang.casefold() == from_lang.casefold()
                     for lang in self.__api_comment_langs

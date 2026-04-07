@@ -16,9 +16,9 @@ from tencentcloud.common.profile.http_profile import HttpProfile
 # 导入对应产品模块的client models
 from tencentcloud.tmt.v20180321 import models, tmt_client
 
-from modules.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
-from modules.translation_api.base_translation import BaseTranslation
-from modules.utils import (
+from src.utils.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
+from src.api.base_translation import BaseTranslation
+from src.utils.utils import (
     acquire_token,
     enpun_2_zhpun,
     get_password_with_star,

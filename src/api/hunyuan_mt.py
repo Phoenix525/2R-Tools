@@ -7,9 +7,15 @@ import time
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
-from modules.exception.tool_exception import ToolException
-from modules.translation_api.base_translation import BaseTranslation
-from modules.utils import print_err, print_info, print_warn, read_config, remove_escape
+from src.exception.tool_exception import ToolException
+from src.api.base_translation import BaseTranslation
+from src.utils.utils import (
+    print_err,
+    print_info,
+    print_warn,
+    read_config,
+    remove_escape,
+)
 
 # 量化加载类型
 FLAGS = {

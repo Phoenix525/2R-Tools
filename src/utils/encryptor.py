@@ -6,7 +6,7 @@ import hashlib
 
 from cryptography.fernet import Fernet
 
-from modules.utils import GLOBAL_DATA, print_debug, print_err, write_config
+from src.utils.utils import GLOBAL_DATA, print_debug, print_err, write_config
 
 
 class SimpleAPIKeyEncryptor:

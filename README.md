@@ -8,20 +8,17 @@
 - windows 11操作系统；
 - Python 3.10+；
 
-## 项目结构
-- libraries文件夹：译文库。
+## 翻译项目结构
+- Translated Libraries文件夹：译文库。
 	- rpgmz_default_library.json：RPG Maker MZ引擎初始简中译文。
 	- rpgmv_default_library.json：RPG Maker MV引擎初始简中译文。
 	- rpgvxace_default_library.json：RPG Maker VX Ace引擎初始简中译文。
 	- TransLib.json：本地译文库（暂时不支持区分语种）。可以通过工具进行扩充，适用于所有游戏引擎的文本翻译。译文库不宜储存存在多含义的文本，这可能会导致翻译文本词不达意。在提取待翻文本或进行文本翻译时，工具会先在本地译文库中查找。
 	- gameText.json：RPGM游戏旧版本翻译文件（暂时不支持区分语种）。在提取RPGM游戏翻译文本时，工具会扫描该文件，若存在结果，则会覆盖从TransLib.json中获取的译文，并录入新的翻译文本中。
-- modules文件夹：程序代码。
 - RPGM Workspace文件夹：RPGM项目工作区。用于存放和管理翻译文件。
 - RPGM Data Input文件夹：存放RPGM的初始json代码文件。
 - RPGM Data Output文件夹：存放RPGM的新生成json代码文件。
 - waiting-for-entry文件夹：放置json和rpy翻译文件，用于将翻译数据写入TransLib.json译文库。
-- config.ini是工具默认设置及API接口通行证配置文件。
-- main.py是工具的启动程序。
   
 ## 内置翻译引擎
 - 本地AI翻译（需自行部署环境及下载模型）：
@@ -72,8 +69,8 @@
 3. 执行main.py启动程序：
    - 项目未配置conda虚拟环境：
 		```Powershell
-		# 安装项目所使用的依赖
-		# 注意先将torch所依赖cuda版本130修改成本机的cuda版本。例torch==2.11.0+cuda121
+		# 安装项目依赖
+		# 注意先将requirements.txt中torch所依赖cuda版本130修改成本机的cuda版本。例torch==2.11.0+cuda121
 		PS D:\2R-Tools>pip install -r requirements.txt
 
 		# 启动工具
@@ -84,8 +81,8 @@
 		# 激活虚拟环境：2rtools
 		(base) PS D:\2R-Tools>conda activate 2rtools
 		
-		# 安装项目所使用的依赖
-		# 注意先将torch所依赖cuda版本130修改成本机的cuda版本。例torch==2.11.0+cuda121
+		# 安装项目依赖
+		# 注意先将requirements.txt中torch所依赖cuda版本130修改成本机的cuda版本。例torch==2.11.0+cuda121
 		(2rtools) PS D:\2R-Tools>pip install -r requirements.txt
 
 		# 启动工具

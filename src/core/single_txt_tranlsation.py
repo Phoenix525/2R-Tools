@@ -9,7 +9,7 @@ Ren'Py翻译文本机器翻译工具
 import sys
 
 import main
-from modules.interpreter import Interpreter
+from src.core.interpreter import Interpreter
 
 # pylint: disable=invalid-name
 __interpreter = None  # 翻译器实例
@@ -20,15 +20,13 @@ def start():
     翻译单条语句模式
     """
 
-    print(
-        """
+    print("""
 ===========================================================================================
                                        机器翻译工具
                                       作者：Phoenix
                                       版权归作者所有
 ===========================================================================================
-"""
-    )
+""")
 
     __select_serial_num()
 
@@ -74,11 +72,9 @@ def __select_serial_num(serial_num="", first_select=True):
     _inp = ""
     # 首次进入选项
     if first_select:
-        print(
-            """1) 翻译文本
+        print("""1) 翻译文本
 0) 返回上一级
-"""
-        )
+""")
         _inp = input("请输入要操作的序号或回车退出程序：").strip()
     else:
         _inp = input(

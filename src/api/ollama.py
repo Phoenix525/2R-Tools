@@ -3,9 +3,9 @@
 
 from ollama import ChatResponse, chat
 
-from modules.exception.tool_exception import ToolException
-from modules.translation_api.base_translation import BaseTranslation
-from modules.utils import print_err, read_config, remove_escape
+from src.exception.tool_exception import ToolException
+from src.api.base_translation import BaseTranslation
+from src.utils.utils import print_err, read_config, remove_escape
 
 
 class OllamaTranslation(BaseTranslation):

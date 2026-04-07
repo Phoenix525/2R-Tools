@@ -24,9 +24,9 @@ from hashlib import md5
 from itertools import cycle
 
 import chardet
-import langid
+import py3langid
 
-from modules.exception.tool_exception import ToolException
+from src.exception.tool_exception import ToolException
 
 
 def print_debug(value: str):
@@ -91,9 +91,14 @@ GLOBAL_DATA = {
 
 # 项目所在绝对路径
 BASE_ABSPATH = os.path.abspath(".")
+# 项目代码绝对路径
+SRC_ABSPATH = os.path.join(BASE_ABSPATH, "src")
 
 # 配置文件绝对路径
 CONFIG_ABSPATH = os.path.join(BASE_ABSPATH, "config.ini")
+
+# rpgm项目工作区的绝对路径
+RPGM_PROJECT_PARENT_FOLDER = os.path.join(BASE_ABSPATH, "RPGM Workspace")
 
 # renpy项目工作区的绝对路径
 RENPY_PROJECT_PARENT_FOLDER = os.path.join(BASE_ABSPATH, "RenPy Workspace")
@@ -135,12 +140,8 @@ PATTERN_NEW_SAY = re.compile(r'(?!\s*#+)\s*(".*?[^\\]"|[\S\s]*?)\s*"(.*)"\s*(.*)
 PATTERN_WHO = re.compile(r'^"(.*?[^\\])"')
 # 正则：匹配注释符号
 PATTERN_ANNOTATION = re.compile(r"^\s*#\s*")
-
 # 正则：匹配rpg的Mapxxx.json文件
 PATTERN_MAP = re.compile(r"^Map\d{3}$")
-
-# rpgm项目工作区的绝对路径
-RPGM_PROJECT_PARENT_FOLDER = os.path.join(BASE_ABSPATH, "RPGM Workspace")
 
 
 def get_md5(parm_str: any, cut=False) -> str:
@@ -405,7 +406,7 @@ def is_letters_and_digits(val="") -> bool:
     return bool(re.fullmatch(r"^[A-Za-z0-9]+$", val))
 
 
-def check_langs(txt: str) -> str:
+def validate_lang(txt: str) -> str:
     """
     检测语言，查询结果参考ISO 639-1语言编码标准
     """
@@ -413,11 +414,10 @@ def check_langs(txt: str) -> str:
     if txt.strip() == "":
         return "en"
 
-    return langid.classify(txt)[0]
-    # return detect(txt, low_memory=False).lang
+    return py3langid.classify(txt)[0]
 
 
-def matching_langs(txt: str, langs: str) -> bool:
+def match_lang(txt: str, langs: str) -> bool:
     """
     匹配符合指定列表中语种的文本。匹配返回True，反之返回False。
     由于语言检测程序的限制，此方法存在一定误差。
@@ -446,7 +446,7 @@ def matching_langs(txt: str, langs: str) -> bool:
             continue
 
         try:
-            if langid.classify(txt)[0] == lang:
+            if py3langid.classify(txt)[0] == lang:
                 # if detect(txt, low_memory=False).lang == lang:
                 return True
         except Exception:
@@ -507,8 +507,8 @@ def zhpun_2_enpun(txt: str) -> str:
     """
 
     # 处理常用标点符号
-    chs_pun = "，。！？：；【】（）《》“”‘’"
-    en_pun = ",.!?:;[]()<>\"\"''"
+    chs_pun = "，。！？：；（）【】《》`“”‘’"
+    en_pun = ",.!?:;()[]<>·\"\"''"
     trantab = str.maketrans(chs_pun, en_pun)
     txt = txt.translate(trantab)
     return txt
@@ -952,5 +952,5 @@ def get_config():
 
 
 TRANSLATED_LIB_LIBRARY = read_json(
-    os.path.join(BASE_ABSPATH, "libraries", TRANSLATED_LIB_LIBRARY_FILE)
+    os.path.join(BASE_ABSPATH, "Translated Libraries", TRANSLATED_LIB_LIBRARY_FILE)
 )

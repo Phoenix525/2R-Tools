@@ -18,7 +18,7 @@ import sys
 from datetime import datetime
 
 import main
-from modules.utils import (
+from src.utils.utils import (
     GLOBAL_DATA,
     MARK_TODO,
     PATTERN_EMPTY_LINE,
@@ -63,16 +63,14 @@ __curr_renpy_project_path = os.path.join(
 
 def start():
 
-    print(
-        r"""
+    print(r"""
 ===========================================================================================
                                  Ren'Py 翻译文本更新工具
                                       作者：Phoenix
                                       版权归作者所有
                             PS：本工具所有操作均不会影响原文件！
 ===========================================================================================
-"""
-    )
+""")
 
     __select_serial_num()
 
@@ -786,11 +784,9 @@ def __select_serial_num(serial_num="", first_select=True):
     _inp = ""
     # 首次进入选项
     if first_select:
-        print(
-            """1) 更新翻译文本
+        print("""1) 更新翻译文本
 0) 返回上一级
-"""
-        )
+""")
         _inp = input("请输入要操作的序号或回车退出程序：").strip()
     else:
         _inp = input(

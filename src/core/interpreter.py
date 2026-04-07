@@ -10,7 +10,7 @@ import sys
 
 from prettytable import PrettyTable
 
-from modules.utils import (
+from src.utils.utils import (
     GLOBAL_DATA,
     MARK_TODO,
     get_value_from_library,
@@ -226,62 +226,62 @@ class Interpreter:
         match self.__curr_api_name:
             # 腾讯翻译
             case "tencent":
-                from modules.translation_api.tencent import TencentTranslation
+                from src.api.tencent import TencentTranslation
 
                 self.__curr_api = TencentTranslation()
             # 阿里翻译
             case "alibaba":
-                from modules.translation_api.alibaba import ALiBaBaTranslation
+                from src.api.alibaba import ALiBaBaTranslation
 
                 self.__curr_api = ALiBaBaTranslation()
             # 百度翻译
             case "baidu":
-                from modules.translation_api.baidu import BaiduTranslation
+                from src.api.baidu import BaiduTranslation
 
                 self.__curr_api = BaiduTranslation()
             # 彩云小译
             case "caiyun":
-                from modules.translation_api.caiyun import CaiyunTranslation
+                from src.api.caiyun import CaiyunTranslation
 
                 self.__curr_api = CaiyunTranslation()
             # 火山翻译
             case "huoshan":
-                from modules.translation_api.huoshan import HuoshanTranslation
+                from src.api.huoshan import HuoshanTranslation
 
                 self.__curr_api = HuoshanTranslation()
             # 小牛翻译
             case "xiaoniu":
-                from modules.translation_api.xiaoniu import XiaoNiuTranslation
+                from src.api.xiaoniu import XiaoNiuTranslation
 
                 self.__curr_api = XiaoNiuTranslation()
             # 讯飞翻译
             case "xunfei":
-                from modules.translation_api.xunfei import XunFeiTranslation
+                from src.api.xunfei import XunFeiTranslation
 
                 self.__curr_api = XunFeiTranslation()
             # 有道智云
             case "youdao":
-                from modules.translation_api.youdao import YoudaoTranslation
+                from src.api.youdao import YoudaoTranslation
 
                 self.__curr_api = YoudaoTranslation()
             # DeepL翻译
             case "deepL":
-                from modules.translation_api.deepL import DeepLTranslation
+                from src.api.deepL import DeepLTranslation
 
                 self.__curr_api = DeepLTranslation()
             # 谷歌翻译
             case "google":
-                from modules.translation_api.google import GoogleTranslation
+                from src.api.google import GoogleTranslation
 
                 self.__curr_api = GoogleTranslation()
             # Ollama平台
             case "ollama":
-                from modules.translation_api.ollama import OllamaTranslation
+                from src.api.ollama import OllamaTranslation
 
                 self.__curr_api = OllamaTranslation()
             # 腾讯Hunyuan-MT
             case "hunyuan_mt":
-                from modules.translation_api.hunyuan_mt import HunYuanMTTranslation
+                from src.api.hunyuan_mt import HunYuanMTTranslation
 
                 self.__curr_api = HunYuanMTTranslation()
             case _:
@@ -307,8 +307,7 @@ class Interpreter:
         _inp = ""
         # 首次进入选择列表
         if first_select:
-            str_api = """
-===========================================================================================
+            str_api = """===========================================================================================
 翻译引擎列表如下：
 """
             for idx, item in enumerate(APIS):
@@ -319,14 +318,11 @@ class Interpreter:
                 api_titles.append(title)
             print(str_api)
 
-            _inp = input(f"请选择翻译引擎，直接回车默认选1：").strip()
+            _inp = input("请选择翻译引擎，直接回车默认选1：").strip()
             # 如果输入为空，则选择默认引擎
             if _inp == "":
-                print(
-                    f"""
-===========================================================================================
-当前翻译引擎：【{api_titles[0]}】"""
-                )
+                print(f"""===========================================================================================
+当前翻译引擎：【{api_titles[0]}】""")
                 self.__curr_api_name = self.__api_names[0]
                 # 实例化翻译器
                 self.__get_interpreter()
@@ -344,19 +340,16 @@ class Interpreter:
         _serial_inp = to_int(_inp)
         # 若序号不存在，重新选择
         if not validate_index(self.__api_names, _serial_inp, False):
-            self.__select_api_type(False, _serial_inp, api_titles=api_titles)
+            self.__select_api_type(_serial_inp, False, api_titles=api_titles)
             return
 
         # 若翻译引擎未启用则重新选择
         if GLOBAL_DATA[f"{self.__api_names[_serial_inp - 1]}"] is False:
-            self.__select_api_type(False, _serial_inp, api_titles=api_titles)
+            self.__select_api_type(_serial_inp, False, api_titles=api_titles)
             return
 
-        print(
-            f"""
-===========================================================================================
-当前翻译引擎：【{api_titles[_serial_inp - 1]}】"""
-        )
+        print(f"""===========================================================================================
+当前翻译引擎：【{api_titles[_serial_inp - 1]}】""")
 
         self.__curr_api_name = self.__api_names[_serial_inp - 1]
         # 实例化翻译器
@@ -409,11 +402,8 @@ class Interpreter:
             default = 0
             _inp = input(f"请选择目标语种序号，直接回车默认选 {default + 1}：").strip()
             if _inp == "":
-                print(
-                    f"""
-===========================================================================================
-当前目标语种：【{curr_langs[default][0]}】"""
-                )
+                print(f"""===========================================================================================
+当前目标语种：【{curr_langs[default][0]}】""")
                 self._to_lang = curr_langs[default][-1]
                 return
         else:
@@ -429,9 +419,6 @@ class Interpreter:
             self.__select_lang_type(_inp, False, target_langs=target_langs)
             return
 
-        print(
-            f"""
-===========================================================================================
-当前目标语种：【{target_langs[_inp_serial][0]}】"""
-        )
+        print(f"""===========================================================================================
+当前目标语种：【{target_langs[_inp_serial][0]}】""")
         self._to_lang = target_langs[_inp_serial][-1]

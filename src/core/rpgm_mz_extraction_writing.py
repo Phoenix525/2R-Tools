@@ -6,12 +6,12 @@
 """
 
 import os
-import shutil
 import sys
 from datetime import datetime
+from shutil import copy, rmtree
 
 import main
-from modules.utils import (
+from src.utils.utils import (
     BASE_ABSPATH,
     EXTRACT,
     GLOBAL_DATA,
@@ -25,7 +25,7 @@ from modules.utils import (
     WRITEIN,
     del_key_from_dict,
     get_md5,
-    matching_langs,
+    match_lang,
     merge_dicts,
     print_info,
     print_warn,
@@ -35,8 +35,8 @@ from modules.utils import (
     write_json,
 )
 
-# MV引擎默认文本库
-RPGMV_DEFAULT_LIBRARY = "rpgmv_default_library.json"
+# MZ引擎默认文本库
+RPGMZ_DEFAULT_LIBRARY = "rpgmz_default_library.json"
 
 TYPE_COMMONEVENTS = "CommonEvents"
 TYPE_SYSTEM = "System"
@@ -73,13 +73,6 @@ KEY_MESSAGES = "messages"
 # -------- Mapxxx.json --------
 KEY_DISPLAYNAME = "displayName"
 
-# Wicked Rouge
-TYPE_BATTLEHUD = "BattleHUD"
-TYPE_MAPHUD = "MapHUD"
-KEY_TYPE = "type"
-KEY_VALUE = "Value"
-KEY_TYPE_VALUE = "Text"
-
 # pylint: disable=invalid-name
 # 缓存文本
 __game_txt_cache = None
@@ -103,15 +96,13 @@ def start(project_name: str):
     __curr_rpgm_project_name = project_name
     __curr_rpgm_project_path = os.path.join(RPGM_PROJECT_PARENT_FOLDER, project_name)
 
-    print(
-        """
+    print("""
 ===========================================================================================
-                               RPG Maker MV 文本提取写入工具
+                               RPG Maker MZ 文本提取写入工具
                                       作者：Phoenix
                                       版权归作者所有
 ===========================================================================================
-"""
-    )
+""")
 
     __select_serial_num()
 
@@ -136,10 +127,9 @@ def __walk_file(_type: str):
     if not os.path.exists(RPGM_INPUT_ABSPATH):
         os.makedirs(RPGM_INPUT_ABSPATH)
     if os.path.exists(RPGM_OUTPUT_ABSPATH):
-        shutil.rmtree(RPGM_OUTPUT_ABSPATH)
+        rmtree(RPGM_OUTPUT_ABSPATH)
     os.makedirs(RPGM_OUTPUT_ABSPATH)
 
-    # 读取文本库
     if not __read_game_txt(_type):
         return
 
@@ -165,7 +155,7 @@ def __walk_file(_type: str):
             ] and not PATTERN_MAP.match(json_file[:-5]):
                 # 如果当前为写入模式，在新目录拷贝一份该文件
                 if _type == WRITEIN:
-                    shutil.copy(os.path.join(root, json_file), new_path)
+                    copy(os.path.join(root, json_file), new_path)
                 print(f"{json_file} 不在白名单内，已跳过！\n")
                 continue
 
@@ -204,9 +194,6 @@ def __deal_with_json_file(root: str, json_file: str, _type: str, new_path: str):
         _change = __scanning_system(json_datas, _type, filename)
     elif PATTERN_MAP.match(filename):
         _change = __scanning_type_maps(json_datas, _type, filename)
-
-    # elif filename in [TYPE_BATTLEHUD, TYPE_MAPHUD]:
-    #     _change = scanning_wicked_rouge(json_datas, _type)
 
     # 提取模式
     if _type == EXTRACT:
@@ -552,7 +539,7 @@ def __sacnning_common_events(json_datas: list, _type: str) -> bool:
             if (
                 code == 122
                 and isinstance(parameters[4], str)
-                and not any(s in parameters[4] for s in ("$", "."))
+                and not any(s in parameters[4] for s in ["$", "."])
             ):
                 if _type == EXTRACT:
                     _change = switch_change_mark(
@@ -729,21 +716,6 @@ def __scanning_system(json_datas: dict, _type: str, filename: str) -> bool:
             else:
                 json_datas[KEY_SKILLTYPES][idx] = __read_from_cache(skilltype, _loc)
 
-    # weaponTypes是列表
-    if (
-        KEY_WEAPONTYPES in json_datas
-        and isinstance(json_datas[KEY_WEAPONTYPES], list)
-        and len(json_datas[KEY_WEAPONTYPES]) > 0
-    ):
-        for idx, weapontype in enumerate(json_datas[KEY_WEAPONTYPES]):
-            _loc = get_md5("_".join([filename, KEY_WEAPONTYPES, str(idx)]), True)
-            if _type == EXTRACT:
-                _change = switch_change_mark(
-                    _change, __write_in_cache(weapontype, _loc)
-                )
-            else:
-                json_datas[KEY_WEAPONTYPES][idx] = __read_from_cache(weapontype, _loc)
-
     if KEY_TERMS in json_datas:
         _terms = json_datas[KEY_TERMS]
         # basic是列表
@@ -814,6 +786,21 @@ def __scanning_system(json_datas: dict, _type: str, filename: str) -> bool:
                     json_datas[KEY_TERMS][KEY_MESSAGES][key] = __read_from_cache(
                         message
                     )
+
+    # weaponTypes是列表
+    if (
+        KEY_WEAPONTYPES in json_datas
+        and isinstance(json_datas[KEY_WEAPONTYPES], list)
+        and len(json_datas[KEY_WEAPONTYPES]) > 0
+    ):
+        for idx, weapontype in enumerate(json_datas[KEY_WEAPONTYPES]):
+            _loc = get_md5("_".join([filename, KEY_WEAPONTYPES, str(idx)]), True)
+            if _type == EXTRACT:
+                _change = switch_change_mark(
+                    _change, __write_in_cache(weapontype, _loc)
+                )
+            else:
+                json_datas[KEY_WEAPONTYPES][idx] = __read_from_cache(weapontype, _loc)
 
     return _change
 
@@ -909,7 +896,7 @@ def __scanning_type_maps(json_datas: dict, _type: str, filename: str) -> bool:
                 if (
                     code == 122
                     and isinstance(parameters[4], str)
-                    and not any(s in parameters[4] for s in ("$", "."))
+                    and not any(s in parameters[4] for s in ["$", "."])
                 ):
                     if _type == EXTRACT:
                         _change = switch_change_mark(
@@ -1001,43 +988,6 @@ def __scanning_type_maps(json_datas: dict, _type: str, filename: str) -> bool:
     return _change
 
 
-# def __scanning_wicked_rouge(json_datas: dict, _type: str) -> bool:
-#     '''
-#     扫描Wicked Rouge的BattleHUD.json和MapHUD.json
-#     '''
-
-#     # 记录文本更改
-#     _change = False
-
-#     if not json_datas or not isinstance(json_datas, dict) or len(json_datas) < 1:
-#         return _change
-
-#     for i_json_datas, json_datas_item in json_datas.items():
-#         if (
-#             not json_datas_item
-#             or not isinstance(json_datas_item, list)
-#             or len(json_datas_item) < 1
-#         ):
-#             continue
-
-#         for i, item in enumerate(json_datas_item):
-#             if not item or not isinstance(item, dict):
-#                 continue
-#             if KEY_TYPE not in item or not item[KEY_TYPE] == KEY_TYPE_VALUE:
-#                 continue
-#             if KEY_VALUE not in item or item[KEY_VALUE].strip() == '':
-#                 continue
-
-#             if _type == EXTRACT:
-#                 _change = switch_change_mark(_change, write_in_cache(item[KEY_VALUE]))
-#             else:
-#                 json_datas[i_json_datas][i][KEY_VALUE] = read_from_cache(
-#                     item[KEY_VALUE]
-#                 )
-
-#     return _change
-
-
 def __read_game_txt(_type: str) -> bool:
     """
     读取默认文本库和gameText.json
@@ -1061,11 +1011,13 @@ def __read_game_txt(_type: str) -> bool:
 
     # 读取引擎默认文本库
     default_libraries = read_json(
-        os.path.join(BASE_ABSPATH, "libraries", RPGMV_DEFAULT_LIBRARY)
+        os.path.join(BASE_ABSPATH, "Translated Libraries", RPGMZ_DEFAULT_LIBRARY)
     )
     # 读取游戏已有译文
     translated_libraries = read_json(
-        os.path.join(BASE_ABSPATH, "libraries", GLOBAL_DATA["rpg_game_default_txt"])
+        os.path.join(
+            BASE_ABSPATH, "Translated Libraries", GLOBAL_DATA["rpg_game_default_txt"]
+        )
     )
     # 合并两个译文为一个译文库，若有相同键，游戏译文覆盖默认译文
     libraries = merge_dicts([default_libraries, translated_libraries])
@@ -1089,7 +1041,7 @@ def __write_in_cache(key: str, _loc="", _filter="", value="") -> bool:
     _key = _loc + "_" + key if _loc != "" else key
 
     # 不匹配指定语种的文本不存入缓存
-    if not matching_langs(key, _filter):
+    if not match_lang(key, _filter):
         return False
 
     # 缓存中已有该字段，且值不为空字串或TODO时，直接返回
@@ -1099,15 +1051,6 @@ def __write_in_cache(key: str, _loc="", _filter="", value="") -> bool:
         and __game_txt_cache[_key].strip().upper() != MARK_TODO
     ):
         return False
-
-    # Threads of Destiny
-    # if '{' in key and '}' in key:
-    #     key1 = key[key.find('{') + 1:key.find('}')]
-    #     _key2 = _loc + '_' + key1 if _loc != '' else key1
-    #     if _key2 in _translation_library and _translation_library[_key2] != '' and _translation_library[_key2] != TODO_FILTER:
-    #         temp_game_txt_cache[_key] = key[:key.find('{')] + _translation_library[_key2] + key[key.find('}') + 1:]
-    #         update_phoenix_mark(_game_txt_cache, True)
-    #         return True
 
     # default_strings中有该条文本且不为空字串，赋值
     if (
@@ -1170,12 +1113,10 @@ def __select_serial_num(serial_num="", first_select=True):
     _inp = ""
     # 首次进入选项
     if first_select:
-        print(
-            """1) 提取翻译文本
+        print("""1) 提取翻译文本
 2) 写入翻译文本
 0) 返回上一级
-"""
-        )
+""")
         _inp = input("请输入要操作的序号或回车退出程序：").strip()
     else:
         _inp = input(

@@ -7,11 +7,10 @@ import time
 import volcenginesdktranslate20250301
 from volcenginesdkcore import Configuration, rest
 
-from modules.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
-from modules.translation_api.base_translation import BaseTranslation
-from modules.utils import (
+from src.utils.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
+from src.api.base_translation import BaseTranslation
+from src.utils.utils import (
     acquire_token,
-    check_langs,
     enpun_2_zhpun,
     get_password_with_star,
     is_letters_and_digits,

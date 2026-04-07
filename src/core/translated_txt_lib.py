@@ -11,7 +11,7 @@ import pathlib
 import sys
 
 import main
-from modules.utils import (
+from src.utils.utils import (
     BASE_ABSPATH,
     PATTERN_EMPTY_LINE,
     PATTERN_IDENTIFIER,
@@ -36,15 +36,13 @@ __txt_library_cache = None
 
 def start():
 
-    print(
-        r"""
+    print(r"""
 ===========================================================================================
                                   rpy/json 写入译文库工具
                                       作者：Phoenix
                                       版权归作者所有
 ===========================================================================================
-"""
-    )
+""")
 
     __select_serial_num()
 
@@ -198,7 +196,7 @@ def __write_translib():
         translated_txt_lib[k] = v
 
     write_json(
-        os.path.join(BASE_ABSPATH, "libraries", TRANSLATED_LIB_LIBRARY_FILE),
+        os.path.join(BASE_ABSPATH, "Translated Libraries", TRANSLATED_LIB_LIBRARY_FILE),
         translated_txt_lib,
         backup=False,
     )
@@ -216,12 +214,10 @@ def __select_serial_num(serial_num="", first_select=True):
     _inp = ""
     # 首次进入选项
     if first_select:
-        print(
-            """1) 更新译文库（待录入文本务必是标准rpy或json翻译文件，以免污染译文库）
+        print("""1) 更新译文库（待录入文本务必是标准rpy或json翻译文件，以免污染译文库）
 2) 更新JSON文本（试验功能，仅可输入合法文本路径，暂不支持路径验证及输入目录）
 0) 返回上一级
-"""
-        )
+""")
         _inp = input("请输入要操作的序号（如1）或回车退出程序：").strip()
     else:
         _inp = input(

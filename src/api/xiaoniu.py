@@ -6,10 +6,10 @@ import time
 
 import requests
 
-from modules.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
-from modules.exception.tool_exception import ToolException
-from modules.translation_api.base_translation import BaseTranslation
-from modules.utils import (
+from src.utils.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
+from src.exception.tool_exception import ToolException
+from src.api.base_translation import BaseTranslation
+from src.utils.utils import (
     acquire_token,
     enpun_2_zhpun,
     get_password_with_star,
