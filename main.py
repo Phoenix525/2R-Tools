@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-'''
+"""
 @Author: Phoenix
 @Date: 2020-07-04 23:33:35
-'''
+"""
 
 import os
 import sys
@@ -16,44 +16,49 @@ import modules.rpgm_mz_extraction_writing as rpgm_mz_extraction_writing
 import modules.rpgm_vx_ace_extraction_writing as rpgm_vx_ace_extraction_writing
 import modules.single_txt_tranlsation as single_txt_tranlsation
 import modules.translated_txt_lib as translated_txt_lib
-from modules.utils import (RENPY_PROJECT_PARENT_FOLDER, get_config,
-                           get_projects_list, print_info, print_warn)
+from modules.utils import (
+    RENPY_PROJECT_PARENT_FOLDER,
+    get_config,
+    get_projects_list,
+    print_info,
+    print_warn,
+)
 
 
 def get_renpy_project() -> str:
-    '''
+    """
     选择当前要操作的ren\'Py项目名称，若不存在则新建一个
-    '''
+    """
 
-    _projects = get_projects_list('renpy')
+    _projects = get_projects_list("renpy")
     if len(_projects) <= 0:
         _project_name = input(
-            'ren\'Py工作区无项目，请新建一个项目，输入项目名称及版本号（例：Test_v0.1）：'
+            "ren'Py工作区无项目，请新建一个项目，输入项目名称及版本号（例：Test_v0.1）："
         ).strip()
         _project_abspath = os.path.join(RENPY_PROJECT_PARENT_FOLDER, _project_name)
         os.makedirs(_project_abspath)
         return _project_name
 
-    print_msg = '\nren\'Py工作区现有项目如下：\n0: 新建项目\n'
+    print_msg = "\nren'Py工作区现有项目如下：\n0: 新建项目\n"
     for idx, project in _projects.items():
-        print_msg += f'{idx}: {project}\n'
-    print_msg += '\n请输入相应序号选择要处理的项目，输入0则新建一个项目：'
+        print_msg += f"{idx}: {project}\n"
+    print_msg += "\n请输入相应序号选择要处理的项目，输入0则新建一个项目："
     _imp = input(print_msg).strip()
-    if _imp == '0':
+    if _imp == "0":
         _project_name = input(
-            '请新建一个项目，输入项目名称及版本号（例：Test_v0.1）：'
+            "请新建一个项目，输入项目名称及版本号（例：Test_v0.1）："
         ).strip()
         _project_abspath = os.path.join(RENPY_PROJECT_PARENT_FOLDER, _project_name)
         os.makedirs(_project_abspath)
         return _project_name
 
     for idx, project in _projects.items():
-        if _imp == idx or _imp == project.rsplit('.', 1)[0]:
-            print_info(f'当前renPy翻译项目：{project}')
+        if _imp == idx or _imp == project.rsplit(".", 1)[0]:
+            print_info(f"当前renPy翻译项目：{project}")
             return project
 
     _project_name = input(
-        '无此序号项目，请新建一个项目，输入项目名称及版本号（例：Test_v0.1）：'
+        "无此序号项目，请新建一个项目，输入项目名称及版本号（例：Test_v0.1）："
     ).strip()
     _project_abspath = os.path.join(RENPY_PROJECT_PARENT_FOLDER, _project_name)
     os.makedirs(_project_abspath)
@@ -61,53 +66,53 @@ def get_renpy_project() -> str:
 
 
 def get_rpgm_project(select: str) -> str:
-    '''
+    """
     获取当前要操作的rpgm翻译文件路径
-    '''
+    """
 
-    _projects = get_projects_list('rpgm')
+    _projects = get_projects_list("rpgm")
     if len(_projects) < 1:
         # 当选择翻译rpgm翻译文件时，若工作区无项目则直接返回
-        if select == '6':
-            print_warn('RPGM工作区无项目！')
-            return ''
+        if select == "6":
+            print_warn("RPGM工作区无项目！")
+            return ""
 
         _project_name = input(
-            'ren\'Py工作区无项目，请新建一个项目，输入项目名称及版本号（例：Test_v0.1）：'
+            "ren'Py工作区无项目，请新建一个项目，输入项目名称及版本号（例：Test_v0.1）："
         ).strip()
-        return f'{_project_name}.json'
+        return f"{_project_name}.json"
 
-    print_msg = '\nren\'Py工作区现有项目如下：\n0: 新建项目\n'
+    print_msg = "\nren'Py工作区现有项目如下：\n0: 新建项目\n"
     for idx, project in _projects.items():
-        print_msg += f'{idx}: {project}\n'
-    print_msg += '\n请输入相应序号或名称选择要处理的项目，输入0则新建一个项目：'
+        print_msg += f"{idx}: {project}\n"
+    print_msg += "\n请输入相应序号或名称选择要处理的项目，输入0则新建一个项目："
     _imp = input(print_msg).strip()
-    if _imp == '0':
+    if _imp == "0":
         _project_name = input(
-            '请新建一个项目，输入项目名称及版本号（例：Test_v0.1）：'
+            "请新建一个项目，输入项目名称及版本号（例：Test_v0.1）："
         ).strip()
-        return f'{_project_name}.json'
+        return f"{_project_name}.json"
 
     for idx, project in _projects.items():
-        if _imp == idx or _imp == project.rsplit('.', 1)[0]:
-            print_info(f'当前RPGM翻译项目：{project}')
+        if _imp == idx or _imp == project.rsplit(".", 1)[0]:
+            print_info(f"当前RPGM翻译项目：{project}")
             return project
 
     _project_name = input(
-        '无此序号项目，请新建一个项目，输入项目名称及版本号（例：Test_v0.1）：'
+        "无此序号项目，请新建一个项目，输入项目名称及版本号（例：Test_v0.1）："
     ).strip()
-    print_info(f'当前RPGM翻译项目：{_project_name}.json')
-    return f'{_project_name}.json'
+    print_info(f"当前RPGM翻译项目：{_project_name}.json")
+    return f"{_project_name}.json"
 
 
-def start_main(serial_num='', first_select=True):
+def start_main(serial_num="", first_select=True):
 
     # 用户输入内容
-    _inp = ''
+    _inp = ""
     # 首次进入选项
     if first_select:
         print(
-            r'''
+            r"""
 ===========================================================================================
           ______  _____  _   _ ______ __   __      ______ ______  _____ ___  ___
           | ___ \|  ___|| \ | || ___ \\ \ / /___   | ___ \| ___ \|  __ \|  \/  |
@@ -128,54 +133,54 @@ def start_main(serial_num='', first_select=True):
 6) JSON 文本翻译
 7) 单语句翻译
 8) rpy/json 写入译文库
-'''
+"""
         )
-        _inp = input('请输入要操作的序号或回车退出程序：').strip()
+        _inp = input("请输入要操作的序号或回车退出程序：").strip()
     else:
         _inp = input(
-            f'列表中不存在序号 {serial_num}，请重新输入正确序号或回车退出程序：'
+            f"列表中不存在序号 {serial_num}，请重新输入正确序号或回车退出程序："
         ).strip()
 
     match _inp:
-        case '':
+        case "":
             sys.exit()
-        case '1':
+        case "1":
             # 选择renpy项目文件夹
             # _curr_renpy_project = get_renpy_project()
             # print_info(f'当前项目: {_curr_renpy_project}')
             renpy_translation.start()
-        case '2':
+        case "2":
             # 选择renpy项目文件夹
             # _curr_renpy_project = get_renpy_project()
             renpy_update.start()
-        case '3':
+        case "3":
             # 选择rpgm翻译文件
             _curr_rpgm_project = get_rpgm_project(_inp)
             rpgm_mz_extraction_writing.start(_curr_rpgm_project)
-        case '4':
+        case "4":
             # 选择rpgm翻译文件
             _curr_rpgm_project = get_rpgm_project(_inp)
             rpgm_mv_extraction_writing.start(_curr_rpgm_project)
-        case '5':
+        case "5":
             # 选择rpgm翻译文件
             _curr_rpgm_project = get_rpgm_project(_inp)
             rpgm_vx_ace_extraction_writing.start(_curr_rpgm_project)
-        case '6':
+        case "6":
             # 选择rpgm翻译文件
             _curr_rpgm_project = get_rpgm_project(_inp)
-            if _curr_rpgm_project == '':
-                print_info('未选择翻译项目，返回主界面！')
+            if _curr_rpgm_project == "":
+                print_info("未选择翻译项目，返回主界面！")
                 start_main()
             else:
                 json_translation.start(_curr_rpgm_project)
-        case '7':
+        case "7":
             single_txt_tranlsation.start()
-        case '8':
+        case "8":
             translated_txt_lib.start()
         case _:
             start_main(_inp, False)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     get_config()
     start_main()

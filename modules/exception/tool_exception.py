@@ -5,9 +5,9 @@ import sys
 
 
 class ToolException(Exception):
-    '''
+    """
     工具的异常类
-    '''
+    """
 
     def __init__(self, code=None, message=None, requestId=None):
         self.code = code
@@ -20,7 +20,7 @@ class ToolException(Exception):
             self.message,
             self.requestId,
         )
-        if sys.version_info[0] < 3 and isinstance(s, unicode):
+        if sys.version_info[0] < 3 and isinstance(s, unicode):  # noqa: F821
             return s.encode("utf8")
         else:
             return s

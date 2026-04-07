@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-'''
+"""
 @Author: Phoenix
 @Date: 2020-06-12 12:11:24
 Ren'Py翻译文本机器翻译工具
@@ -10,7 +10,7 @@ translate chinese xxx_xxx_xxxxxxxx:
 
     # pov "xxxxx" with dissolve
     pov "" with dissolve
-'''
+"""
 
 import os
 import sys
@@ -18,19 +18,29 @@ from datetime import datetime
 
 import main
 from modules.interpreter import Interpreter
-from modules.utils import (GLOBAL_DATA, MARK_TODO, PATTERN_EMPTY_LINE,
-                           PATTERN_IDENTIFIER, PATTERN_NEW, PATTERN_NEW_SAY,
-                           PATTERN_OLD, PATTERN_OLD_SAY,
-                           RENPY_PROJECT_PARENT_FOLDER, copy_directory,
-                           get_file_encoding, print_info, print_warn,
-                           validate_renpy_trans_file)
+from modules.utils import (
+    GLOBAL_DATA,
+    MARK_TODO,
+    PATTERN_EMPTY_LINE,
+    PATTERN_IDENTIFIER,
+    PATTERN_NEW,
+    PATTERN_NEW_SAY,
+    PATTERN_OLD,
+    PATTERN_OLD_SAY,
+    RENPY_PROJECT_PARENT_FOLDER,
+    copy_directory,
+    get_file_encoding,
+    print_info,
+    print_warn,
+    validate_renpy_trans_file,
+)
 
 # 标准原译组结束标识符
-END_SAY = '-*- END -*-'
+END_SAY = "-*- END -*-"
 
 # pylint: disable=invalid-name
-__input_abspath = GLOBAL_DATA['rpy_trans_input_abspath']
-__output_abspath = ''
+__input_abspath = GLOBAL_DATA["rpy_trans_input_abspath"]
+__output_abspath = ""
 
 # 是否覆盖所有译文
 __rewrite_all = False
@@ -42,7 +52,7 @@ __rewrite_todo = False
 __interpreter = None
 
 # 当前renpy项目名称
-__curr_renpy_project_name = 'Test_v0.1'
+__curr_renpy_project_name = "Test_v0.1"
 # 当前renpy项目的绝对路径
 __curr_renpy_project_path = os.path.join(
     RENPY_PROJECT_PARENT_FOLDER, __curr_renpy_project_name
@@ -50,19 +60,19 @@ __curr_renpy_project_path = os.path.join(
 
 
 def start():
-    '''
+    """
     翻译文本模式
-    '''
+    """
 
     print(
-        r'''
+        r"""
 ===========================================================================================
                                   Ren'Py 翻译文本机翻工具
                                       作者：Phoenix
                                       版权归作者所有
                             PS：本工具所有操作均不会影响原文件！
 ===========================================================================================
-'''
+"""
     )
 
     # 选择操作选项
@@ -83,14 +93,14 @@ def start():
         __rewrite_todo = __rewrite_todo()
 
     __walk_file()
-    print_info('翻译已全部完成，请前往原路径查看翻译文本！')
+    print_info("翻译已全部完成，请前往原路径查看翻译文本！")
     sys.exit()
 
 
 def __walk_file():
-    '''
+    """
     遍历文件夹内所有内容
-    '''
+    """
 
     if os.path.isfile(__input_abspath):
         # 跳过非renPy翻译文本
@@ -98,17 +108,16 @@ def __walk_file():
             return
 
         root, f = os.path.split(__input_abspath)
-        print(f'当前翻译文本：{f}')
+        print(f"当前翻译文本：{f}")
         __process_file(__input_abspath, __output_abspath, f)
         return
 
     for root, dirs, files in os.walk(__input_abspath, topdown=False):
-
         # 新文件目录
         relative_path = os.path.relpath(root, __input_abspath)
         new_path = (
             __output_abspath
-            if relative_path == '.'
+            if relative_path == "."
             else os.path.join(__output_abspath, relative_path)
         )
         # 若新目录不存在，创建它
@@ -125,25 +134,25 @@ def __walk_file():
                 copy_directory(in_path, out_path)
                 continue
 
-            print(f'当前翻译文本：{f}')
+            print(f"当前翻译文本：{f}")
             __process_file(in_path, out_path, f)
 
 
 def __process_file(old_path: str, new_path: str, filename: str):
-    '''
+    """
     读取文本、翻译并写入
-    '''
+    """
 
-    with open(old_path, 'r', encoding=get_file_encoding(old_path)) as inp:
+    with open(old_path, "r", encoding=get_file_encoding(old_path)) as inp:
         # todo 读出所有行，文件较大时可能会报错，需优化
         lightSen = inp.readlines()
 
     # 待翻译文本字典，将文本提取出来统一翻译。键为源文本的行索引，值为文本
     translate_txts = {}
     # 原文
-    _old_say = ''
+    _old_say = ""
     # 标识符
-    _identifier = 'strings'
+    _identifier = "strings"
 
     # 获取要翻译的文本列表
     for idx, line in enumerate(lightSen):
@@ -157,27 +166,27 @@ def __process_file(old_path: str, new_path: str, filename: str):
             _identifier = identifier_match.group(1)
             # 扫描到标志符行，说明进入了新的BAP，原文清空
             # 此步非常重要，避免在没有原文且选择覆盖的情况下出错
-            _old_say = ''
+            _old_say = ""
             continue
 
         # 原文行
         old_say_match = PATTERN_OLD_SAY.match(line)
-        if old_say_match is not None and _identifier not in ('', 'strings'):
+        if old_say_match is not None and _identifier not in ("", "strings"):
             # 跳过cv语音行
-            if old_say_match.group(1) != 'voice':
+            if old_say_match.group(1) != "voice":
                 _old_say = old_say_match.group(2)
             continue
 
         # 译文行
         new_say_match = PATTERN_NEW_SAY.match(line)
-        if new_say_match is not None and _identifier not in ('', 'strings'):
+        if new_say_match is not None and _identifier not in ("", "strings"):
             _who = new_say_match.group(1)
             # 跳过cv语音行
-            if _who == 'voice':
+            if _who == "voice":
                 continue
 
             # rpy翻译文件原文本质上是注释，有些rpy翻译文件因一些原因删除了原文注释，所以原文say为空，表明找不到原文注释，这种情况无法获取原文进行翻译，只能跳过
-            if _old_say.strip() == '':
+            if _old_say.strip() == "":
                 continue
 
             # 如果原文为END_SAY，说明当前BAP已结束，现在是多出来的译文行，跳过
@@ -192,7 +201,7 @@ def __process_file(old_path: str, new_path: str, filename: str):
 
             original_new_say = new_say_match.group(2)
             if (
-                original_new_say != ''  # 当译文不为空
+                original_new_say != ""  # 当译文不为空
                 and not __rewrite_all  # 当未启用覆盖所有译文
                 and original_new_say.upper() != MARK_TODO  # 当译文不为TODO
                 and (
@@ -205,28 +214,28 @@ def __process_file(old_path: str, new_path: str, filename: str):
                 continue
 
             translate_txts[idx] = {
-                'line': line,
-                'identifier': _identifier,
-                'src': _old_say,
+                "line": line,
+                "identifier": _identifier,
+                "src": _old_say,
             }
             _old_say = END_SAY
             continue
 
         # old行
         old_match = PATTERN_OLD.match(line)
-        if old_match is not None and _identifier == 'strings':
+        if old_match is not None and _identifier == "strings":
             _old_say = old_match.group(1)
             continue
 
         # new行
         new_match = PATTERN_NEW.match(line)
-        if new_match is not None and _identifier == 'strings':
-            if _old_say == '':
+        if new_match is not None and _identifier == "strings":
+            if _old_say == "":
                 continue
 
             original_new = new_match.group(1)  # 译文
             if (
-                original_new != ''  # 当译文不为空
+                original_new != ""  # 当译文不为空
                 and not __rewrite_all  # 当未启用覆盖所有译文
                 and original_new.upper() != MARK_TODO  # 当译文不为TODO
                 and (
@@ -238,18 +247,18 @@ def __process_file(old_path: str, new_path: str, filename: str):
             ):
                 continue
             translate_txts[idx] = {
-                'line': line,
-                'identifier': _identifier,
-                'src': _old_say,
+                "line": line,
+                "identifier": _identifier,
+                "src": _old_say,
             }
-            _old_say = ''
+            _old_say = ""
 
     # 待翻文本字典为空，不需要翻译
     if len(translate_txts) < 1:
-        print_info(f'{filename} 无需翻译！\n')
+        print_info(f"{filename} 无需翻译！\n")
         return
 
-    outp = open(new_path, 'w', encoding=get_file_encoding(new_path))
+    outp = open(new_path, "w", encoding=get_file_encoding(new_path))
 
     tmp_translate_txts = {}
     for idx, key in enumerate(translate_txts.keys()):
@@ -258,21 +267,21 @@ def __process_file(old_path: str, new_path: str, filename: str):
         # 翻译文本
         # 虽然翻译接口大多支持一次翻译多条文本，但存在翻译失败，个别文本丢失的情况，无法保证传入的文本和传回的结果对上号，所以这里还是一条文本发起一次请求
         translated = __interpreter.translate_txt(
-            value['src'], activate_context='1', open_todo=GLOBAL_DATA['open_todo']
+            value["src"], activate_context="1", open_todo=GLOBAL_DATA["open_todo"]
         )
-        tmp_translate_txts[key]['dst'] = translated
+        tmp_translate_txts[key]["dst"] = translated
 
         # 当为最后一个索引或缓存已达设定值，则写入文件，避免意外退出导致翻译结果完全丢失
         if (
             idx == len(translate_txts) - 1
-            or len(tmp_translate_txts) == GLOBAL_DATA['rpy_trans_bap_max_cache']
+            or len(tmp_translate_txts) == GLOBAL_DATA["rpy_trans_bap_max_cache"]
         ):
             for tmp_key, tmp_value in tmp_translate_txts.items():
-                src = tmp_value['src']
-                dst = tmp_value['dst']
-                if dst == '' or dst == src:
+                src = tmp_value["src"]
+                dst = tmp_value["dst"]
+                if dst == "" or dst == src:
                     continue
-                reverse_line = tmp_value['line'][::-1]
+                reverse_line = tmp_value["line"][::-1]
                 reverse_dst = dst[::-1]
                 new_line = reverse_line.replace('""', f'"{reverse_dst}"')
                 reverse_line = new_line[::-1]
@@ -282,26 +291,26 @@ def __process_file(old_path: str, new_path: str, filename: str):
             outp.flush()
             tmp_translate_txts = {}
     outp.close()
-    print_info(f'{filename} 翻译完成！\n')
+    print_info(f"{filename} 翻译完成！\n")
 
 
 def __input_path(first_select=True):
-    '''
+    """
     输入待翻文件/文件夹的绝对路径
-    '''
+    """
 
     global __input_abspath, __output_abspath
 
     # 用户输入内容
-    _inp = ''
+    _inp = ""
     # 首次输入路径
     if first_select:
         if __input_abspath:
-            print_info('正在验证默认路径……')
+            print_info("正在验证默认路径……")
             # 若路径不存在，则重新手动输入
             if not os.path.exists(__input_abspath):
-                print_warn('config.ini配置的翻译文本路径不存在！请手动输入路径！\n')
-                __input_abspath = ''
+                print_warn("config.ini配置的翻译文本路径不存在！请手动输入路径！\n")
+                __input_abspath = ""
                 __input_path(False)
                 return
 
@@ -309,12 +318,12 @@ def __input_path(first_select=True):
                 __input_abspath, __output_abspath
             )
             return
-        _inp = input('请输入翻译文本的绝对路径或回车关闭程序：').strip()
+        _inp = input("请输入翻译文本的绝对路径或回车关闭程序：").strip()
     else:
-        _inp = input('路径错误，请重新输入正确的路径或回车关闭程序：').strip()
+        _inp = input("路径错误，请重新输入正确的路径或回车关闭程序：").strip()
 
     # 输入为空，退出程序
-    if _inp == '':
+    if _inp == "":
         sys.exit()
     # 规范路径，不调整大小写
     _inp = os.path.normpath(_inp)
@@ -326,105 +335,105 @@ def __input_path(first_select=True):
 
 
 def __verify_path(input_abspath: str, output_abspath: str) -> tuple:
-    '''
+    """
     验证原路径和目标路径是否正确
 
     :param input_abspath: 原路径
     :param output_abspath: 目标路径
-    '''
+    """
 
     # 如果输入路径是文件夹
     if os.path.isdir(input_abspath):
         # 输出路径也生成文件夹
-        output_abspath = input_abspath + '-new'
+        output_abspath = input_abspath + "-new"
         # 如果输出文件夹已存在，先将其更名，再新建空文件夹
         if os.path.exists(output_abspath):
             os.rename(
                 output_abspath,
-                output_abspath + '_' + datetime.now().strftime('%Y_%m_%d_%H_%M_%S'),
+                output_abspath + "_" + datetime.now().strftime("%Y_%m_%d_%H_%M_%S"),
             )
         os.makedirs(output_abspath)
 
     # 如果输出路径是文件
     elif os.path.isfile(input_abspath):
         _inp = os.path.splitext(input_abspath)
-        output_abspath = _inp[0] + '-new' + _inp[-1]
+        output_abspath = _inp[0] + "-new" + _inp[-1]
         # 如果输出文件已存在，将其更名备份
         if os.path.exists(output_abspath):
             bak_output_abspath = (
                 _inp[0]
-                + '-new_'
-                + datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
+                + "-new_"
+                + datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
                 + _inp[-1]
             )
             os.rename(output_abspath, bak_output_abspath)
-    print_info('路径验证成功！\n')
+    print_info("路径验证成功！\n")
     return input_abspath, output_abspath
 
 
 def __rewrite_all() -> bool:
-    '''
+    """
     是否覆盖所有译文。如果提取翻译文本未勾选“为翻译生成空字串”，则务必选择覆盖写入
-    '''
+    """
 
-    print('\n！！！！！以下选项谨慎操作！！！！！')
+    print("\n！！！！！以下选项谨慎操作！！！！！")
     rewrite_tmp = input(
-        '是否覆盖所有译文？输入“y”覆盖，输入其他内容不覆盖。\n注意：如果生成翻译文本未勾选“为翻译生成空字串”，则必须选择覆盖：'
+        "是否覆盖所有译文？输入“y”覆盖，输入其他内容不覆盖。\n注意：如果生成翻译文本未勾选“为翻译生成空字串”，则必须选择覆盖："
     ).strip()
 
-    if rewrite_tmp in ['Y', 'y']:
-        print('=====================当前选择为：覆盖写入=====================\n')
+    if rewrite_tmp in ["Y", "y"]:
+        print("=====================当前选择为：覆盖写入=====================\n")
         return True
 
-    print('====================当前选择为：不覆盖写入====================\n')
+    print("====================当前选择为：不覆盖写入====================\n")
     return False
 
 
 def __rewrite_todo() -> bool:
-    '''
+    """
     是否覆盖TODO译文
-    '''
+    """
 
-    print('\n！！！！！以下选项谨慎操作！！！！！')
-    rewrite_tmp = input('是否覆盖TODO译文？输入“y”覆盖，输入其他内容不覆盖：').strip()
+    print("\n！！！！！以下选项谨慎操作！！！！！")
+    rewrite_tmp = input("是否覆盖TODO译文？输入“y”覆盖，输入其他内容不覆盖：").strip()
 
-    if rewrite_tmp in ['Y', 'y']:
-        print('=====================当前选择为：覆盖写入=====================\n')
+    if rewrite_tmp in ["Y", "y"]:
+        print("=====================当前选择为：覆盖写入=====================\n")
         return True
 
-    print('====================当前选择为：不覆盖写入====================\n')
+    print("====================当前选择为：不覆盖写入====================\n")
     return False
 
 
-def __select_serial_num(serial_num='', first_select=True):
-    '''
+def __select_serial_num(serial_num="", first_select=True):
+    """
     输入序号选择对应的操作
 
     - serial_num: 选定的操作序号
     - first_select: 是否为重新选择
-    '''
+    """
 
     # 用户输入内容
-    _inp = ''
+    _inp = ""
     # 首次进入选项
     if first_select:
         print(
-            '''1) 翻译文本
+            """1) 翻译文本
 0) 返回上一级
-'''
+"""
         )
-        _inp = input('请输入要操作的序号或回车退出程序：').strip()
+        _inp = input("请输入要操作的序号或回车退出程序：").strip()
     else:
         _inp = input(
-            f'列表中不存在序号 {serial_num}，请重新输入正确序号或回车退出程序：'
+            f"列表中不存在序号 {serial_num}，请重新输入正确序号或回车退出程序："
         ).strip()
 
     match _inp:
-        case '':
+        case "":
             sys.exit()
-        case '0':
+        case "0":
             main.start_main()
-        case '1':
+        case "1":
             return
         case _:
             __select_serial_num(_inp, False)

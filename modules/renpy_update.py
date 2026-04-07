@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-'''
+"""
 @Author: Phoenix
 @Date: 2020-07-20 23:33:35
 
@@ -9,7 +9,7 @@ translate chinese xxx_xxx_xxxxxxxx:
 
     # pov "xxxxx" with dissolve
     pov "" with dissolve
-'''
+"""
 
 import copy
 import os
@@ -18,23 +18,35 @@ import sys
 from datetime import datetime
 
 import main
-from modules.utils import (GLOBAL_DATA, MARK_TODO, PATTERN_EMPTY_LINE,
-                           PATTERN_IDENTIFIER, PATTERN_NEW, PATTERN_NEW_SAY,
-                           PATTERN_OLD, PATTERN_OLD_SAY,
-                           RENPY_PROJECT_PARENT_FOLDER, del_key_from_dict,
-                           get_file_encoding, has_lower_letter, is_int,
-                           print_err, print_info, validate_renpy_trans_file)
+from modules.utils import (
+    GLOBAL_DATA,
+    MARK_TODO,
+    PATTERN_EMPTY_LINE,
+    PATTERN_IDENTIFIER,
+    PATTERN_NEW,
+    PATTERN_NEW_SAY,
+    PATTERN_OLD,
+    PATTERN_OLD_SAY,
+    RENPY_PROJECT_PARENT_FOLDER,
+    del_key_from_dict,
+    get_file_encoding,
+    has_lower_letter,
+    is_int,
+    print_err,
+    print_info,
+    validate_renpy_trans_file,
+)
 
 # 标准原译组结束标识符
-END_SAY = '-*- END -*-'
+END_SAY = "-*- END -*-"
 
 # pylint: disable=invalid-name
 # 旧版本翻译文本路径
-__pre_trans_project_path = GLOBAL_DATA['rpy_update_old_abspath']
+__pre_trans_project_path = GLOBAL_DATA["rpy_update_old_abspath"]
 # 等待更新的翻译文本路径
-__wait_trans_project_path = GLOBAL_DATA['rpy_update_new_abspath']
+__wait_trans_project_path = GLOBAL_DATA["rpy_update_new_abspath"]
 # 更新后的翻译文本路径
-__new_trans_project_path = ''
+__new_trans_project_path = ""
 
 # 译文缓存库。key为原文，可储存who和strings。格式：{old_say:{identifier:[str,str]}}
 __txt_library_cache = {}
@@ -42,7 +54,7 @@ __txt_library_cache = {}
 __identifier_library_cache = {}
 
 # 当前翻译项目名称
-__curr_renpy_project_name = 'Test_v0.1'
+__curr_renpy_project_name = "Test_v0.1"
 # 当前翻译项目的绝对路径
 __curr_renpy_project_path = os.path.join(
     RENPY_PROJECT_PARENT_FOLDER, __curr_renpy_project_name
@@ -52,30 +64,30 @@ __curr_renpy_project_path = os.path.join(
 def start():
 
     print(
-        r'''
+        r"""
 ===========================================================================================
                                  Ren'Py 翻译文本更新工具
                                       作者：Phoenix
                                       版权归作者所有
                             PS：本工具所有操作均不会影响原文件！
 ===========================================================================================
-'''
+"""
     )
 
     __select_serial_num()
 
-    __input_path('OLD')
-    __input_path('NEW')
+    __input_path("OLD")
+    __input_path("NEW")
 
     __walk_file()
-    print_info('翻译文本已完成更新！')
+    print_info("翻译文本已完成更新！")
     sys.exit()
 
 
 def __walk_file():
-    '''
+    """
     遍历文件夹内所有内容
-    '''
+    """
 
     # 扫描旧版本翻译项目，将符合要求的译文存入缓存库
     if os.path.isfile(__pre_trans_project_path):
@@ -84,7 +96,7 @@ def __walk_file():
             return
 
         root, f = os.path.split(__pre_trans_project_path)
-        print(f'当前扫描文本：{f}')
+        print(f"当前扫描文本：{f}")
         __scanning_file(root, f)
     else:
         for root, dirs, files in os.walk(__pre_trans_project_path, topdown=False):
@@ -93,7 +105,7 @@ def __walk_file():
                 if not validate_renpy_trans_file(os.path.join(root, f)):
                     continue
 
-                print(f'当前扫描文本：{f}')
+                print(f"当前扫描文本：{f}")
                 __scanning_file(root, f)
 
     # 更新翻译项目
@@ -103,17 +115,16 @@ def __walk_file():
             return
 
         f = os.path.split(__wait_trans_project_path)[-1]
-        print(f'当前更新文本：{f}')
+        print(f"当前更新文本：{f}")
         __process_file(__wait_trans_project_path, __new_trans_project_path, f)
         return
 
     for root, dirs, files in os.walk(__wait_trans_project_path, topdown=False):
-
         # 创建文件所在目录
         relative_path = os.path.relpath(root, __wait_trans_project_path)
         new_trans_folder_path = (
             __new_trans_project_path
-            if relative_path == '.'
+            if relative_path == "."
             else os.path.join(__new_trans_project_path, relative_path)
         )
         # 若新目录不存在，创建它
@@ -126,29 +137,29 @@ def __walk_file():
             if not validate_renpy_trans_file(wait_trans_file_path):
                 continue
 
-            print(f'当前更新文本：{f}')
+            print(f"当前更新文本：{f}")
             __process_file(
                 wait_trans_file_path, os.path.join(new_trans_folder_path, f), f
             )
 
 
 def __scanning_file(file_path: str, filename: str):
-    '''
+    """
     扫描旧版本翻译文本，将需要的数据存入缓存器
-    '''
+    """
 
     with open(
         os.path.join(file_path, filename),
-        'r',
+        "r",
         encoding=get_file_encoding(os.path.join(file_path, filename)),
     ) as inp:
         # todo 读出所有行，文件较大时可能会报错，需优化
         lightSen = inp.readlines()
 
     # _old_who = ''  # 字符串形式的who
-    _old_say = ''  # 原文say
-    _identifier = 'strings'  # strings标识符，用来区分who_say和old_new
-    _curr_bap_processed = ''  # 标志当前BAP处理结束
+    _old_say = ""  # 原文say
+    _identifier = "strings"  # strings标识符，用来区分who_say和old_new
+    _curr_bap_processed = ""  # 标志当前BAP处理结束
 
     for line in lightSen:
         # 空行
@@ -162,18 +173,18 @@ def __scanning_file(file_path: str, filename: str):
             # 扫描到标志符行，说明进入了新的BAP，清空原文
             # 此步非常重要，避免在没有原文且选择覆盖的情况下出错
             # _old_who = ''
-            _old_say = ''
+            _old_say = ""
             # 重置BAP结束标志
             _curr_bap_processed = False
             continue
 
         # 原文本行
         old_say_match = PATTERN_OLD_SAY.match(line)
-        if old_say_match is not None and _identifier not in ['', 'strings']:
+        if old_say_match is not None and _identifier not in ["", "strings"]:
             old_say_list = old_say_match.groups()
             _who = old_say_list[0]
             # 跳过cv语音行
-            if _who == 'voice':
+            if _who == "voice":
                 continue
 
             # 存在字符串形式的who，在存入缓存库之前，不能修改_old_who
@@ -187,7 +198,7 @@ def __scanning_file(file_path: str, filename: str):
 
         # old行
         old_match = PATTERN_OLD.match(line)
-        if old_match is not None and _identifier == 'strings':
+        if old_match is not None and _identifier == "strings":
             # 获取原文，在存入缓存库之前，不能修改_old_say
             _old_say = old_match.group(1)
             _curr_bap_processed = False
@@ -199,11 +210,11 @@ def __scanning_file(file_path: str, filename: str):
 
         # 译文行
         new_say_match = PATTERN_NEW_SAY.match(line)
-        if new_say_match is not None and _identifier not in ['', 'strings']:
+        if new_say_match is not None and _identifier not in ["", "strings"]:
             new_say_list = new_say_match.groups()
             _who = new_say_list[0]
             # 跳过cv语音行
-            if _who == 'voice':
+            if _who == "voice":
                 continue
 
             # 写入标识符缓存库
@@ -211,7 +222,7 @@ def __scanning_file(file_path: str, filename: str):
             __write_in_identifier_library_cache(_identifier, new_say)
 
             # 原文say为空时，表示找不到该条原文注释，无法通过原文来找译文，故只存入标识符缓存库，不存入文本缓存库
-            if _old_say == '':
+            if _old_say == "":
                 continue
 
             # 字符串形式的who
@@ -227,31 +238,31 @@ def __scanning_file(file_path: str, filename: str):
 
         # new 行
         new_match = PATTERN_NEW.match(line)
-        if new_match is not None and _identifier == 'strings':
+        if new_match is not None and _identifier == "strings":
             # 写入文本缓存库
             __write_in_txt_library_cache(_old_say, new_match.group(1), _identifier)
             # 当前BAP处理结束
             _curr_bap_processed = True
 
-    print_info(f'{filename} 扫描完成！\n')
+    print_info(f"{filename} 扫描完成！\n")
 
 
 def __process_file(wait_trans_path: str, new_trans_path: str, filename: str):
-    '''
+    """
     将缓存区中原文相匹配的译文写入到新翻译文本中
-    '''
+    """
 
-    with open(wait_trans_path, 'r', encoding=get_file_encoding(wait_trans_path)) as inp:
+    with open(wait_trans_path, "r", encoding=get_file_encoding(wait_trans_path)) as inp:
         # todo 读出所有行，文件较大时可能会报错，需优化
         lightSen = inp.readlines()
-    outp = open(new_trans_path, 'w', encoding=get_file_encoding(new_trans_path))
+    outp = open(new_trans_path, "w", encoding=get_file_encoding(new_trans_path))
 
     # 临时文本列表，写入文件用
     _tmp_lightSen = copy.copy(lightSen)
     # 原文say
-    _old_say = ''
+    _old_say = ""
     # 标识符
-    _identifier = 'strings'
+    _identifier = "strings"
     # BAP当前缓存量
     _bap_count = 0
 
@@ -270,31 +281,31 @@ def __process_file(wait_trans_path: str, new_trans_path: str, filename: str):
             _bap_count += 1
             # 扫描到标志符行，说明进入了新的BAP，原文清空
             # 此步非常重要，避免在没有原文且选择覆盖的情况下出错
-            _old_say = ''
+            _old_say = ""
             continue
 
         # 原文本行
         old_say_match = PATTERN_OLD_SAY.match(line)
-        if old_say_match is not None and _identifier not in ('', 'strings'):
+        if old_say_match is not None and _identifier not in ("", "strings"):
             _old_say_list = old_say_match.groups()
             # 跳过cv语音行
-            if _old_say_list[0] == 'voice':
+            if _old_say_list[0] == "voice":
                 continue
             _old_say = _old_say_list[1]
             continue
 
         # 译文行
         new_say_match = PATTERN_NEW_SAY.match(line)
-        if new_say_match is not None and _identifier not in ('', 'strings'):
+        if new_say_match is not None and _identifier not in ("", "strings"):
             _new_say_list = new_say_match.groups()
             _who = _new_say_list[0]
             # 跳过cv语音行
-            if _who == 'voice':
+            if _who == "voice":
                 continue
 
             # 原文say为空时，表示找不到原文注释，这时可以尝试通过标识符来找译文
-            if _old_say == '':
-                if _new_say_list[1].strip() == '':
+            if _old_say == "":
+                if _new_say_list[1].strip() == "":
                     translated_list = __read_from_identifier_library_cache(_identifier)
                     if len(translated_list):
                         for list_idx, list_item in enumerate(translated_list):
@@ -310,7 +321,7 @@ def __process_file(wait_trans_path: str, new_trans_path: str, filename: str):
                             _tmp_idx += 1
                             _tmp_lightSen.insert(_tmp_idx, reverse_line)
 
-                if _bap_count >= GLOBAL_DATA['rpy_update_bap_max_cache']:
+                if _bap_count >= GLOBAL_DATA["rpy_update_bap_max_cache"]:
                     outp.writelines(_tmp_lightSen)
                     outp.flush()
                     # 清空BAP缓存
@@ -334,11 +345,13 @@ def __process_file(wait_trans_path: str, new_trans_path: str, filename: str):
             #         )
 
             # 以下为原文say不为空时的处理逻辑
-            if _new_say_list[1].strip() == '':  # 当译文行为空时，尝试获取已有译文
+            if _new_say_list[1].strip() == "":  # 当译文行为空时，尝试获取已有译文
                 translated_list = __read_from_identifier_library_cache(_identifier)
                 # 如果从identifier_library_cache未匹配到，可以通过标识符在txt_library_cache中再匹配一次
                 if len(translated_list) < 1:
-                    translated_list = __read_from_txt_library_cache(_old_say, _identifier)
+                    translated_list = __read_from_txt_library_cache(
+                        _old_say, _identifier
+                    )
 
                 if len(translated_list):
                     for list_idx, list_item in enumerate(translated_list):
@@ -354,7 +367,7 @@ def __process_file(wait_trans_path: str, new_trans_path: str, filename: str):
                         _tmp_idx += 1
                         _tmp_lightSen.insert(_tmp_idx, reverse_line)
 
-            if _bap_count >= GLOBAL_DATA['rpy_update_bap_max_cache']:
+            if _bap_count >= GLOBAL_DATA["rpy_update_bap_max_cache"]:
                 outp.writelines(_tmp_lightSen)
                 outp.flush()
                 # 清空BAP缓存
@@ -365,15 +378,15 @@ def __process_file(wait_trans_path: str, new_trans_path: str, filename: str):
 
         # old行
         old_match = PATTERN_OLD.match(line)
-        if old_match is not None and _identifier == 'strings':
+        if old_match is not None and _identifier == "strings":
             _old_say = old_match.group(1)
             continue
 
         # new 行
         new_match = PATTERN_NEW.match(line)
-        if new_match is not None and _identifier == 'strings':
-            if _old_say == '':
-                if _bap_count >= GLOBAL_DATA['rpy_update_bap_max_cache']:
+        if new_match is not None and _identifier == "strings":
+            if _old_say == "":
+                if _bap_count >= GLOBAL_DATA["rpy_update_bap_max_cache"]:
                     outp.writelines(_tmp_lightSen)
                     outp.flush()
                     # 清空BAP缓存
@@ -382,38 +395,38 @@ def __process_file(wait_trans_path: str, new_trans_path: str, filename: str):
 
             original_new_say = new_match.group(1)  # 译文
             # 当译文不为空时，如果覆盖写入，则发出请求
-            if original_new_say == '':
+            if original_new_say == "":
                 translated_list = __read_from_txt_library_cache(_old_say, _identifier)
                 if len(translated_list):
                     # strings只可能有一行，所以直接取首位索引值即可
-                    _tmp_lightSen[_tmp_idx] = '    new \"' + translated_list[0] + '\"\n'
+                    _tmp_lightSen[_tmp_idx] = '    new "' + translated_list[0] + '"\n'
 
-            if _bap_count >= GLOBAL_DATA['rpy_update_bap_max_cache']:
+            if _bap_count >= GLOBAL_DATA["rpy_update_bap_max_cache"]:
                 outp.writelines(_tmp_lightSen)
                 outp.flush()
                 # 清空BAP缓存
                 _bap_count = 0
-            _old_say = ''
+            _old_say = ""
 
     if _bap_count > 0:
         outp.writelines(_tmp_lightSen)
         outp.close()
-    print_info(f'{filename} 更新完成！\n')
+    print_info(f"{filename} 更新完成！\n")
 
 
-def __write_in_identifier_library_cache(identifier='', translated_txt=''):
-    '''
+def __write_in_identifier_library_cache(identifier="", translated_txt=""):
+    """
     写入标识符缓存库
-    '''
+    """
 
     # 如果标识符为空或who或strings，不写入缓存库
     identifier = identifier.strip()
-    if identifier in ('', 'who', 'strings'):
+    if identifier in ("", "who", "strings"):
         return
 
     global __identifier_library_cache
     # 如果译文为空，或译文中含有TODO，不写入缓存库，已写入缓存库的也删除
-    if translated_txt.strip() == '' or MARK_TODO in translated_txt:
+    if translated_txt.strip() == "" or MARK_TODO in translated_txt:
         if identifier in __identifier_library_cache:
             __identifier_library_cache = del_key_from_dict(
                 identifier, __identifier_library_cache
@@ -427,34 +440,34 @@ def __write_in_identifier_library_cache(identifier='', translated_txt=''):
 
 
 def __write_in_txt_library_cache(
-    source_txt='', translated_txt='', identifier='strings'
+    source_txt="", translated_txt="", identifier="strings"
 ) -> bool:
-    '''
+    """
     写入文本缓存库
-    '''
+    """
 
     # 如果原文为空，直接返回
-    if source_txt.strip() == '':
+    if source_txt.strip() == "":
         return True
 
     # 如果标识符为空，表明数据非法，直接返回
     identifier = identifier.strip()
-    if identifier == '':
+    if identifier == "":
         return True
 
     # 去除首尾空行，who和strings的空行往往都是有意而为，故不剔除
-    if identifier not in ('who', 'strings'):
+    if identifier not in ("who", "strings"):
         source_txt = source_txt.strip()
 
     # 将文本全部转为大写。这里需要判断下原字符串是否含有小写英文字符。
-    q_upper = ''
+    q_upper = ""
     if has_lower_letter(source_txt):
         q_upper = source_txt.upper()
 
     global __txt_library_cache
     # 如果译文为空，或译文中含有TODO，不写入缓存库，已写入缓存库的也删除
-    if translated_txt.strip() == '' or MARK_TODO in translated_txt:
-        if identifier not in ('who', 'strings'):
+    if translated_txt.strip() == "" or MARK_TODO in translated_txt:
+        if identifier not in ("who", "strings"):
             if (
                 source_txt in __txt_library_cache
                 and identifier in __txt_library_cache[source_txt]
@@ -479,7 +492,7 @@ def __write_in_txt_library_cache(
         # 译文行存在一条原文对应多条译文的情况，所以这里应该用列表来储存译文
         __txt_library_cache[source_txt][identifier] = [translated_txt]
     else:
-        if identifier not in ('who', 'strings'):
+        if identifier not in ("who", "strings"):
             __txt_library_cache[source_txt][identifier].append(translated_txt)
 
     # 原文本无大写形式时，直接return
@@ -492,19 +505,19 @@ def __write_in_txt_library_cache(
     if identifier not in __txt_library_cache[q_upper]:
         __txt_library_cache[q_upper][identifier] = [translated_txt]
     else:
-        if identifier not in ('who', 'strings'):
+        if identifier not in ("who", "strings"):
             __txt_library_cache[q_upper][identifier].append(translated_txt)
 
     return False
 
 
 def __read_from_identifier_library_cache(identifier: str) -> list:
-    '''
+    """
     从标识符缓存库读取
-    '''
+    """
 
     identifier = identifier.strip()
-    if identifier in ('', 'who', 'strings'):
+    if identifier in ("", "who", "strings"):
         return []
 
     if __identifier_library_cache is None or not len(__identifier_library_cache):
@@ -519,12 +532,12 @@ def __read_from_identifier_library_cache(identifier: str) -> list:
 
     # 当标识符不匹配时，有可能因存在label不同导致标识符不同的情况，将标识符分割获取8位标识符后再匹配一次
     ident = __get_identifier(identifier)
-    if ident == 'wrong':
+    if ident == "wrong":
         return []
 
     for key, value in __identifier_library_cache.items():
         cache_ident = __get_identifier(key)
-        if cache_ident == 'wrong':
+        if cache_ident == "wrong":
             continue
         if ident == cache_ident:
             for tex in value:
@@ -536,26 +549,26 @@ def __read_from_identifier_library_cache(identifier: str) -> list:
 
 
 def __read_from_txt_library_cache(source_txt: str, identifier: str) -> list:
-    '''
+    """
     从文本缓存库读取
 
     1. 直接匹配文本。匹配成功，则根据标识符获取译文；若为找到相应标识符，则选择首位索引下的译文
     2. 将文本所有字母转为大写再进行匹配
-    '''
+    """
 
-    if source_txt.strip() == '':
+    if source_txt.strip() == "":
         return []
 
     # 去除首尾空行
     identifier = identifier.strip()
-    if identifier == '':
+    if identifier == "":
         return []
 
     if __txt_library_cache is None or not len(__txt_library_cache):
         return []
 
     # 去除首尾空行，strings下的空行往往都是有意而为，故不剔除
-    if identifier != 'strings':
+    if identifier != "strings":
         source_txt = source_txt.strip()
 
     if source_txt not in __txt_library_cache:
@@ -575,14 +588,14 @@ def __read_from_txt_library_cache(source_txt: str, identifier: str) -> list:
         return txt_list
 
     # 当标识符不匹配时，有可能因存在label不同导致标识符不同的情况，将标识符分割获取8位标识符后再匹配一次
-    if identifier not in ('who', 'strings'):
+    if identifier not in ("who", "strings"):
         ident = __get_identifier(identifier)
-        if ident == 'wrong':
+        if ident == "wrong":
             return []
 
         for key, value in li.items():
             cache_ident = __get_identifier(key)
-            if cache_ident == 'wrong':
+            if cache_ident == "wrong":
                 continue
             if ident == cache_ident:
                 for tex in value:
@@ -604,19 +617,19 @@ def __read_from_txt_library_cache(source_txt: str, identifier: str) -> list:
 
 
 def __get_identifier(ident: str) -> str:
-    '''
+    """
     获取除“strings”外的8位标识符，标识符有可能是纯字母、纯数字或字母数字。
 
     将标识符字符串通过“_”分割成多个字符后，一般最后一位便是8位标识符。
     但同时也存在多个文本相同且都在同一个label语句中的情况，Ren'Py会在标识符行末尾添加一个递增数字来加以区分，此时倒数第二位才是8位标识符。
 
     如果标识符不是“strings”，且长度不符合标准标识符的位数，那么说明该标识符可能出现了错误，不处理该数据。
-    '''
+    """
     ident = ident.strip()
-    if ident == '':
-        return 'wrong'
+    if ident == "":
+        return "wrong"
 
-    ident_split = ident.split('_')
+    ident_split = ident.split("_")
     if len(ident_split) <= 1:
         return ident
 
@@ -629,42 +642,42 @@ def __get_identifier(ident: str) -> str:
 
     # 如果不是纯数字，或长度大于2（文本中出现两位数以上的相同标识符的可能性微乎其微），则将其归为错误数据，返回错误标记
     if not is_int(identifier_last) or len(identifier_last) > 2:
-        return 'wrong'
+        return "wrong"
 
     # 如果是纯数字，则大概率是递增数字，此时我们获取倒数第二位
     identifier = ident_split[-2]
     # 如果倒数第二位的长度依然不等于8，则将其归为错误数据，返回错误标记
     if len(identifier) != 8:
-        return 'wrong'
+        return "wrong"
 
     # 返回8位标识符+递增数字
-    return identifier + '_' + identifier_last
+    return identifier + "_" + identifier_last
 
 
-def __input_path(project='OLD', reselect=False):
-    '''
+def __input_path(project="OLD", reselect=False):
+    """
     输入待翻文件/文件夹的绝对路径
-    '''
+    """
 
     global __pre_trans_project_path, __wait_trans_project_path, __new_trans_project_path
 
     if not reselect:
-        if project == 'OLD':
+        if project == "OLD":
             # 若存在默认路径
-            if __pre_trans_project_path != '':
+            if __pre_trans_project_path != "":
                 # 若路径不存在，重新手动输入
                 if not os.path.exists(__pre_trans_project_path):
-                    print_err('默认的旧版本翻译项目路径不存在！\n')
-                    __pre_trans_project_path = ''
+                    print_err("默认的旧版本翻译项目路径不存在！\n")
+                    __pre_trans_project_path = ""
                     __input_path(project)
                     return
 
-                print_info('路径验证成功！\n')
+                print_info("路径验证成功！\n")
                 return
 
-            inp = input('请输入旧翻译文本的绝对路径：').strip()
+            inp = input("请输入旧翻译文本的绝对路径：").strip()
             # 输入为空，重新输入
-            if inp == '':
+            if inp == "":
                 __input_path(project, True)
                 return
             # 规范路径，不调整大小写
@@ -674,25 +687,25 @@ def __input_path(project='OLD', reselect=False):
                 __input_path(project, True)
                 return
             __pre_trans_project_path = inp
-            print_info('路径验证成功！\n')
+            print_info("路径验证成功！\n")
 
-        elif project == 'NEW':
+        elif project == "NEW":
             # 若存在默认路径
-            if __wait_trans_project_path != '':
+            if __wait_trans_project_path != "":
                 # 若路径不存在，则重新手动输入
                 if not os.path.exists(__wait_trans_project_path):
-                    print_err('config.ini配置的新翻译文本路径不存在！\n')
-                    __wait_trans_project_path = ''
+                    print_err("config.ini配置的新翻译文本路径不存在！\n")
+                    __wait_trans_project_path = ""
                     __input_path(project)
                     return
 
                 __new_trans_project_path = __verify_path(__wait_trans_project_path)
-                print_info('路径验证成功！\n')
+                print_info("路径验证成功！\n")
                 return
 
-            inp = input('请输入新翻译文本的绝对路径：').strip()
+            inp = input("请输入新翻译文本的绝对路径：").strip()
             # 输入为空，重新输入
-            if inp == '':
+            if inp == "":
                 __input_path(project, True)
                 return
             # 规范路径，不调整大小写
@@ -703,12 +716,12 @@ def __input_path(project='OLD', reselect=False):
                 return
             __wait_trans_project_path = inp
             __new_trans_project_path = __verify_path(__wait_trans_project_path)
-            print_info('路径验证成功！\n')
+            print_info("路径验证成功！\n")
         return
 
-    tmp = input('不存在该路径，请重新输入正确的路径或回车关闭程序：').strip()
+    tmp = input("不存在该路径，请重新输入正确的路径或回车关闭程序：").strip()
     # 输入为空，退出程序
-    if tmp == '':
+    if tmp == "":
         sys.exit()
     # 规范路径，不调整大小写
     tmp = os.path.normpath(tmp)
@@ -717,30 +730,30 @@ def __input_path(project='OLD', reselect=False):
         __input_path(project, True)
         return
 
-    if project == 'OLD':
+    if project == "OLD":
         __pre_trans_project_path = tmp
     else:
         __wait_trans_project_path = tmp
         __new_trans_project_path = __verify_path(__wait_trans_project_path)
-    print_info('路径验证成功！\n')
+    print_info("路径验证成功！\n")
 
 
 def __verify_path(wait_trans_path: str) -> str:
-    '''
+    """
     验证待翻译项目路径是否正确，并新建更新后的项目路径，已存在的项目先改名备份
 
     :param wait_trans_path: 待翻译项目路径
-    '''
+    """
 
     # 如果待翻译项目是文件夹
     if os.path.isdir(wait_trans_path):
         # 新建更新的项目文件夹
-        new_trans_path = wait_trans_path + '-new'
+        new_trans_path = wait_trans_path + "-new"
         # 如果更新的项目路径存在，先将其更名，再新建空文件夹
         if os.path.exists(new_trans_path):
             os.rename(
                 new_trans_path,
-                new_trans_path + '_' + datetime.now().strftime('%Y_%m_%d_%H_%M_%S'),
+                new_trans_path + "_" + datetime.now().strftime("%Y_%m_%d_%H_%M_%S"),
             )
         os.makedirs(new_trans_path)
         return new_trans_path
@@ -748,48 +761,48 @@ def __verify_path(wait_trans_path: str) -> str:
     # 如果待翻译项目是文件
     if os.path.isfile(wait_trans_path):
         _inp = os.path.splitext(wait_trans_path)
-        new_trans_file = _inp[0] + '-new' + _inp[-1]
+        new_trans_file = _inp[0] + "-new" + _inp[-1]
         # 如果更新的项目路径存在，将其更名备份
         if os.path.exists(new_trans_file):
             bak_new_trans_file = (
                 _inp[0]
-                + '-new_'
-                + datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
+                + "-new_"
+                + datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
                 + _inp[-1]
             )
             os.rename(new_trans_file, bak_new_trans_file)
         return new_trans_file
 
 
-def __select_serial_num(serial_num='', first_select=True):
-    '''
+def __select_serial_num(serial_num="", first_select=True):
+    """
     输入序号选择对应的操作
 
     - serial_num: 选定的操作序号
     - first_select: 是否为重新选择
-    '''
+    """
 
     # 用户输入内容
-    _inp = ''
+    _inp = ""
     # 首次进入选项
     if first_select:
         print(
-            '''1) 更新翻译文本
+            """1) 更新翻译文本
 0) 返回上一级
-'''
+"""
         )
-        _inp = input('请输入要操作的序号或回车退出程序：').strip()
+        _inp = input("请输入要操作的序号或回车退出程序：").strip()
     else:
         _inp = input(
-            f'列表中不存在序号 {serial_num}，请重新输入正确序号或回车退出程序：'
+            f"列表中不存在序号 {serial_num}，请重新输入正确序号或回车退出程序："
         ).strip()
 
     match _inp:
-        case '':
+        case "":
             sys.exit()
-        case '0':
+        case "0":
             main.start_main()
-        case '1':
+        case "1":
             return
         case _:
             __select_serial_num(_inp, False)
