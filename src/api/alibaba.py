@@ -10,17 +10,15 @@ from alibabacloud_credentials.client import Client as CredentialClient
 from alibabacloud_tea_openapi import models as open_api_models
 from alibabacloud_tea_util import models as util_models
 
-from src.utils.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
-from src.exception.tool_exception import ToolException
 from src.api.base_translation import BaseTranslation
+from src.exception.tool_exception import ToolException
+from src.utils.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
 from src.utils.utils import (
     acquire_token,
-    get_password_with_star,
-    is_letters_and_digits,
     print_err,
     print_info,
     read_config,
-    remove_escape,
+    remove_escapes,
 )
 
 
@@ -56,7 +54,7 @@ class ALiBaBaTranslation(BaseTranslation):
         """
 
         # 删除转义符
-        source_txt = remove_escape(source_txt)
+        source_txt = remove_escapes(source_txt)
         # 源文本语种
         from_lang = kwargs.get("from_lang", "auto")
         # 校验文本及语种是否符合要求，不符合则直接返回空值
@@ -132,15 +130,19 @@ class ALiBaBaTranslation(BaseTranslation):
 
         keys = {}
         if not self.__access_key_id:
-            inp = get_password_with_star(prompt="未配置AccessKeyID！请输入：")
-            if inp == "" or not is_letters_and_digits(inp) or len(inp) < 24:
-                print_err("未输入正确参数，引擎启动失败！")
+            inp = self.input_what_we_need(
+                length=24,
+                prompt="未配置AccessKeyID！请输入（敏感内容不显示）或回车返回引擎列表：",
+            )
+            if inp == "":
                 return False
             self.__access_key_id = keys["AccessKeyID"] = inp
         if not self.__access_key_secret:
-            inp = get_password_with_star(prompt="未配置AccessKeySecret！请输入：")
-            if inp == "" or not is_letters_and_digits(inp) or len(inp) < 30:
-                print_err("未输入正确参数，引擎启动失败！")
+            inp = self.input_what_we_need(
+                length=30,
+                prompt="未配置AccessKeySecret！请输入（敏感内容不显示）或回车返回引擎列表：",
+            )
+            if inp == "":
                 return False
             self.__access_key_secret = keys["AccessKeySecret"] = inp
 

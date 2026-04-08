@@ -7,16 +7,14 @@ import json
 
 from xfyunsdknlp.translate_client import TranslateClient
 
-from src.utils.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
 from src.api.base_translation import BaseTranslation
+from src.utils.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
 from src.utils.utils import (
     acquire_token,
     enpun_2_zhpun,
-    get_password_with_star,
-    is_letters_and_digits,
     print_err,
     read_config,
-    remove_escape,
+    remove_escapes,
 )
 
 
@@ -57,7 +55,7 @@ class XunFeiTranslation(BaseTranslation):
             return ""
 
         # 删除转义符
-        source_txt = remove_escape(source_txt)
+        source_txt = remove_escapes(source_txt)
         # 源文本语种
         from_lang = kwargs.get("from_lang", "auto")
         # 校验文本及语种是否符合要求，不符合则直接返回空值
@@ -111,21 +109,27 @@ class XunFeiTranslation(BaseTranslation):
 
         keys = {}
         if not self.__app_id:
-            inp = get_password_with_star("未配置APPID！请输入：").strip()
-            if inp == "" or not is_letters_and_digits(inp) or len(inp) < 8:
-                print_err("未输入正确参数，引擎启动失败！")
+            inp = self.input_what_we_need(
+                length=8,
+                prompt="未配置APPID！请输入（敏感内容不显示）或回车返回引擎列表：",
+            )
+            if inp == "":
                 return False
             self.__app_id = keys["APPID"] = inp
         if not self.__api_secret:
-            inp = get_password_with_star("未配置APISecret！请输入：").strip()
-            if inp == "" or not is_letters_and_digits(inp) or len(inp) < 32:
-                print_err("未输入正确参数，引擎启动失败！")
+            inp = self.input_what_we_need(
+                length=32,
+                prompt="未配置APISecret！请输入（敏感内容不显示）或回车返回引擎列表：",
+            )
+            if inp == "":
                 return False
             self.__api_secret = keys["APISecret"] = inp
         if not self.__api_key:
-            inp = get_password_with_star("未配置APIKey！请输入：").strip()
-            if inp == "" or not is_letters_and_digits(inp) or len(inp) < 32:
-                print_err("未输入正确参数，引擎启动失败！")
+            inp = self.input_what_we_need(
+                length=32,
+                prompt="未配置APIKey！请输入（敏感内容不显示）或回车返回引擎列表：",
+            )
+            if inp == "":
                 return False
             self.__api_key = keys["APIKey"] = inp
 

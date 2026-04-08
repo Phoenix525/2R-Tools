@@ -9,7 +9,7 @@ from src.utils.utils import (
     enpun_2_zhpun,
     print_err,
     read_config,
-    remove_escape,
+    remove_escapes,
 )
 
 
@@ -47,7 +47,7 @@ class GoogleTranslation(BaseTranslation):
             return ""
 
         # 删除转义符
-        source_txt = remove_escape(source_txt)
+        source_txt = remove_escapes(source_txt)
         # 源文本语种
         from_lang = kwargs.get("from_lang", "auto")
         # 校验文本及语种是否符合要求，不符合则直接返回空值

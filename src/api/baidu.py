@@ -8,19 +8,16 @@ from json import loads
 from random import randint
 from urllib import parse
 
-from src.utils.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
+from src.api.base_translation import STRING_NUM, BaseTranslation
 from src.exception.tool_exception import ToolException
-from src.api.base_translation import BaseTranslation
+from src.utils.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
 from src.utils.utils import (
     acquire_token,
     enpun_2_zhpun,
-    get_password_with_star,
-    is_all_digits,
-    is_letters_and_digits,
     print_err,
     print_info,
     read_config,
-    remove_escape,
+    remove_escapes,
 )
 
 
@@ -55,7 +52,7 @@ class BaiduTranslation(BaseTranslation):
         """
 
         # 删除转义符
-        source_txt = remove_escape(source_txt)
+        source_txt = remove_escapes(source_txt)
         # 源文本语种
         from_lang = kwargs.get("from_lang", "auto")
         # 校验文本及语种是否符合要求，不符合则直接返回空值
@@ -150,15 +147,20 @@ class BaiduTranslation(BaseTranslation):
 
         keys = {}
         if not self.__app_id:
-            inp = get_password_with_star(prompt="未配置appid！请输入：")
-            if inp == "" or not is_all_digits(inp) or len(inp) < 17:
-                print_err("未输入正确参数，引擎启动失败！")
+            inp = self.input_what_we_need(
+                length=17,
+                validate_type=STRING_NUM,
+                prompt="未配置appid！请输入（敏感内容不显示）或回车返回引擎列表：",
+            )
+            if inp == "":
                 return False
             self.__app_id = keys["appid"] = inp
         if not self.__secret_key:
-            inp = get_password_with_star(prompt="未配置secretKey！请输入：")
-            if inp == "" or not is_letters_and_digits(inp) or len(inp) < 20:
-                print_err("未输入正确参数，引擎启动失败！")
+            inp = self.input_what_we_need(
+                length=20,
+                prompt="未配置secretKey！请输入（敏感内容不显示）或回车返回引擎列表：",
+            )
+            if inp == "":
                 return False
             self.__secret_key = keys["secretKey"] = inp
 

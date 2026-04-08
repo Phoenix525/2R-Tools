@@ -8,7 +8,19 @@
 import time
 
 from src.exception.tool_exception import ToolException
-from src.utils.utils import print_err, validate_lang
+from src.utils.utils import (
+    get_password_with_mask,
+    is_all_digits,
+    is_letters_and_digits,
+    is_uuid_v1,
+    print_err,
+    validate_lang,
+)
+
+STRING_NUM = "STRING_NUM"
+STRING_LETTER_NUM = "STRING_LETTER_NUM"
+STRING_DEEPL = "STRING_DEEPL"
+STRING_HUOSHAN = "STRING_HUOSHAN"
 
 
 class BaseTranslation(object):
@@ -122,3 +134,49 @@ class BaseTranslation(object):
             print_err(str(e))
         finally:
             return from_lang
+
+    def input_what_we_need(
+        self,
+        length: int,
+        first_config=True,
+        *,
+        validate_type=STRING_LETTER_NUM,
+        prompt="请输入：",
+    ):
+        """
+        输入密钥，并验证是否合法，合法返回字串，反之返回空值
+
+        :param length: 指定检查长度
+        :param first_config: 首次调用函数
+        :param validate_type: 验证类型。不同api的密钥组成方式或有不同，不同的密钥根据指定的类型来验证
+        :param prompt: 控制台显示提示语
+        """
+
+        if not first_config:
+            prompt = "参数输入不正确，请重新输入或回车返回引擎列表："
+
+        inp = get_password_with_mask(prompt)
+        if inp == "":
+            return ""
+
+        validated = False
+        if validate_type == STRING_LETTER_NUM:
+            validated = is_letters_and_digits(inp, length)
+
+        elif validate_type == STRING_NUM:
+            validated = is_all_digits(inp, length)
+
+        elif validate_type == STRING_DEEPL:
+            # 免费版
+            if len(inp) == 39:
+                validated = inp.endswith(":fx") and is_uuid_v1(inp[:-3])
+            # pro付费版
+            elif len(inp) == 36:
+                validated = is_uuid_v1(inp)
+
+        elif validate_type == STRING_HUOSHAN:
+            validated = inp.endswith("==") and is_letters_and_digits(inp, length)
+
+        if not validated:
+            return self.input_what_we_need(length, False, validate_type=validate_type)
+        return inp

@@ -7,7 +7,6 @@
 
 import copy
 import os
-import pathlib
 import sys
 
 import main
@@ -44,7 +43,7 @@ def start():
 ===========================================================================================
 """)
 
-    __select_serial_num()
+    __choose_option()
 
     sys.exit()
 
@@ -202,12 +201,20 @@ def __write_translib():
     )
 
 
-def __select_serial_num(serial_num="", first_select=True):
+def __update_json_trans(pre_trans_path: str, new_trans_path: str):
+    print("正在扫描JSON文件……")
+    _dict1 = read_json(pre_trans_path)
+    _dict2 = read_json(new_trans_path)
+    trans_datas = merge_dicts([_dict1, _dict2])
+    write_json(new_trans_path, trans_datas)
+    print("JSON文本已完成更新！")
+
+
+def __choose_option(first_select=True):
     """
     输入序号选择对应的操作
 
-    - serial_num: 选定的操作序号
-    - first_select: 是否为重新选择
+    :param first_select: 首次进入选项
     """
 
     # 用户输入内容
@@ -220,9 +227,7 @@ def __select_serial_num(serial_num="", first_select=True):
 """)
         _inp = input("请输入要操作的序号（如1）或回车退出程序：").strip()
     else:
-        _inp = input(
-            f"列表中不存在序号 {serial_num}，请重新输入正确序号或回车退出程序："
-        ).strip()
+        _inp = input("列表中不存在该序号，请重新输入正确序号或回车退出程序：").strip()
 
     match _inp:
         case "":
@@ -234,17 +239,7 @@ def __select_serial_num(serial_num="", first_select=True):
         case "2":
             _file1 = input("\n请输入原文本库路径：").strip()
             _file2 = input("\n请输入新文本库路径：").strip()
-            print("正在扫描JSON文件……")
-            _dict1 = read_json(_file1)
-            _dict2 = read_json(_file2)
-            merge_dicts([_dict1, _dict2])
-            file_2_path = pathlib.Path(_file2)
-            write_json(
-                os.path.join(
-                    file_2_path.parent, file_2_path.stem + "_new" + file_2_path.suffix
-                ),
-                _file2,
-            )
-            print("JSON文本已完成更新！")
+            # todo 此处需要增加验证路径和文件是否合法的逻辑
+            __update_json_trans(_file1, _file2)
         case _:
-            __select_serial_num(_inp, False)
+            __choose_option(False)

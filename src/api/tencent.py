@@ -16,17 +16,15 @@ from tencentcloud.common.profile.http_profile import HttpProfile
 # 导入对应产品模块的client models
 from tencentcloud.tmt.v20180321 import models, tmt_client
 
-from src.utils.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
 from src.api.base_translation import BaseTranslation
+from src.utils.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
 from src.utils.utils import (
     acquire_token,
     enpun_2_zhpun,
-    get_password_with_star,
-    is_letters_and_digits,
     print_err,
     print_info,
     read_config,
-    remove_escape,
+    remove_escapes,
 )
 
 
@@ -66,7 +64,7 @@ class TencentTranslation(BaseTranslation):
             return ""
 
         # 删除转义符
-        source_txt = remove_escape(source_txt)
+        source_txt = remove_escapes(source_txt)
         # 源文本语种
         from_lang = kwargs.get("from_lang", "auto")
         # 校验文本及语种是否符合要求，不符合则直接返回空值
@@ -136,15 +134,19 @@ class TencentTranslation(BaseTranslation):
 
         keys = {}
         if not self.__secret_id:
-            inp = get_password_with_star(prompt="未配置secretId！请输入：")
-            if inp == "" or not is_letters_and_digits(inp) or len(inp) < 36:
-                print_err("未输入正确参数，引擎启动失败！")
+            inp = self.input_what_we_need(
+                length=36,
+                prompt="未配置secretId！请输入（敏感内容不显示）或回车返回引擎列表：",
+            )
+            if inp == "":
                 return False
             self.__secret_id = keys["secretId"] = inp
         if not self.__secret_key:
-            inp = get_password_with_star(prompt="未配置secretKey！请输入：")
-            if inp == "" or not is_letters_and_digits(inp) or len(inp) < 32:
-                print_err("未输入正确参数，引擎启动失败！")
+            inp = self.input_what_we_need(
+                length=32,
+                prompt="未配置secretKey！请输入（敏感内容不显示）或回车返回引擎列表：",
+            )
+            if inp == "":
                 return False
             self.__secret_key = keys["secretKey"] = inp
 

@@ -10,20 +10,23 @@
 import ast
 import base64
 import copy
+import getpass
 import hashlib
 import json
-import msvcrt
 import os
 import pathlib
 import re
 import shutil
 import time
+import uuid
 from configparser import ConfigParser
 from datetime import datetime
 from hashlib import md5
 from itertools import cycle
 
 import chardet
+
+# import pwinput
 import py3langid
 
 from src.exception.tool_exception import ToolException
@@ -112,11 +115,6 @@ TRANSLATED_LIB_LIBRARY_FILE = "TransLib.json"
 
 # 待处理标记，此处写死，避免用户修改导致文本不通用
 MARK_TODO = "TODO"
-
-# 提取模式
-EXTRACT = "EXTRACT"
-# 写入模式
-WRITEIN = "WRITEIN"
 
 # json更新标记
 KEY_PHOENIX = "__PHOENIX__"
@@ -301,7 +299,7 @@ def copy_file(source_file: str, target_dir: str, time_mark=True):
             source_file_path.stem
             + "_"
             + datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-            + source_file_path.suffix,
+            + source_file_path.suffix
         )
     shutil.copy(source_file, os.path.join(target_dir, new_file))
 
@@ -380,6 +378,18 @@ def to_boolean(val: any) -> bool:
         return False
 
 
+def is_uuid_v1(val: str) -> bool:
+    """
+    验证字符串是否是UUID
+    """
+    # ^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}(?::(?:fx|adm))?$
+    try:
+        uuid.UUID(val)
+        return True
+    except ValueError:
+        return False
+
+
 def is_int(val: any) -> bool:
     """
     判断传入参数是否是整型纯数字
@@ -392,18 +402,31 @@ def is_int(val: any) -> bool:
         return False
 
 
-def is_all_digits(val="") -> bool:
+def is_all_digits(string: str, length: int) -> bool:
     """
-    校验字串是否是全数字
+    校验字串是否是全数字，若不指定长度，则检查整个字符串是否符合
     """
-    return bool(re.fullmatch(r"\d+", val))
+
+    if not string:
+        return False
+
+    if not length:
+        length = len(string)
+    pattern = r"^\d{" + str(length) + r"}$"
+    return bool(re.match(pattern, string))
 
 
-def is_letters_and_digits(val="") -> bool:
+def is_letters_and_digits(string: str, length: int) -> bool:
     """
-    校验字串是否是大小写英文字母和数字组成
+    检查字符串是否由指定长度的大小写字母和数字组成，若不指定长度，则检查整个字符串是否符合
     """
-    return bool(re.fullmatch(r"^[A-Za-z0-9]+$", val))
+    if not string:
+        return False
+
+    if not length:
+        length = len(string)
+    pattern = r"^[A-Za-z0-9]{" + str(length) + r"}$"
+    return bool(re.match(pattern, string))
 
 
 def validate_lang(txt: str) -> str:
@@ -412,12 +435,12 @@ def validate_lang(txt: str) -> str:
     """
 
     if txt.strip() == "":
-        return "en"
+        return "auto"
 
     return py3langid.classify(txt)[0]
 
 
-def match_lang(txt: str, langs: str) -> bool:
+def match_lang(txt: str, lang: str) -> bool:
     """
     匹配符合指定列表中语种的文本。匹配返回True，反之返回False。
     由于语言检测程序的限制，此方法存在一定误差。
@@ -427,7 +450,7 @@ def match_lang(txt: str, langs: str) -> bool:
     """
 
     # 传入的待匹配文本为空字符串或语种列表为空字符串时，返回True
-    if txt.strip() == "" or langs.strip() == "":
+    if txt.strip() == "" or lang.strip() == "":
         return True
 
     # try:
@@ -438,7 +461,7 @@ def match_lang(txt: str, langs: str) -> bool:
 
     # return False
 
-    langlist = langs.split(",")
+    langlist = lang.split(",")
 
     for lang in langlist:
         lang = lang.strip()
@@ -447,7 +470,6 @@ def match_lang(txt: str, langs: str) -> bool:
 
         try:
             if py3langid.classify(txt)[0] == lang:
-                # if detect(txt, low_memory=False).lang == lang:
                 return True
         except Exception:
             continue
@@ -578,7 +600,7 @@ def has_lower_letter(txt: str) -> bool:
     return True
 
 
-def remove_escape(txt: str) -> str:
+def remove_escapes(txt: str) -> str:
     """
     删除文本中的转义字符，避免云翻译因转义字符的影响导致漏翻或语意错误
     """
@@ -724,7 +746,7 @@ def hashlib_256(res: str) -> str:
     """
     对传入的字串进行SHA256计算，把计算结果进行Base64编码后输出
 
-    - 要加密的字串
+    :param res: 要加密的字串
     """
     m = hashlib.sha256(bytes(res.encode(encoding="utf-8"))).digest()
     result = base64.b64encode(m).decode(encoding="utf-8")
@@ -735,8 +757,8 @@ def get_tuple_values_for_index(tup: tuple, idx=0) -> tuple:
     """
     获取元组中元组指定索引的值，并组成新的元组输出
 
-    - tup: 要查询的元组
-    - idx: 指定的索引
+    :param tup: 要查询的元组
+    :param idx: 指定的索引
     """
 
     if idx < 0:
@@ -756,9 +778,10 @@ def get_tuple_values_for_index(tup: tuple, idx=0) -> tuple:
 def validate_index(lst: list | tuple | str, index=0, with_negative=True) -> bool:
     """
     判断索引是否有效（支持负索引）
-    - lst: 要查询的对象
-    - index: 给定的索引值
-    - with_negative: 是否支持负索引
+
+    :param lst: 要查询的对象
+    :param index: 给定的索引值
+    :param with_negative: 是否支持负索引
     """
 
     lst_length = len(lst)
@@ -772,9 +795,10 @@ def validate_index(lst: list | tuple | str, index=0, with_negative=True) -> bool
 def acquire_token(qps=1, tokens=1, last_refill=0):
     """
     令牌桶限流器
-    - qps: 请求频率
-    - tokens: 当前令牌数
-    - last_refill: 最新补充令牌时间
+
+    :param qps: 请求频率
+    :param tokens: 当前令牌数
+    :param last_refill: 最新补充令牌时间
     """
 
     now = time.time()
@@ -797,6 +821,7 @@ def read_config(config_path="") -> ConfigParser | None:
     """
     读取项目配置文件
     """
+
     if not config_path:
         config_path = CONFIG_ABSPATH
     if not os.path.exists(config_path) or not os.path.isfile(config_path):
@@ -845,28 +870,21 @@ def write_config(section: str, keys=None, add=True) -> bool:
     return True
 
 
-def get_password_with_star(prompt="请输入密码: "):
-    print(prompt, end="", flush=True)
-    password = []
+def get_password_with_mask(prompt="请输入密码: "):
+    """
+    控制台输入敏感内容非明文显示，返回实际输入内容
 
-    while True:
-        ch = msvcrt.getch()
+    :param prompt: 控制台显示的提示语
+    """
 
-        if ch in (b"\r", b"\n"):  # 回车
-            print()
-            break
-        elif ch == b"\x08":  # 退格
-            if password:
-                password.pop()
-                print("\b \b", end="", flush=True)
-        else:
-            # 获取字符的原始字节
-            char = ch.decode("utf-8", errors="ignore")
-            if char:  # 只处理可打印字符
-                password.append(char)
-                print("*", end="", flush=True)
+    # 掩码显示
+    # todo 存在输入长度超过命令行窗口宽度自动换行后无法退格到上一行的问题，会导致命令行窗口卡死，只能关闭重启
+    # inp = pwinput.pwinput(prompt, mask="*")
+    # return inp.strip()
 
-    return "".join(password)
+    # 空白显示，这个方法不会遇到掩码显示的超长自动换行的问题，但不够直观
+    inp = getpass.getpass(prompt)
+    return inp.strip()
 
 
 def get_value_from_library(source_txt: str):

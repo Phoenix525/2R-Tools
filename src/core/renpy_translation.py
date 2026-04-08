@@ -31,7 +31,6 @@ from src.utils.utils import (
     copy_directory,
     get_file_encoding,
     print_info,
-    print_warn,
     validate_renpy_trans_file,
 )
 
@@ -61,7 +60,7 @@ __curr_renpy_project_path = os.path.join(
 
 def start():
     """
-    翻译文本模式
+    Ren'Py 翻译文本翻译工具
     """
 
     print(r"""
@@ -74,20 +73,18 @@ def start():
 """)
 
     # 选择操作选项
-    __select_serial_num()
-
+    __choose_option()
     # 输入待处理对象路径
     __input_path()
 
-    global __interpreter, __rewrite_all, __rewrite_todo
-
+    global __interpreter, __rewrite_all
     __interpreter = Interpreter()
 
     # 是否开启覆盖所有译文
     __rewrite_all = __rewrite_all()
-
     # 如果不覆盖所有译文，再询问是否开启覆盖TODO译文
     if not __rewrite_all:
+        global __rewrite_todo
         __rewrite_todo = __rewrite_todo()
 
     __walk_file()
@@ -295,6 +292,8 @@ def __process_file(old_path: str, new_path: str, filename: str):
 def __input_path(first_select=True):
     """
     输入待翻文件/文件夹的绝对路径
+
+    :param first_select: 首次输入路径
     """
 
     global __input_abspath, __output_abspath
@@ -307,16 +306,15 @@ def __input_path(first_select=True):
             print_info("正在验证默认路径……")
             # 若路径不存在，则重新手动输入
             if not os.path.exists(__input_abspath):
-                print_warn("config.ini配置的翻译文本路径不存在！请手动输入路径！\n")
                 __input_abspath = ""
                 __input_path(False)
                 return
-
-            __input_abspath, __output_abspath = __verify_path(
-                __input_abspath, __output_abspath
+            __input_abspath, __output_abspath = __create_new_trans_project_path(
+                __input_abspath
             )
+            print_info("路径验证成功！\n")
             return
-        _inp = input("请输入翻译文本的绝对路径或回车关闭程序：").strip()
+        _inp = input("请输入翻译项目的绝对路径或回车关闭程序：").strip()
     else:
         _inp = input("路径错误，请重新输入正确的路径或回车关闭程序：").strip()
 
@@ -329,12 +327,13 @@ def __input_path(first_select=True):
     if not os.path.exists(_inp):
         __input_path(False)
         return
-    __input_abspath, __output_abspath = __verify_path(_inp, __output_abspath)
+    __input_abspath, __output_abspath = __create_new_trans_project_path(_inp)
+    print_info("路径验证成功！\n")
 
 
-def __verify_path(input_abspath: str, output_abspath: str) -> tuple:
+def __create_new_trans_project_path(input_abspath: str, output_abspath: str) -> tuple:
     """
-    验证原路径和目标路径是否正确
+    创建新翻译项目路径
 
     :param input_abspath: 原路径
     :param output_abspath: 目标路径
@@ -365,7 +364,6 @@ def __verify_path(input_abspath: str, output_abspath: str) -> tuple:
                 + _inp[-1]
             )
             os.rename(output_abspath, bak_output_abspath)
-    print_info("路径验证成功！\n")
     return input_abspath, output_abspath
 
 
@@ -403,12 +401,11 @@ def __rewrite_todo() -> bool:
     return False
 
 
-def __select_serial_num(serial_num="", first_select=True):
+def __choose_option(first_select=True):
     """
     输入序号选择对应的操作
 
-    - serial_num: 选定的操作序号
-    - first_select: 是否为重新选择
+    :param first_select: 首次进入选项
     """
 
     # 用户输入内容
@@ -420,9 +417,7 @@ def __select_serial_num(serial_num="", first_select=True):
 """)
         _inp = input("请输入要操作的序号或回车退出程序：").strip()
     else:
-        _inp = input(
-            f"列表中不存在序号 {serial_num}，请重新输入正确序号或回车退出程序："
-        ).strip()
+        _inp = input("列表中不存在该序号，请重新输入正确序号或回车退出程序：").strip()
 
     match _inp:
         case "":
@@ -432,4 +427,4 @@ def __select_serial_num(serial_num="", first_select=True):
         case "1":
             return
         case _:
-            __select_serial_num(_inp, False)
+            __choose_option(False)

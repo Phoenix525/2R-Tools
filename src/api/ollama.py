@@ -3,9 +3,9 @@
 
 from ollama import ChatResponse, chat
 
-from src.exception.tool_exception import ToolException
 from src.api.base_translation import BaseTranslation
-from src.utils.utils import print_err, read_config, remove_escape
+from src.exception.tool_exception import ToolException
+from src.utils.utils import print_err, read_config, remove_escapes
 
 
 class OllamaTranslation(BaseTranslation):
@@ -49,7 +49,7 @@ class OllamaTranslation(BaseTranslation):
         """
 
         # 删除转义符
-        source_txt = remove_escape(source_txt)
+        source_txt = remove_escapes(source_txt)
         # 源文本语种
         from_lang = kwargs.get("from_lang", "auto")
         # 校验文本及语种是否符合要求，不符合则直接返回空值

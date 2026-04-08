@@ -51,7 +51,7 @@ def start(project_name: str):
 ===========================================================================================
 """)
 
-    __select_serial_num()
+    __choose_option()
 
     sys.exit()
 
@@ -68,9 +68,11 @@ def __initialize():
     __translate()
 
 
-def __translate(_filter=""):
+def __translate(filter_lang=""):
     """
     扫描缓存，逐条翻译并覆写
+
+    :param filter_lang: 过滤语种
     """
 
     print_info("正在翻译……")
@@ -99,7 +101,7 @@ def __translate(_filter=""):
         txt = k.split("_")[-1]
 
         # 过滤指定语种文本
-        if not match_lang(txt, _filter):
+        if not match_lang(txt, filter_lang):
             continue
 
         __game_txt_cache[k] = __interpreter.translate_txt(txt)
@@ -220,6 +222,8 @@ def __update_phoenix_mark(update=False):
 def __wirte_in_file(bak=True):
     """
     将结果写入文件
+
+    :param bak: 启用备份
     """
 
     if not __game_txt_cache[KEY_PHOENIX]:
@@ -230,12 +234,11 @@ def __wirte_in_file(bak=True):
     write_json(__curr_rpgm_project_path, __game_txt_cache, backup=bak)
 
 
-def __select_serial_num(serial_num="", first_select=True):
+def __choose_option(first_select=True):
     """
     输入序号选择对应的操作
 
-    - serial_num: 选定的操作序号
-    - first_select: 是否为重新选择
+    :param first_select: 首次进入选项
     """
 
     # 用户输入内容
@@ -249,9 +252,7 @@ def __select_serial_num(serial_num="", first_select=True):
 """)
         _inp = input("请输入要操作的序号或回车退出程序：").strip()
     else:
-        _inp = input(
-            f"列表中不存在序号 {serial_num}，请重新输入正确序号或回车退出程序："
-        ).strip()
+        _inp = input("列表中不存在该序号，请重新输入正确序号或回车退出程序：").strip()
 
     match _inp:
         case "":
@@ -265,4 +266,4 @@ def __select_serial_num(serial_num="", first_select=True):
         case "3":
             __add_pass()
         case _:
-            __select_serial_num(_inp, False)
+            __choose_option(False)

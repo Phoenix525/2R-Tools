@@ -3,7 +3,7 @@
 """
 @Author: Phoenix
 @Date: 2020-06-12 12:11:24
-Ren'Py翻译文本机器翻译工具
+机器翻译工具
 """
 
 import sys
@@ -27,8 +27,7 @@ def start():
                                       版权归作者所有
 ===========================================================================================
 """)
-
-    __select_serial_num()
+    __choose_option()
 
     # 实例化翻译引擎
     global __interpreter
@@ -37,12 +36,14 @@ def start():
     __translate()
 
 
-def __translate(reselect="0"):
+def __translate(first_trans=True):
     """
     开始翻译
+
+    :param first_trans: 首次调用翻译
     """
 
-    if reselect == "0":
+    if first_trans:
         tmp = input("\n原文：").strip()
         if tmp == "":
             __translate("1")
@@ -60,26 +61,23 @@ def __translate(reselect="0"):
     __translate()
 
 
-def __select_serial_num(serial_num="", first_select=True):
+def __choose_option(first_select=True):
     """
     输入序号选择对应的操作
 
-    - serial_num: 选定的操作序号
-    - first_select: 是否为重新选择
+    :param first_select: 首次进入选项
     """
 
     # 用户输入内容
     _inp = ""
     # 首次进入选项
     if first_select:
-        print("""1) 翻译文本
+        print("""1) 开始翻译
 0) 返回上一级
 """)
         _inp = input("请输入要操作的序号或回车退出程序：").strip()
     else:
-        _inp = input(
-            f"列表中不存在序号 {serial_num}，请重新输入正确序号或回车退出程序："
-        ).strip()
+        _inp = input("列表中不存在该序号，请重新输入正确序号或回车退出程序：").strip()
 
     match _inp:
         case "":
@@ -89,4 +87,4 @@ def __select_serial_num(serial_num="", first_select=True):
         case "1":
             return
         case _:
-            __select_serial_num(_inp, False)
+            __choose_option(False)

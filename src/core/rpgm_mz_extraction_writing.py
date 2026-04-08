@@ -13,7 +13,6 @@ from shutil import copy, rmtree
 import main
 from src.utils.utils import (
     BASE_ABSPATH,
-    EXTRACT,
     GLOBAL_DATA,
     KEY_PHOENIX,
     MARK_TODO,
@@ -22,7 +21,6 @@ from src.utils.utils import (
     RPGM_OUTPUT_ABSPATH,
     RPGM_PROJECT_PARENT_FOLDER,
     TRANSLATED_FILE_MARK,
-    WRITEIN,
     del_key_from_dict,
     get_md5,
     match_lang,
@@ -34,6 +32,11 @@ from src.utils.utils import (
     update_phoenix_mark,
     write_json,
 )
+
+# 提取模式：从原游戏代码提取翻译文本
+EXTRACT = "EXTRACT"
+# 写入模式：将翻译文本写入游戏代码
+WRITEIN = "WRITEIN"
 
 # MZ引擎默认文本库
 RPGMZ_DEFAULT_LIBRARY = "rpgmz_default_library.json"
@@ -104,7 +107,7 @@ def start(project_name: str):
 ===========================================================================================
 """)
 
-    __select_serial_num()
+    __choose_option()
 
     # 判断翻译文本是否有变动，没有则跳过
     if KEY_PHOENIX in __game_txt_cache and not __game_txt_cache[KEY_PHOENIX]:
@@ -1101,12 +1104,11 @@ def __read_from_cache(key: str, _loc="") -> str:
     return __game_txt_cache[_key]
 
 
-def __select_serial_num(serial_num="", first_select=True):
+def __choose_option(first_select=True):
     """
     输入序号选择对应的操作
 
-    - serial_num: 选定的操作序号
-    - first_select: 是否为重新选择
+    :param first_select: 首次进入选项
     """
 
     # 用户输入内容
@@ -1119,9 +1121,7 @@ def __select_serial_num(serial_num="", first_select=True):
 """)
         _inp = input("请输入要操作的序号或回车退出程序：").strip()
     else:
-        _inp = input(
-            f"列表中不存在序号 {serial_num}，请重新输入正确序号或回车退出程序："
-        ).strip()
+        _inp = input("列表中不存在该序号，请重新输入正确序号或回车退出程序：").strip()
 
     match _inp:
         case "":
@@ -1133,4 +1133,4 @@ def __select_serial_num(serial_num="", first_select=True):
         case "2":
             __walk_file(WRITEIN)
         case _:
-            __select_serial_num(_inp, False)
+            __choose_option(False)

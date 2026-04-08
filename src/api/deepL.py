@@ -3,15 +3,14 @@
 
 import deepl
 
+from src.api.base_translation import STRING_DEEPL, BaseTranslation
 from src.utils.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
-from src.api.base_translation import BaseTranslation
 from src.utils.utils import (
     acquire_token,
     enpun_2_zhpun,
-    get_password_with_star,
     print_err,
     read_config,
-    remove_escape,
+    remove_escapes,
 )
 
 
@@ -44,7 +43,7 @@ class DeepLTranslation(BaseTranslation):
         """
 
         # 删除转义符
-        source_txt = remove_escape(source_txt)
+        source_txt = remove_escapes(source_txt)
         # 源文本语种
         from_lang = kwargs.get("from_lang", "auto")
         # 校验文本及语种是否符合要求，不符合则直接返回空值
@@ -91,9 +90,12 @@ class DeepLTranslation(BaseTranslation):
         if self.__auth_key:
             return True
 
-        inp = get_password_with_star("未配置auth_key！请输入：").strip()
-        if inp == "" or " " in inp:
-            print_err("未输入正确参数，引擎启动失败！")
+        inp = self.input_what_we_need(
+            length=39,
+            validate_type=STRING_DEEPL,
+            prompt="未配置auth_key！请输入（敏感内容不显示）或回车返回引擎列表：",
+        )
+        if inp == "":
             return False
         self.__auth_key = inp
 

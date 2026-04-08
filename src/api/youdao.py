@@ -8,18 +8,16 @@ from uuid import uuid1
 
 from requests import post
 
-from src.utils.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
-from src.exception.tool_exception import ToolException
 from src.api.base_translation import BaseTranslation
+from src.exception.tool_exception import ToolException
+from src.utils.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
 from src.utils.utils import (
     acquire_token,
     enpun_2_zhpun,
-    get_password_with_star,
-    is_letters_and_digits,
     print_err,
     print_info,
     read_config,
-    remove_escape,
+    remove_escapes,
 )
 
 
@@ -52,7 +50,7 @@ class YoudaoTranslation(BaseTranslation):
         """
 
         # 删除转义符
-        source_txt = remove_escape(source_txt)
+        source_txt = remove_escapes(source_txt)
         # 源文本语种
         from_lang = kwargs.get("from_lang", "auto")
         # 校验文本及语种是否符合要求，不符合则直接返回空值
@@ -149,16 +147,20 @@ class YoudaoTranslation(BaseTranslation):
 
         keys = {}
         if not self.__app_id:
-            inp = get_password_with_star("未配置appId！请输入：").strip()
-            if inp == "" or not is_letters_and_digits(inp) or len(inp) < 16:
-                print_err("未输入正确参数，引擎启动失败！")
+            inp = self.input_what_we_need(
+                length=16,
+                prompt="未配置appId！请输入（敏感内容不显示）或回车返回引擎列表：",
+            )
+            if inp == "":
                 return False
             self.__app_id = keys["appId"] = inp
 
         if not self.__app_key:
-            inp = get_password_with_star("未配置appKey！请输入：").strip()
-            if inp == "" or not is_letters_and_digits(inp) or len(inp) < 32:
-                print_err("未输入正确参数，引擎启动失败！")
+            inp = self.input_what_we_need(
+                length=32,
+                prompt="未配置appKey！请输入（敏感内容不显示）或回车返回引擎列表：",
+            )
+            if inp == "":
                 return False
             self.__app_key = keys["appKey"] = inp
         store = SimpleKeyStore(SimpleAPIKeyEncryptor("youdao_api_tokens"))

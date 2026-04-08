@@ -32,10 +32,12 @@ from src.utils.utils import (
     get_file_encoding,
     has_lower_letter,
     is_int,
-    print_err,
     print_info,
     validate_renpy_trans_file,
 )
+
+PRE_PROJECT = "PRE_PROJECT"
+WAIT_PROJECT = "WAIT_PROJECT"
 
 # 标准原译组结束标识符
 END_SAY = "-*- END -*-"
@@ -72,10 +74,10 @@ def start():
 ===========================================================================================
 """)
 
-    __select_serial_num()
+    __choose_option()
 
-    __input_path("OLD")
-    __input_path("NEW")
+    __input_path(PRE_PROJECT)
+    __input_path(WAIT_PROJECT)
 
     __walk_file()
     print_info("翻译文本已完成更新！")
@@ -652,93 +654,73 @@ def __get_identifier(ident: str) -> str:
     return identifier + "_" + identifier_last
 
 
-def __input_path(project="OLD", reselect=False):
+def __input_path(project=WAIT_PROJECT, first_select=True):
     """
-    输入待翻文件/文件夹的绝对路径
+    输入旧版本翻译项目和待翻项目的绝对路径
+
+    :param project: 翻译项目
+    :param first_select: 首次输入路径
     """
 
     global __pre_trans_project_path, __wait_trans_project_path, __new_trans_project_path
-
-    if not reselect:
-        if project == "OLD":
+    # 用户输入内容
+    _inp = ""
+    # 首次进入
+    if first_select:
+        if project == PRE_PROJECT:
             # 若存在默认路径
             if __pre_trans_project_path != "":
+                print_info("正在验证默认路径……")
                 # 若路径不存在，重新手动输入
                 if not os.path.exists(__pre_trans_project_path):
-                    print_err("默认的旧版本翻译项目路径不存在！\n")
                     __pre_trans_project_path = ""
-                    __input_path(project)
+                    __input_path(project, False)
                     return
-
                 print_info("路径验证成功！\n")
                 return
-
-            inp = input("请输入旧翻译文本的绝对路径：").strip()
-            # 输入为空，重新输入
-            if inp == "":
-                __input_path(project, True)
-                return
-            # 规范路径，不调整大小写
-            inp = os.path.normpath(inp)
-            # 若路径不存在，重新输入
-            if not os.path.exists(inp):
-                __input_path(project, True)
-                return
-            __pre_trans_project_path = inp
-            print_info("路径验证成功！\n")
-
-        elif project == "NEW":
+            _inp = input("请输入旧翻译文本的绝对路径或回车关闭程序：").strip()
+        else:
             # 若存在默认路径
             if __wait_trans_project_path != "":
+                print_info("正在验证默认路径……")
                 # 若路径不存在，则重新手动输入
                 if not os.path.exists(__wait_trans_project_path):
-                    print_err("config.ini配置的新翻译文本路径不存在！\n")
                     __wait_trans_project_path = ""
-                    __input_path(project)
+                    __input_path(project, False)
                     return
 
-                __new_trans_project_path = __verify_path(__wait_trans_project_path)
+                __new_trans_project_path = __create_new_trans_project_path(
+                    __wait_trans_project_path
+                )
                 print_info("路径验证成功！\n")
                 return
+            _inp = input("请输入新翻译文本的绝对路径或回车关闭程序：").strip()
+    else:
+        _inp = input("路径错误，请重新输入正确的路径或回车关闭程序：").strip()
 
-            inp = input("请输入新翻译文本的绝对路径：").strip()
-            # 输入为空，重新输入
-            if inp == "":
-                __input_path(project, True)
-                return
-            # 规范路径，不调整大小写
-            inp = os.path.normpath(inp)
-            # 若路径不存在，重新输入
-            if not os.path.exists(inp):
-                __input_path(project, True)
-                return
-            __wait_trans_project_path = inp
-            __new_trans_project_path = __verify_path(__wait_trans_project_path)
-            print_info("路径验证成功！\n")
-        return
-
-    tmp = input("不存在该路径，请重新输入正确的路径或回车关闭程序：").strip()
     # 输入为空，退出程序
-    if tmp == "":
+    if _inp == "":
         sys.exit()
     # 规范路径，不调整大小写
-    tmp = os.path.normpath(tmp)
+    _inp = os.path.normpath(_inp)
     # 若路径不存在，重新输入
-    if not os.path.exists(tmp):
-        __input_path(project, True)
+    if not os.path.exists(_inp):
+        __input_path(project, False)
         return
 
-    if project == "OLD":
-        __pre_trans_project_path = tmp
+    if project == PRE_PROJECT:
+        __pre_trans_project_path = _inp
     else:
-        __wait_trans_project_path = tmp
-        __new_trans_project_path = __verify_path(__wait_trans_project_path)
+        __wait_trans_project_path = _inp
+        __new_trans_project_path = __create_new_trans_project_path(
+            __wait_trans_project_path
+        )
     print_info("路径验证成功！\n")
 
 
-def __verify_path(wait_trans_path: str) -> str:
+def __create_new_trans_project_path(wait_trans_path: str) -> str:
     """
-    验证待翻译项目路径是否正确，并新建更新后的项目路径，已存在的项目先改名备份
+    新建更新后的项目路径，已存在的项目先改名备份
 
     :param wait_trans_path: 待翻译项目路径
     """
@@ -772,12 +754,11 @@ def __verify_path(wait_trans_path: str) -> str:
         return new_trans_file
 
 
-def __select_serial_num(serial_num="", first_select=True):
+def __choose_option(first_select=True):
     """
     输入序号选择对应的操作
 
-    - serial_num: 选定的操作序号
-    - first_select: 是否为重新选择
+    :param first_select: 首次进入选项
     """
 
     # 用户输入内容
@@ -789,9 +770,7 @@ def __select_serial_num(serial_num="", first_select=True):
 """)
         _inp = input("请输入要操作的序号或回车退出程序：").strip()
     else:
-        _inp = input(
-            f"列表中不存在序号 {serial_num}，请重新输入正确序号或回车退出程序："
-        ).strip()
+        _inp = input("列表中不存在该序号，请重新输入正确序号或回车退出程序：").strip()
 
     match _inp:
         case "":
@@ -801,4 +780,4 @@ def __select_serial_num(serial_num="", first_select=True):
         case "1":
             return
         case _:
-            __select_serial_num(_inp, False)
+            __choose_option(False)
