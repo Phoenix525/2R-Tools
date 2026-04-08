@@ -23,7 +23,7 @@
 ## 内置翻译引擎
 - 本地AI翻译（需自行部署环境及下载模型）：
 	- 基于Ollama框架。可切换多种模型（部署极简，运行速度快）
-	- 基于Transformers库。调用腾讯Hunyuan-MT模型（部署难度中等，运行速度较慢），部署教程点击[此处](https://gitee.com/aeolus314/2rtools/blob/master/docs/Windows%2011%E9%83%A8%E7%BD%B2%20HY-MT1.5-7B%20%E6%95%99%E7%A8%8B.md)。
+	- 基于Transformers库。调用腾讯Hunyuan-MT模型（部署难度中等，运行速度较慢），部署教程点击[此处](https://gitee.com/aeolus314/2rtools/blob/master_dev/docs/Windows%2011%E9%83%A8%E7%BD%B2%20HY-MT1.5-7B%20%E6%95%99%E7%A8%8B.md)。
 - 机器翻译平台（非AI大模型翻译）：
 	- [腾讯翻译](https://console.cloud.tencent.com/tmt)
 	- [阿里翻译](https://mt.console.aliyun.com/basic)
