@@ -19,8 +19,11 @@ transformers==4.56.0
 volcengine_python_sdk==5.0.21
 xfyunsdknlp==0.0.3
 
-# torch==2.11.0
 # Pytorch直接通过requirements.txt安装，只会安装CPU版本，无法安装配套版本的CUDA运行时，即无法通过显卡来跑模型。
 # 要安装含CUDA运行时版本的，请在控制台手动安装：pip install torch --index-url https://download.pytorch.org/whl/cu130
 # 如果需要图像音频相关的模块，请同时安装：pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu130
 # 后面的cu130代表你本机英伟达显卡驱动安装的cuda版本，在控制台输入`nvidia-smi`回车即可查询，根据自己的cuda版本进行调整：https://pytorch.org/get-started/locally/。官网没有的cuda版本，请自行搜索torch和cuda的对应关系并获取相应安装命令。
+# torch==2.11.0
+
+# Windows系统无法直接使用pip在线安装
+# triton==3.0.0
