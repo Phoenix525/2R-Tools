@@ -60,9 +60,6 @@ class HunYuanMTTranslation(BaseTranslation):
         # 获取配置
         self.__get_config()
 
-        # 加载模型和分词器
-        self.__load_model()
-
     def translate(self, source_txt: str, to_lang: str, **kwargs) -> str:
         """
         开始翻译，必定有返回值
@@ -131,6 +128,10 @@ class HunYuanMTTranslation(BaseTranslation):
 
         if not self.__check_model():
             self._activated = False
+        else:
+            # 加载模型和分词器
+            if not self.__load_model():
+                self._activated = False
         return self._activated
 
     def __check_model(self) -> bool:
@@ -156,7 +157,7 @@ class HunYuanMTTranslation(BaseTranslation):
         else:
             return True
 
-    def __load_model(self):
+    def __load_model(self) -> bool:
         """
         加载模型与分词器
         """
@@ -180,21 +181,25 @@ class HunYuanMTTranslation(BaseTranslation):
             )
 
             config: BitsAndBytesConfig
-            match FLAGS[self.__load_flag]:
+            match FLAGS.get(self.__load_flag, ""):
                 case "load_in_8bit":  # 启用8位量化加载
                     config = BitsAndBytesConfig(
                         load_in_8bit=True,
                         llm_int8_threshold=6.0,  # 阈值，用于处理异常大的权重值
                     )
                 case "load_in_4bit":  # 启用4位量化加载
-                    config = BitsAndBytesConfig(load_in_4bit=True)
+                    config = BitsAndBytesConfig(
+                        load_in_4bit=True,
+                    )
                 case "nf4":  # 启用NF4量化加载
                     config = BitsAndBytesConfig(
-                        load_in_4bit=True, bnb_4bit_quant_type="nf4"
+                        load_in_4bit=True,
+                        bnb_4bit_quant_type="nf4",
                     )
                 case "double_quant":  # 启用双量化加载
                     config = BitsAndBytesConfig(
-                        load_in_4bit=True, bnb_4bit_use_double_quant=True
+                        load_in_4bit=True,
+                        bnb_4bit_use_double_quant=True,
                     )
                 case "QLoRA":  # 启用QLoRA量化加载
                     config = BitsAndBytesConfig(
@@ -210,19 +215,19 @@ class HunYuanMTTranslation(BaseTranslation):
             self.__model = AutoModelForCausalLM.from_pretrained(
                 self.__model_path,
                 device_map="auto",  # 自动分配GPU/CPU资源
-                dtype=torch.bfloat16,  # 用bfloat16节省显存
+                dtype=torch.float16,
                 quantization_config=config,
                 trust_remote_code=True,
             )
         except Exception as e:
             self.__tokenizer = None
             self.__model = None
-            raise ToolException(
-                "TranslationAPIErr", f"Hunyuan-MT模型加载失败：请检查报错信息：{str(e)}"
-            )
+            print_err(f"Hunyuan-MT模型加载失败：请检查报错信息：{str(e)}")
+            return False
         else:
             load_time = time.time() - start_time
             print_info(f"模型加载完成，耗时: {load_time:.2f}秒")
+            return True
 
     def __get_config(self):
         """

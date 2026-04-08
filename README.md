@@ -5,8 +5,9 @@
 >注：工具仅能提取引擎原生支持的文件及语法下的翻译文本，不支持游戏作者自行编写的部分代码。
 
 ## 运行环境
-- windows 11操作系统；
+- Windows 11 操作系统；
 - Python 3.10+；
+>注：本教程仅提供 Windows 11 系统的部署支持，其他系统请自行搜索相关教程。
 
 ## 翻译项目结构
 - Translated Libraries文件夹：译文库。
@@ -19,11 +20,11 @@
 - RPGM Data Input文件夹：存放RPGM的初始json代码文件。
 - RPGM Data Output文件夹：存放RPGM的新生成json代码文件。
 - waiting-for-entry文件夹：放置json和rpy翻译文件，用于将翻译数据写入TransLib.json译文库。
-  
+
 ## 内置翻译引擎
 - 本地AI翻译（需自行部署环境及下载模型）：
 	- 基于Ollama框架。可切换多种模型（部署极简，运行速度快）
-	- 基于Transformers库。调用腾讯Hunyuan-MT模型（部署难度中等，运行速度较慢），部署教程点击[此处](https://github.com/Phoenix525/2R-Tools/blob/main/Windows%2011%E9%83%A8%E7%BD%B2%20HY-MT1.5-7B%20%E6%95%99%E7%A8%8B.md)。
+	- 基于Transformers库。调用腾讯Hunyuan-MT模型（部署难度中等，运行速度较慢），部署教程点击[此处](https://gitee.com/aeolus314/2rtools/blob/master/Windows%2011%E9%83%A8%E7%BD%B2%20HY-MT1.5-7B%20%E6%95%99%E7%A8%8B.md)。
 - 机器翻译平台（非AI大模型翻译）：
 	- [腾讯翻译](https://console.cloud.tencent.com/tmt)
 	- [阿里翻译](https://mt.console.aliyun.com/basic)
@@ -67,24 +68,43 @@
 		activate=True
 		```
 3. 执行main.py启动程序：
-   - 项目未配置conda虚拟环境：
-		```Powershell
-		# 安装项目依赖
-		# 注意先将requirements.txt中torch所依赖cuda版本130修改成本机的cuda版本。例torch==2.11.0+cuda121
-		PS D:\2R-Tools>pip install -r requirements.txt
-
-		# 启动工具
-		PS D:\2R-Tools>python main.py
-		```
 	- 项目配置了conda虚拟环境，先激活项目所属虚拟环境：
 		```Powershell
 		# 激活虚拟环境：2rtools
 		(base) PS D:\2R-Tools>conda activate 2rtools
-		
+
 		# 安装项目依赖
-		# 注意先将requirements.txt中torch所依赖cuda版本130修改成本机的cuda版本。例torch==2.11.0+cuda121
 		(2rtools) PS D:\2R-Tools>pip install -r requirements.txt
+
+		# 安装Pytroch，Hunyuan-MT本地AI翻译依赖库。如果已按上面的教程部署了Hunyuan-MT模型，此步可省略
+		# 请根据你本机英伟达显卡驱动安装的CUDA版本，安装相应版本的Pytorch，务必要对应下载，版本不对，会导致模型无法正常运行。
+		# CUDA v13.x: pip install torch --index-url https://download.pytorch.org/whl/cu130
+		# CUDA v12.8: pip install torch --index-url https://download.pytorch.org/whl/cu128
+		# CUDA v12.6: pip install torch --index-url https://download.pytorch.org/whl/cu126
+		# 其他更低版本的cuda请自行搜索对应的pytorch版本及安装命令。
+		# 若直接执行pip install torch，只会安装CPU版本，不包含CUDA运行时，这会导致即便你的显卡是英伟达，也无法使用显卡跑模型
+		(2rtools) PS D:\2R-Tools>pip install torch --index-url https://download.pytorch.org/whl/cu130
+
+		# （可省略）Hunyuan-MT模型运行时会报triton未找到的警告，对实际运行不影响。
+		# 如果需要安装，可以使用下面的命令直接安装（对应Python3.10版本）。若不在2R-Tools项目下，triton本地构建包需要指定完整的路径
+		# 其他版本可在此处下载：https://hf-mirror.com/madbuda/triton-windows-builds。
+		(2rtools) PS D:\2R-Tools>pip install .\triton-3.0.0-cp310-cp310-win_amd64.whl
 
 		# 启动工具
 		(2rtools) PS D:\2R-Tools>python main.py
+		```
+   - 项目未配置conda虚拟环境：
+		```Powershell
+		# 安装项目依赖
+		PS D:\2R-Tools>pip install -r requirements.txt
+
+		# 安装Pytroch，Hunyuan-MT本地AI翻译依赖库。如果已按上面的教程部署了Hunyuan-MT模型，此步可省略
+		PS D:\2R-Tools>pip install torch --index-url https://download.pytorch.org/whl/cu130
+
+		# （可省略）Hunyuan-MT模型运行时会报triton未找到的警告，对实际运行不影响。如果需要安装，可以使用下面的命令直接安装
+		# PS D:\2R-Tools>pip install .\triton-2.1.0-cp310-cp310-win_amd64.whl
+		PS D:\2R-Tools>pip install .\triton-3.0.0-cp310-cp310-win_amd64.whl
+
+		# 启动工具
+		PS D:\2R-Tools>python main.py
 		```

@@ -1,6 +1,8 @@
 # 准备工作：环境检查与工具安装
 在开始之前，先看看电脑配置够不够。Hunyuan-MT1.5-7B虽然只有70亿参数，但毕竟是7B级别的大模型，对硬件还是有些要求的。
 
+若硬件确实不够，也可以使用最新的Hunyuan-MT1.5-1.8B模型，加载方式与7B一致，对硬件要求更小，加载速度更快，比起7B性能损失不大。
+
 
 ## 硬件要求
 
@@ -19,14 +21,16 @@
 >本文着重hunyuan-mt模型本地部署教程，部署所需的基础软件默认已安装并配置完毕，此处不做赘述。
 
 - Anaconda 或 Miniconda：用于安装、更新和管理Python包，及创建隔离的Python环境
-- Python 3.10.x：最兼容本项目的版本
-- CUDA 12.1+：NVIDIA显卡的加速库，一般已随显卡驱动安装好
+- Python 3.10.x（教程版本v3.10.20）：最兼容本项目的版本
+- CUDA 12.1+（教程版本v13.2）：NVIDIA显卡的加速库，一般已随显卡驱动安装好
 - Visual Studio Build Tools：编译一些Python包需要
 
 # 开始部署
-## 创建虚拟环境
+## 创建虚拟环境（若不使用虚拟环境，此步可省略）
 
-虚拟Python环境是个好东西，能隔离不同项目的依赖，避免版本冲突。如果不使用虚拟环境，此步可省略。
+虚拟Python环境是个好东西，可以给你不同的项目搭建不同版本的python环境，安装不同的依赖，随时创建随时删除，不会影响到你本机的环境。
+
+一开始使用可能会因为多了一步，认为比较麻烦，但用顺手后就会觉得真香！
 
 1. 打开Powershell窗口，后续操作大部分都要在这个窗口中运行。
 2. 创建虚拟环境：
@@ -68,10 +72,18 @@ PyTorch是运行大模型的基础框架，安装时要注意选对CUDA版本。
     (2rtools) PS C:\Users\xxx\Desktop>nvidia-smi
     ```
 2. 根据查询到的CUDA版本，进入上方网址查询对应PyTorch安装命令。
-     ```Powershell
-     # 安装PyTorch（CUDA 13.2版本）
-    (2rtools) PS C:\Users\xxx\Desktop>pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu130
-     ```
+    ```Powershell
+    # 安装PyTorch
+    # Pytorch和CUDA版本务必要对应好，版本不对，会出现兼容问题，导致模型无法正常运行。
+    # CUDA v13.x: pip install torch --index-url https://download.pytorch.org/whl/cu130
+    # CUDA v12.8: pip install torch --index-url https://download.pytorch.org/whl/cu128
+    # CUDA v12.6: pip install torch --index-url https://download.pytorch.org/whl/cu126
+    # 其他更低版本的cuda请自行搜索对应的pytorch版本及安装命令。
+    # 若直接执行pip install torch，只会安装CPU版本，不包含CUDA运行时，这会导致即便你的显卡是英伟达，也无法使用显卡跑模型
+    (2rtools) PS C:\Users\xxx\Desktop>pip install torch --index-url https://download.pytorch.org/whl/cu130
+     # 安装PyTorch，含图像音频相关库，不需要可以不装（CUDA 13.x版本）
+    (2rtools) PS C:\Users\xxx\Desktop>pip install torch torchvision torchaudo --index-url https://download.pytorch.org/whl/cu130
+    ```
 
 ## 安装Transformers库
 
@@ -87,15 +99,38 @@ PyTorch是运行大模型的基础框架，安装时要注意选对CUDA版本。
 ## 安装其他必要依赖
 
 ```Powershell
-# 安装其他依赖
-(2rtools) PS C:\Users\xxx\Desktop>pip install accelerate sentencepiece protobuf bitsandbytes
+# 安装其他必要依赖
+(2rtools) PS C:\Users\xxx\Desktop>pip install accelerate bitsandbytes protobuf sentencepiece
+
+# （可省略）Hunyuan-MT模型运行时会报triton未找到的警告，对实际运行不影响。
+# 如果需要安装，可以使用下面的命令直接安装（对应Python3.10版本）。若不在2R-Tools项目下，triton本地构建包需要指定完整的路径
+# 其他版本可在此处下载：https://hf-mirror.com/madbuda/triton-windows-builds。
+(2rtools) PS D:\2R-Tools>pip install .\triton-3.0.0-cp310-cp310-win_amd64.whl
 ```
 
 ## 下载模型文件
 
-模型文件比较大，有14GB左右，下载需要一些时间。你可以从Hugging Face或者ModelScope下载，推荐用ModelScope，国内访问速度更快。
+模型文件比较大，有14GB左右，下载需要一些时间。可以从ModelScope或Hugging Face下载，推荐用ModelScope，国内访问速度更快。
 
-- 方法一：创建py文件执行ModelScope下载（推荐国内用户）
+- 方法一：在ModelScope网站下载（推荐）
+
+    点击下方网址直接下载。好处是下载过程可控，可以断点续传。
+    - [Hunyuan-MT1.5-7B](https://modelscope.cn/models/Tencent-Hunyuan/HY-MT1.5-7B/files)
+    - [Hunyuan-MT1.5-1.8B](https://modelscope.cn/models/Tencent-Hunyuan/HY-MT1.5-1.8B/files)
+  
+    将上述页面里文件列表的所有文件下载下来后，新建一个文件夹，名称随意，将所有文件放入文件夹中。
+
+- 方法二：用命令行执行ModelScope下载
+
+    ```Powershell
+    # 安装ModelScope
+    (2rtools) PS C:\Users\xxx\Desktop>pip install modelscope
+
+    # 下载模型，下载过程中请勿关闭命令行窗口
+    (2rtools) PS C:\Users\xxx\Desktop>python -c "from modelscope import snapshot_download; snapshot_download('Tencent-Hunyuan/Hunyuan-MT-7B', cache_dir='./models')"
+    ```
+
+- 方法三：创建py文件执行ModelScope下载
   
     在当前目录下新建一个download.py文件，将以下代码拷贝进去保存：
 
@@ -113,23 +148,9 @@ PyTorch是运行大模型的基础框架，安装时要注意选对CUDA版本。
     (2rtools) PS C:\Users\xxx\Desktop>python download.py
     ```
 
-- 方法二：用命令行执行ModelScope下载
+    方法二和方法三下载完成后，你会看到一个models文件夹，里面就是模型文件了。
 
-    ```Powershell
-    # 安装ModelScope
-    (2rtools) PS C:\Users\xxx\Desktop>pip install modelscope
-
-    # 下载模型，下载过程中请勿关闭命令行窗口
-    (2rtools) PS C:\Users\xxx\Desktop>python -c "from modelscope import snapshot_download; snapshot_download('Tencent-Hunyuan/Hunyuan-MT-7B', cache_dir='./models')"
-    ```
-
-    方法一和方法二下载完成后，你会看到一个models文件夹，里面就是模型文件了。
-
-- 方法三：在Hugging Face网站下载（需要翻墙）
-
-    点击 [此处](https://huggingface.co/tencent/HY-MT1.5-7B/tree/main) 进入网站直接下载。好处是下载过程可控，可以断点续传。
-
-模型文件你可以随便找个地方存放，然后在config.ini配置文件中填上模型的绝对路径即可。
+模型文件你可以随便找个地方存放，然后在config.ini配置文件中填上模型文件夹所在的绝对路径即可。
 
 # 基础使用：让模型跑起来
 
@@ -196,7 +217,7 @@ def load_model():
     tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
     # 量化加载类型，默认启用非量化加载
     config = None
-    # 内存不足时，使用8位量化加载
+    # 显存及内存不足时，使用8位量化加载
     if activate_8bit:
         config = BitsAndBytesConfig(
                 load_in_8bit=True,  # 启用8位量化加载
@@ -296,3 +317,8 @@ if __name__ == '__main__':
 | Mongolian           | mn      | 蒙古语        |
 | Uyghur              | ug      | 维吾尔语      |
 | Cantonese           | yue     | 粤语          |
+
+# 参考文章
+
+1. [Hunyuan-MT-7B在Windows11环境下的部署指南](https://blog.csdn.net/weixin_36369848/article/details/157961374)
+2. [Hunyuan-MT-7B部署教程：Windows 11环境一键安装](https://blog.csdn.net/weixin_42465140/article/details/157861303)

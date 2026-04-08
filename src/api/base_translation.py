@@ -168,10 +168,10 @@ class BaseTranslation(object):
 
         elif validate_type == STRING_DEEPL:
             # 免费版
-            if len(inp) == 39:
+            if len(inp) == length:
                 validated = inp.endswith(":fx") and is_uuid_v1(inp[:-3])
             # pro付费版
-            elif len(inp) == 36:
+            elif len(inp) == length - 3:
                 validated = is_uuid_v1(inp)
 
         elif validate_type == STRING_HUOSHAN:

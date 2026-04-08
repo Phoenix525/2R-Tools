@@ -1,17 +1,26 @@
+accelerate==1.13.0
 alibabacloud_alimt20181012==1.5.2
 alibabacloud_credentials==1.0.8
 alibabacloud_tea_openapi==0.4.4
 alibabacloud_tea_util==0.3.14
-chardet==7.4.0.post2
-cryptography==46.0.6
+bitsandbytes==0.49.2    # 如果本地语言大模型需要开启量化加载，这个模块必须装
+chardet==7.4.1
+cryptography==46.0.7
 deepl==1.29.0
 google_trans_new==1.1.9
 prettytable==3.17.0
+protobuf==7.34.1
 py3langid==0.3.0
 Requests==2.33.1
+sentencepiece==0.2.1
 tencentcloud_sdk_python_common==3.1.70
 tencentcloud_sdk_python_tmt==3.1.70
-torch==2.11.0+cu130
 transformers==4.56.0
 volcengine_python_sdk==5.0.21
 xfyunsdknlp==0.0.3
+
+# torch==2.11.0
+# Pytorch直接通过requirements.txt安装，只会安装CPU版本，无法安装配套版本的CUDA运行时，即无法通过显卡来跑模型。
+# 要安装含CUDA运行时版本的，请在控制台手动安装：pip install torch --index-url https://download.pytorch.org/whl/cu130
+# 如果需要图像音频相关的模块，请同时安装：pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu130
+# 后面的cu130代表你本机英伟达显卡驱动安装的cuda版本，在控制台输入`nvidia-smi`回车即可查询，根据自己的cuda版本进行调整：https://pytorch.org/get-started/locally/。官网没有的cuda版本，请自行搜索torch和cuda的对应关系并获取相应安装命令。

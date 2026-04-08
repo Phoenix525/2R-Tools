@@ -339,7 +339,7 @@ class Interpreter:
 
         _serial_inp = to_int(_inp)
         # 若序号不存在，重新选择
-        if not validate_index(self.__api_names, _serial_inp, False):
+        if not validate_index(self.__api_names, _serial_inp - 1, False):
             self.__select_api_type(_serial_inp, False, api_titles=api_titles)
             return
 
