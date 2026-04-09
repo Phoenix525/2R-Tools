@@ -93,9 +93,7 @@ GLOBAL_DATA = {
 }
 
 # 项目所在绝对路径
-BASE_ABSPATH = os.path.abspath(".")
-# 项目代码绝对路径
-SRC_ABSPATH = os.path.join(BASE_ABSPATH, "src")
+BASE_ABSPATH = pathlib.Path(__file__).parent.parent.parent
 
 # 配置文件绝对路径
 CONFIG_ABSPATH = os.path.join(BASE_ABSPATH, "config.ini")
