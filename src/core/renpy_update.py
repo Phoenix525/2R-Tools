@@ -34,6 +34,7 @@ from src.utils.utils import (
     is_int,
     print_info,
     validate_renpy_trans_file,
+    waiit_key_or_enter,
 )
 
 PRE_PROJECT = "PRE_PROJECT"
@@ -67,21 +68,30 @@ def start():
 
     print(r"""
 ===========================================================================================
-                                 Ren'Py 翻译文本更新工具
-                                      作者：Phoenix
-                                      版权归作者所有
+                                Ren'Py 翻译文本更新工具
+                                    作者：Phoenix
+                                    版权归作者所有
                             PS：本工具所有操作均不会影响原文件！
 ===========================================================================================
 """)
 
-    __choose_option()
-
-    __input_path(PRE_PROJECT)
-    __input_path(WAIT_PROJECT)
+    no_skip = __input_path(PRE_PROJECT)
+    if not no_skip:
+        main.start_main()
+        return
+    no_skip = __input_path(WAIT_PROJECT)
+    if not no_skip:
+        main.start_main()
+        return
 
     __walk_file()
-    print_info("翻译文本已完成更新！")
-    sys.exit()
+
+    inp = waiit_key_or_enter("按任意键返回主菜单或回车退出程序：")
+    if inp:
+        sys.exit()
+    else:
+        # 返回主菜单
+        main.start_main()
 
 
 def __walk_file():
@@ -117,6 +127,7 @@ def __walk_file():
         f = os.path.split(__wait_trans_project_path)[-1]
         print(f"当前更新文本：{f}")
         __process_file(__wait_trans_project_path, __new_trans_project_path, f)
+        print_info("翻译文本已完成更新！")
         return
 
     for root, dirs, files in os.walk(__wait_trans_project_path, topdown=False):
@@ -141,6 +152,7 @@ def __walk_file():
             __process_file(
                 wait_trans_file_path, os.path.join(new_trans_folder_path, f), f
             )
+    print_info("翻译文本已完成更新！")
 
 
 def __scanning_file(file_path: str, filename: str):
@@ -180,7 +192,7 @@ def __scanning_file(file_path: str, filename: str):
 
         # 原文本行
         old_say_match = PATTERN_OLD_SAY.match(line)
-        if old_say_match is not None and _identifier not in ["", "strings"]:
+        if old_say_match is not None and _identifier not in ("", "strings"):
             old_say_list = old_say_match.groups()
             _who = old_say_list[0]
             # 跳过cv语音行
@@ -210,7 +222,7 @@ def __scanning_file(file_path: str, filename: str):
 
         # 译文行
         new_say_match = PATTERN_NEW_SAY.match(line)
-        if new_say_match is not None and _identifier not in ["", "strings"]:
+        if new_say_match is not None and _identifier not in ("", "strings"):
             new_say_list = new_say_match.groups()
             _who = new_say_list[0]
             # 跳过cv语音行
@@ -307,7 +319,7 @@ def __process_file(wait_trans_path: str, new_trans_path: str, filename: str):
             if _old_say == "":
                 if _new_say_list[1].strip() == "":
                     translated_list = __read_from_identifier_library_cache(_identifier)
-                    if len(translated_list):
+                    if translated_list:
                         for list_idx, list_item in enumerate(translated_list):
                             reverse_list_item = list_item[::-1]
                             reverse_line = line[::-1]
@@ -339,7 +351,7 @@ def __process_file(wait_trans_path: str, new_trans_path: str, filename: str):
             # if who_match is not None and who_match.group(1) != '':
             #     original_new_who = who_match.group(1)
             #     _list = read_from_txt_library_cache(original_new_who, 'who')
-            #     if len(_list) > 0:
+            #     if _list:
             #         _who = sub(
             #             escape(repr(original_new_who))[1:-1], _list[0], _who, 1
             #         )
@@ -348,12 +360,12 @@ def __process_file(wait_trans_path: str, new_trans_path: str, filename: str):
             if _new_say_list[1].strip() == "":  # 当译文行为空时，尝试获取已有译文
                 translated_list = __read_from_identifier_library_cache(_identifier)
                 # 如果从identifier_library_cache未匹配到，可以通过标识符在txt_library_cache中再匹配一次
-                if len(translated_list) < 1:
+                if not translated_list:
                     translated_list = __read_from_txt_library_cache(
                         _old_say, _identifier
                     )
 
-                if len(translated_list):
+                if translated_list:
                     for list_idx, list_item in enumerate(translated_list):
                         reverse_list_item = list_item[::-1]
                         reverse_line = line[::-1]
@@ -397,7 +409,7 @@ def __process_file(wait_trans_path: str, new_trans_path: str, filename: str):
             # 当译文不为空时，如果覆盖写入，则发出请求
             if original_new_say == "":
                 translated_list = __read_from_txt_library_cache(_old_say, _identifier)
-                if len(translated_list):
+                if translated_list:
                     # strings只可能有一行，所以直接取首位索引值即可
                     _tmp_lightSen[_tmp_idx] = '    new "' + translated_list[0] + '"\n'
 
@@ -520,7 +532,7 @@ def __read_from_identifier_library_cache(identifier: str) -> list:
     if identifier in ("", "who", "strings"):
         return []
 
-    if __identifier_library_cache is None or not len(__identifier_library_cache):
+    if not __identifier_library_cache:
         return []
 
     if identifier in __identifier_library_cache:
@@ -564,7 +576,7 @@ def __read_from_txt_library_cache(source_txt: str, identifier: str) -> list:
     if identifier == "":
         return []
 
-    if __txt_library_cache is None or not len(__txt_library_cache):
+    if not __txt_library_cache:
         return []
 
     # 去除首尾空行，strings下的空行往往都是有意而为，故不剔除
@@ -577,7 +589,7 @@ def __read_from_txt_library_cache(source_txt: str, identifier: str) -> list:
             return []
 
     li = __txt_library_cache[source_txt]
-    if len(li) < 1:
+    if not li:
         return []
 
     if identifier in li:
@@ -618,10 +630,11 @@ def __read_from_txt_library_cache(source_txt: str, identifier: str) -> list:
 
 def __get_identifier(ident: str) -> str:
     """
-    获取除“strings”外的8位标识符，标识符有可能是纯字母、纯数字或字母数字。
+    获取除“strings”外的8位标识符，标识符由大小写字母“A-Za-z”、数字“0-9”和连字符“_”组成。
 
-    将标识符字符串通过“_”分割成多个字符后，一般最后一位便是8位标识符。
-    但同时也存在多个文本相同且都在同一个label语句中的情况，Ren'Py会在标识符行末尾添加一个递增数字来加以区分，此时倒数第二位才是8位标识符。
+    将标识符字符串通过“_”分割成多个字符后，一般最后一位便是8位标识符。但由于可能也存在多个相同文本在同一label语句中的情况，Ren'Py会在标识符行末尾添加一个递增数字来加以区分，此时倒数第二位才是8位标识符。
+
+    例：bob_entrance_M1_7d57a8a8_11，其中“7d57a8a8”是标识符，末尾的“11”则表示该文本在同一label语句中第X次出现
 
     如果标识符不是“strings”，且长度不符合标准标识符的位数，那么说明该标识符可能出现了错误，不处理该数据。
     """
@@ -630,7 +643,7 @@ def __get_identifier(ident: str) -> str:
         return "wrong"
 
     ident_split = ident.split("_")
-    if len(ident_split) <= 1:
+    if len(ident_split) == 1:
         return ident
 
     # 末尾值要么是标识符，要么是递增数字，先获取它
@@ -640,8 +653,8 @@ def __get_identifier(ident: str) -> str:
     if len(identifier_last) == 8:
         return identifier_last
 
-    # 如果不是纯数字，或长度大于2（文本中出现两位数以上的相同标识符的可能性微乎其微），则将其归为错误数据，返回错误标记
-    if not is_int(identifier_last) or len(identifier_last) > 2:
+    # 如果长度不是8且不是纯数字，则将其归为非法标识符，返回错误标记
+    if not is_int(identifier_last):
         return "wrong"
 
     # 如果是纯数字，则大概率是递增数字，此时我们获取倒数第二位
@@ -654,7 +667,7 @@ def __get_identifier(ident: str) -> str:
     return identifier + "_" + identifier_last
 
 
-def __input_path(project=WAIT_PROJECT, first_select=True):
+def __input_path(project=WAIT_PROJECT, first_select=True) -> bool:
     """
     输入旧版本翻译项目和待翻项目的绝对路径
 
@@ -674,11 +687,10 @@ def __input_path(project=WAIT_PROJECT, first_select=True):
                 # 若路径不存在，重新手动输入
                 if not os.path.exists(__pre_trans_project_path):
                     __pre_trans_project_path = ""
-                    __input_path(project, False)
-                    return
+                    return __input_path(project, False)
                 print_info("路径验证成功！\n")
-                return
-            _inp = input("请输入旧翻译文本的绝对路径或回车关闭程序：").strip()
+                return True
+            _inp = input("请输入旧翻译文本的绝对路径或回车返回主菜单：").strip()
         else:
             # 若存在默认路径
             if __wait_trans_project_path != "":
@@ -686,27 +698,26 @@ def __input_path(project=WAIT_PROJECT, first_select=True):
                 # 若路径不存在，则重新手动输入
                 if not os.path.exists(__wait_trans_project_path):
                     __wait_trans_project_path = ""
-                    __input_path(project, False)
-                    return
+                    return __input_path(project, False)
 
                 __new_trans_project_path = __create_new_trans_project_path(
                     __wait_trans_project_path
                 )
                 print_info("路径验证成功！\n")
-                return
-            _inp = input("请输入新翻译文本的绝对路径或回车关闭程序：").strip()
+                return True
+            _inp = input("请输入新翻译文本的绝对路径或回车返回主菜单：").strip()
     else:
-        _inp = input("路径错误，请重新输入正确的路径或回车关闭程序：").strip()
+        _inp = input("路径错误，请重新输入正确的路径或回车返回主菜单：").strip()
 
-    # 输入为空，退出程序
-    if _inp == "":
-        sys.exit()
+    # 输入为空，返回主菜单
+    if _inp in ("", "\r", "\n"):
+        return False
+
     # 规范路径，不调整大小写
     _inp = os.path.normpath(_inp)
     # 若路径不存在，重新输入
     if not os.path.exists(_inp):
-        __input_path(project, False)
-        return
+        return __input_path(project, False)
 
     if project == PRE_PROJECT:
         __pre_trans_project_path = _inp
@@ -716,6 +727,7 @@ def __input_path(project=WAIT_PROJECT, first_select=True):
             __wait_trans_project_path
         )
     print_info("路径验证成功！\n")
+    return True
 
 
 def __create_new_trans_project_path(wait_trans_path: str) -> str:
@@ -752,32 +764,3 @@ def __create_new_trans_project_path(wait_trans_path: str) -> str:
             )
             os.rename(new_trans_file, bak_new_trans_file)
         return new_trans_file
-
-
-def __choose_option(first_select=True):
-    """
-    输入序号选择对应的操作
-
-    :param first_select: 首次进入选项
-    """
-
-    # 用户输入内容
-    _inp = ""
-    # 首次进入选项
-    if first_select:
-        print("""1) 更新翻译文本
-0) 返回上一级
-""")
-        _inp = input("请输入要操作的序号或回车退出程序：").strip()
-    else:
-        _inp = input("列表中不存在该序号，请重新输入正确序号或回车退出程序：").strip()
-
-    match _inp:
-        case "":
-            sys.exit()
-        case "0":
-            main.start_main()
-        case "1":
-            return
-        case _:
-            __choose_option(False)

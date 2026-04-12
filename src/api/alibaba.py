@@ -134,7 +134,7 @@ class ALiBaBaTranslation(BaseTranslation):
                 length=24,
                 prompt="未配置AccessKeyID！请输入（敏感内容不显示）或回车返回引擎列表：",
             )
-            if inp == "":
+            if inp in ("", "\r", "\n"):
                 return False
             self.__access_key_id = keys["AccessKeyID"] = inp
         if not self.__access_key_secret:
@@ -142,7 +142,7 @@ class ALiBaBaTranslation(BaseTranslation):
                 length=30,
                 prompt="未配置AccessKeySecret！请输入（敏感内容不显示）或回车返回引擎列表：",
             )
-            if inp == "":
+            if inp in ("", "\r", "\n"):
                 return False
             self.__access_key_secret = keys["AccessKeySecret"] = inp
 

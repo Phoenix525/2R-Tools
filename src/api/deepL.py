@@ -3,7 +3,7 @@
 
 import deepl
 
-from src.api.base_translation import STRING_DEEPL, BaseTranslation
+from src.api.base_translation import BaseTranslation, ValidateStringsType
 from src.utils.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
 from src.utils.utils import (
     acquire_token,
@@ -92,10 +92,10 @@ class DeepLTranslation(BaseTranslation):
 
         inp = self.input_what_we_need(
             length=39,
-            validate_type=STRING_DEEPL,
+            validate_type=ValidateStringsType.STRING_UUID,
             prompt="未配置auth_key！请输入（敏感内容不显示）或回车返回引擎列表：",
         )
-        if inp == "":
+        if inp in ("", "\r", "\n"):
             return False
         self.__auth_key = inp
 

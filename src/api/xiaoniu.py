@@ -126,7 +126,7 @@ class XiaoNiuTranslation(BaseTranslation):
                 length=16,
                 prompt="未配置APPID！请输入（敏感内容不显示）或回车返回引擎列表：",
             )
-            if inp == "":
+            if inp in ("", "\r", "\n"):
                 return False
             self.__app_id = keys["APPID"] = inp
         if not self.__api_key:
@@ -134,7 +134,7 @@ class XiaoNiuTranslation(BaseTranslation):
                 length=32,
                 prompt="未配置API_KEY！请输入（敏感内容不显示）或回车返回引擎列表：",
             )
-            if inp == "":
+            if inp in ("", "\r", "\n"):
                 return False
             self.__api_key = keys["API_KEY"] = inp
 

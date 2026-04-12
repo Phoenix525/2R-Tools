@@ -6,8 +6,6 @@
 机器翻译工具
 """
 
-import sys
-
 import main
 from src.core.interpreter import Interpreter
 
@@ -24,16 +22,14 @@ def start():
 ===========================================================================================
                                        机器翻译工具
                                       作者：Phoenix
-                                      版权归作者所有
-===========================================================================================
-""")
-    __choose_option()
+                                      版权归作者所有""")
 
     # 实例化翻译引擎
     global __interpreter
     __interpreter = Interpreter()
     # 开始翻译
-    __translate()
+    if not __translate():
+        main.start_main()
 
 
 def __translate(first_trans=True):
@@ -45,46 +41,15 @@ def __translate(first_trans=True):
 
     if first_trans:
         tmp = input("\n原文：").strip()
-        if tmp == "":
-            __translate("1")
-            return
+        if tmp in ("", "\r", "\n"):
+            return __translate(False)
 
         __interpreter.translate_txt(tmp)
-        __translate()
-        return
+        return __translate()
 
-    tmp = input("未输入文本或输入文本无意义，请重新输入或回车退出程序：").strip()
-    if tmp == "":
-        sys.exit()
+    tmp = input("未输入文本或输入文本无意义，请重新输入或回车返回主菜单：")
+    if tmp in ("", "\r", "\n"):
+        return False
 
     __interpreter.translate_txt(tmp)
-    __translate()
-
-
-def __choose_option(first_select=True):
-    """
-    输入序号选择对应的操作
-
-    :param first_select: 首次进入选项
-    """
-
-    # 用户输入内容
-    _inp = ""
-    # 首次进入选项
-    if first_select:
-        print("""1) 开始翻译
-0) 返回上一级
-""")
-        _inp = input("请输入要操作的序号或回车退出程序：").strip()
-    else:
-        _inp = input("列表中不存在该序号，请重新输入正确序号或回车退出程序：").strip()
-
-    match _inp:
-        case "":
-            sys.exit()
-        case "0":
-            main.start_main()
-        case "1":
-            return
-        case _:
-            __choose_option(False)
+    return __translate()

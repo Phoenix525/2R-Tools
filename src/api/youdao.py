@@ -151,7 +151,7 @@ class YoudaoTranslation(BaseTranslation):
                 length=16,
                 prompt="未配置appId！请输入（敏感内容不显示）或回车返回引擎列表：",
             )
-            if inp == "":
+            if inp in ("", "\r", "\n"):
                 return False
             self.__app_id = keys["appId"] = inp
 
@@ -160,7 +160,7 @@ class YoudaoTranslation(BaseTranslation):
                 length=32,
                 prompt="未配置appKey！请输入（敏感内容不显示）或回车返回引擎列表：",
             )
-            if inp == "":
+            if inp in ("", "\r", "\n"):
                 return False
             self.__app_key = keys["appKey"] = inp
         store = SimpleKeyStore(SimpleAPIKeyEncryptor("youdao_api_tokens"))

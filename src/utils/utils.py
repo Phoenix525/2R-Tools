@@ -17,6 +17,7 @@ import os
 import pathlib
 import re
 import shutil
+import sys
 import time
 import uuid
 from configparser import ConfigParser
@@ -94,6 +95,8 @@ GLOBAL_DATA = {
 
 # 项目所在绝对路径
 BASE_ABSPATH = pathlib.Path(__file__).parent.parent.parent
+# 项目代码绝对路径
+SRC_ABSPATH = os.path.join(BASE_ABSPATH, "src")
 
 # 配置文件绝对路径
 CONFIG_ABSPATH = os.path.join(BASE_ABSPATH, "config.ini")
@@ -165,11 +168,11 @@ def merge_dicts(dicts: list[dict], rewrite=True) -> dict:
     - rewrite: 遇到相同key时，后面字典的值是否覆盖前面字典的值。默认覆盖
     """
 
-    if dicts is None or len(dicts) < 1:
+    if not dicts:
         return None
 
     if len(dicts) == 1:
-        if dicts[0] is None or not isinstance[dicts[0], dict] or len(dicts[0]) < 1:
+        if not dicts[0] or not isinstance[dicts[0], dict]:
             return None
 
     # 若要后面字典的值不覆盖前面字典的值，则反转传入的字典列表
@@ -179,7 +182,7 @@ def merge_dicts(dicts: list[dict], rewrite=True) -> dict:
     # 深拷贝首个字典作为新字典的初始字典，避免影响原有字典
     merged_dict = copy.deepcopy(dicts[0])
     for idx, _dict in enumerate(dicts):
-        if idx == 0 or _dict is None or not isinstance(_dict, dict) or len(_dict) < 1:
+        if idx == 0 or not _dict or not isinstance(_dict, dict):
             continue
         # 此种合并方式遇到相同key，后面字典的值会覆盖前面的值
         merged_dict.update(_dict)
@@ -195,7 +198,7 @@ def del_key_from_dict(key: str, datas=None) -> bool:
     - datas: 要调整的字典
     """
 
-    if datas is None or not isinstance(datas, dict) or len(datas) < 1:
+    if not datas or not isinstance(datas, dict):
         return datas
 
     key = key.strip()
@@ -693,51 +696,41 @@ def validate_renpy_trans_file(file_path: str) -> bool:
     return False
 
 
-def get_projects_list(_type: str) -> dict:
+def get_projects_list(_type: str) -> list:
     """
-    获取现有项目的名称列表
+    获取现有项目的名称列表，否则返回空列表
 
     :param _type: 获取哪种引擎的列表
     """
 
     if _type == "renpy":
-        # 判断ren'Py项目工作区是否存在，不存在则新建一个，并返回空字典
-        if not os.path.exists(RENPY_PROJECT_PARENT_FOLDER):
-            os.makedirs(RENPY_PROJECT_PARENT_FOLDER)
-            return {}
-
+        # 判断ren'Py项目工作区是否存在，不存在则新建一个，并返回空列表
         _path = pathlib.Path(RENPY_PROJECT_PARENT_FOLDER)
-        # 获取所有文件夹
-        folders = [item.name for item in _path.iterdir() if item.is_dir()]
-        if len(folders) <= 0:
-            return {}
+        if not _path.exists():
+            _path.mkdir(parents=True)
+            return []
 
-        _dict = {}
-        for i, item in enumerate(folders):
-            _dict[f"{i + 1}"] = item
-        return _dict
+        # 获取所有翻译文件夹
+        folders = [item.name for item in _path.iterdir() if item.is_dir()]
+        return folders
 
     elif _type == "rpgm":
-        # 判断rpgm项目工作区是否存在，不存在则新建一个，并返回空字典
-        if not os.path.exists(RPGM_PROJECT_PARENT_FOLDER):
-            os.makedirs(RPGM_PROJECT_PARENT_FOLDER)
-            return {}
-
+        # 判断rpgm项目工作区是否存在，不存在则新建一个，并返回空列表
         _path = pathlib.Path(RPGM_PROJECT_PARENT_FOLDER)
-        # 获取所有文件夹
-        files = [item.name for item in _path.iterdir() if item.is_file()]
-        if len(files) <= 0:
-            return {}
+        if not _path.exists():
+            _path.mkdir(parents=True)
+            return []
 
-        _dict = {}
-        for i, item in enumerate(files):
-            if not item.endswith(".json"):
-                continue
-            _dict[f"{i + 1}"] = item
-        return _dict
+        # 获取所有JSON文件
+        files = [
+            item.name
+            for item in _path.iterdir()
+            if item.is_file() and item.name.endswith(".json")
+        ]
+        return files
 
     else:
-        return {}
+        return []
 
 
 def hashlib_256(res: str) -> str:
@@ -749,28 +742,6 @@ def hashlib_256(res: str) -> str:
     m = hashlib.sha256(bytes(res.encode(encoding="utf-8"))).digest()
     result = base64.b64encode(m).decode(encoding="utf-8")
     return result
-
-
-def get_tuple_values_for_index(tup: tuple, idx=0) -> tuple:
-    """
-    获取元组中元组指定索引的值，并组成新的元组输出
-
-    :param tup: 要查询的元组
-    :param idx: 指定的索引
-    """
-
-    if idx < 0:
-        return ()
-
-    if tup is None or not isinstance(tup, tuple) or len(tup) < 1:
-        return ()
-
-    value_list = []
-    for item in tup:
-        if item is None or not isinstance(item, tuple) or idx > len(item) - 1:
-            continue
-        value_list.append(item[idx])
-    return tuple(value_list)
 
 
 def validate_index(lst: list | tuple | str, index=0, with_negative=True) -> bool:
@@ -841,7 +812,7 @@ def write_config(section: str, keys=None, add=True) -> bool:
 
     if not section or not isinstance(section, str):
         return False
-    if keys is None or not isinstance(keys, dict) or len(keys) < 1:
+    if not keys or not isinstance(keys, dict):
         return False
 
     # 读取配置文件，如果值为None说明未读取到，直接返回
@@ -898,6 +869,41 @@ def get_value_from_library(source_txt: str):
         print(f"库译文：{target}\n")
         return target
     return ""
+
+
+def waiit_key_or_enter(prompt="按任意键继续或按回车退出程序："):
+    """
+    获取输入，回车返回True，任意键返回False
+
+    :Param prompt: 控制台提示语
+    """
+
+    print(prompt, end="", flush=True)
+    key = get_key()
+    print()  # 换行
+    return key in ("", "\r", "\n")  # 回车返回True
+
+
+def get_key() -> str:
+    """
+    跨平台获取单个按键（Windows用msvcrt，Unix-like用termios）
+    """
+    if sys.platform == "win32":
+        import msvcrt
+
+        return msvcrt.getch().decode("utf-8", errors="ignore")
+    else:
+        import termios
+        import tty
+
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setraw(fd)
+            ch = sys.stdin.read(1)
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        return ch
 
 
 def get_config():

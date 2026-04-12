@@ -113,7 +113,7 @@ class XunFeiTranslation(BaseTranslation):
                 length=8,
                 prompt="未配置APPID！请输入（敏感内容不显示）或回车返回引擎列表：",
             )
-            if inp == "":
+            if inp in ("", "\r", "\n"):
                 return False
             self.__app_id = keys["APPID"] = inp
         if not self.__api_secret:
@@ -121,7 +121,7 @@ class XunFeiTranslation(BaseTranslation):
                 length=32,
                 prompt="未配置APISecret！请输入（敏感内容不显示）或回车返回引擎列表：",
             )
-            if inp == "":
+            if inp in ("", "\r", "\n"):
                 return False
             self.__api_secret = keys["APISecret"] = inp
         if not self.__api_key:
@@ -129,7 +129,7 @@ class XunFeiTranslation(BaseTranslation):
                 length=32,
                 prompt="未配置APIKey！请输入（敏感内容不显示）或回车返回引擎列表：",
             )
-            if inp == "":
+            if inp in ("", "\r", "\n"):
                 return False
             self.__api_key = keys["APIKey"] = inp
 

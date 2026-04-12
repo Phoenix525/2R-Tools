@@ -138,7 +138,7 @@ class TencentTranslation(BaseTranslation):
                 length=36,
                 prompt="未配置secretId！请输入（敏感内容不显示）或回车返回引擎列表：",
             )
-            if inp == "":
+            if inp in ("", "\r", "\n"):
                 return False
             self.__secret_id = keys["secretId"] = inp
         if not self.__secret_key:
@@ -146,7 +146,7 @@ class TencentTranslation(BaseTranslation):
                 length=32,
                 prompt="未配置secretKey！请输入（敏感内容不显示）或回车返回引擎列表：",
             )
-            if inp == "":
+            if inp in ("", "\r", "\n"):
                 return False
             self.__secret_key = keys["secretKey"] = inp
 

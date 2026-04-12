@@ -19,6 +19,7 @@ from src.utils.utils import (
     print_info,
     print_warn,
     read_json,
+    waiit_key_or_enter,
     write_json,
 )
 
@@ -51,9 +52,17 @@ def start(project_name: str):
 ===========================================================================================
 """)
 
-    __choose_option()
+    no_skip = __choose_option()
+    if not no_skip:
+        main.start_main()
+        return
 
-    sys.exit()
+    inp = waiit_key_or_enter("按任意键返回主菜单或回车退出程序：")
+    if inp:
+        sys.exit()
+    else:
+        # 返回主菜单
+        main.start_main()
 
 
 def __initialize():
@@ -199,7 +208,7 @@ def __read_game_txt() -> bool:
     # 读取待翻译文本
     cache = read_json(__curr_rpgm_project_path)
 
-    if cache is None or len(cache) < 1:
+    if not cache:
         return False
 
     global __game_txt_cache
@@ -245,25 +254,27 @@ def __choose_option(first_select=True):
     _inp = ""
     # 首次进入选项
     if first_select:
-        print(f"""1) 翻译JSON文本
+        print(f"""1) 翻译JSON翻译文本
 2) 检索值为空的字段，并添加{MARK_TODO}
 3) 检索指定语种字段，并添加{GLOBAL_DATA["pass_filter"][0]}
-0) 返回上一级
 """)
-        _inp = input("请输入要操作的序号或回车退出程序：").strip()
+        _inp = input("请输入要操作的序号或回车返回主菜单：")
     else:
-        _inp = input("列表中不存在该序号，请重新输入正确序号或回车退出程序：").strip()
+        _inp = input("列表中不存在该序号，请重新输入正确序号或回车返回主菜单：")
 
     match _inp:
-        case "":
-            sys.exit()
-        case "0":
-            main.start_main()
+        case "" | "\r" | "\n":
+            return False
         case "1":
             __initialize()
+            return True
         case "2":
             __add_todo()
+            return True
         case "3":
             __add_pass()
+            return True
         case _:
-            __choose_option(False)
+            return __choose_option(False)
+
+    return False

@@ -6,6 +6,7 @@
 """
 
 import os
+import pathlib
 import shutil
 import sys
 from datetime import datetime
@@ -30,6 +31,7 @@ from src.utils.utils import (
     read_json,
     switch_change_mark,
     update_phoenix_mark,
+    waiit_key_or_enter,
     write_json,
 )
 
@@ -114,19 +116,26 @@ def start(project_name: str):
 ===========================================================================================
 """)
 
-    __choose_option()
+    no_skip = __choose_option()
+    if not no_skip:
+        main.start_main()
+        return
 
     # 判断翻译文本是否有变动，没有则跳过
     if KEY_PHOENIX in __game_txt_cache and not __game_txt_cache[KEY_PHOENIX]:
         print(f"{__curr_rpgm_project_name} 未发生更改，无需写入！\n")
+    else:
+        # 将更新标识的值重置为False
+        update_phoenix_mark(__game_txt_cache)
+        # 更新翻译项目
+        write_json(__curr_rpgm_project_path, __game_txt_cache)
+
+    inp = waiit_key_or_enter("按任意键返回主菜单或回车退出程序：")
+    if inp:
         sys.exit()
-
-    # 将更新标识的值重置为False
-    update_phoenix_mark(__game_txt_cache)
-    # 更新翻译项目
-    write_json(__curr_rpgm_project_path, __game_txt_cache)
-
-    sys.exit()
+    else:
+        # 返回主菜单
+        main.start_main()
 
 
 def __walk_file(_type: str):
@@ -134,8 +143,7 @@ def __walk_file(_type: str):
     遍历文件夹内所有内容
     """
 
-    if not os.path.exists(RPGM_INPUT_ABSPATH):
-        os.makedirs(RPGM_INPUT_ABSPATH)
+    pathlib.Path(RPGM_INPUT_ABSPATH).mkdir(parents=True, exist_ok=True)
     if os.path.exists(RPGM_OUTPUT_ABSPATH):
         shutil.rmtree(RPGM_OUTPUT_ABSPATH)
     os.makedirs(RPGM_OUTPUT_ABSPATH)
@@ -181,7 +189,7 @@ def __deal_with_json_file(root: str, json_file: str, _type: str, new_path: str):
     print(f"当前扫描文本：{json_file}")
     # 这里的json_datas不做拷贝，直接传入下面的函数
     json_datas = read_json(os.path.join(root, json_file))
-    if json_datas is None or len(json_datas) < 1:
+    if not json_datas:
         print(f"{json_file} 无内容，已跳过！\n")
         return
 
@@ -206,7 +214,7 @@ def __deal_with_json_file(root: str, json_file: str, _type: str, new_path: str):
     elif PATTERN_MAP.match(filename):
         _change = __scanning_type_maps(json_datas, _type, filename)
 
-    # elif filename in [TYPE_BATTLEHUD, TYPE_MAPHUD]:
+    # elif filename in (TYPE_BATTLEHUD, TYPE_MAPHUD):
     #     _change = scanning_wicked_rouge(json_datas, _type)
 
     # 提取模式
@@ -230,7 +238,7 @@ def __sacnning_type_player(json_datas: list, _type: str, filename: str) -> bool:
     # 记录文本更改
     _change = False
 
-    if not json_datas or not isinstance(json_datas, list) or len(json_datas) < 1:
+    if not json_datas or not isinstance(json_datas, list):
         return _change
 
     for json_datas_idx, json_datas_item in enumerate(json_datas):
@@ -351,16 +359,16 @@ def __sacnning_type_player(json_datas: list, _type: str, filename: str) -> bool:
         # pages是列表
         if (
             KEY_PAGES in json_datas_item
+            and json_datas_item[KEY_PAGES]
             and isinstance(json_datas_item[KEY_PAGES], list)
-            and len(json_datas_item[KEY_PAGES]) > 0
         ):
             pages = json_datas_item[KEY_PAGES]
             for pages_idx, pages_item in enumerate(pages):
                 # list是列表
                 if (
                     KEY_LIST not in pages_item
+                    or not pages_item[KEY_LIST]
                     or not isinstance(pages_item[KEY_LIST], list)
-                    or len(pages_item[KEY_LIST]) < 1
                 ):
                     continue
 
@@ -374,8 +382,8 @@ def __sacnning_type_player(json_datas: list, _type: str, filename: str) -> bool:
                     # parameters是列表
                     if (
                         KEY_PARAMETERS not in lists_item[KEY_PARAMETERS]
+                        or not lists_item[KEY_PARAMETERS]
                         or not isinstance(lists_item[KEY_PARAMETERS], list)
-                        or len(lists_item[KEY_PARAMETERS]) < 1
                     ):
                         continue
 
@@ -384,8 +392,8 @@ def __sacnning_type_player(json_datas: list, _type: str, filename: str) -> bool:
                     # 选择菜单
                     if (
                         code == 102
+                        and parameters[0]
                         and isinstance(parameters[0], list)
-                        and len(parameters[0]) > 0
                     ):
                         for idx, choose in enumerate(parameters[0]):
                             if _type == EXTRACT:
@@ -402,7 +410,7 @@ def __sacnning_type_player(json_datas: list, _type: str, filename: str) -> bool:
                     if (
                         code == 122
                         and isinstance(parameters[4], str)
-                        and not any(s in parameters[4] for s in ["$", "."])
+                        and not any(s in parameters[4] for s in ("$", "."))
                     ):
                         if _type == EXTRACT:
                             _change = switch_change_mark(
@@ -427,7 +435,7 @@ def __sacnning_type_player(json_datas: list, _type: str, filename: str) -> bool:
                         continue
 
                     # 脚本
-                    if code in [355, 655] and isinstance(parameters[0], str):
+                    if code in (355, 655) and isinstance(parameters[0], str):
                         if '"' not in parameters[0]:
                             continue
                         if _type == EXTRACT:
@@ -482,7 +490,7 @@ def __sacnning_type_player(json_datas: list, _type: str, filename: str) -> bool:
                             lists[lists_idx][KEY_PARAMETERS][0] = txt
                         continue
 
-                if len(list_idx_record) > 0:
+                if list_idx_record:
                     # 反向列表中元素
                     list_idx_record.reverse()
                     # 统一删除空文本行
@@ -502,7 +510,7 @@ def __sacnning_common_events(json_datas: list, _type: str) -> bool:
     # 记录文本更改
     _change = False
 
-    if not json_datas or not isinstance(json_datas, list) or len(json_datas) < 1:
+    if not json_datas or not isinstance(json_datas, list):
         return _change
 
     for json_datas_idx, json_datas_item in enumerate(json_datas):
@@ -512,8 +520,8 @@ def __sacnning_common_events(json_datas: list, _type: str) -> bool:
         # list是列表
         if (
             KEY_LIST not in json_datas_item
+            or not json_datas_item[KEY_LIST]
             or not isinstance(json_datas_item[KEY_LIST], list)
-            or len(json_datas_item[KEY_LIST]) < 1
         ):
             continue
 
@@ -527,19 +535,15 @@ def __sacnning_common_events(json_datas: list, _type: str) -> bool:
             # parameter是列表
             if (
                 KEY_PARAMETERS not in lists_item
+                or not lists_item[KEY_PARAMETERS]
                 or not isinstance(lists_item[KEY_PARAMETERS], list)
-                or len(lists_item[KEY_PARAMETERS]) < 1
             ):
                 continue
 
             parameters = lists_item[KEY_PARAMETERS]
             code = lists_item[KEY_CODE]
             # 选择菜单
-            if (
-                code == 102
-                and isinstance(parameters[0], list)
-                and len(parameters[0]) > 0
-            ):
+            if code == 102 and parameters[0] and isinstance(parameters[0], list):
                 for idx, choose in enumerate(parameters[0]):
                     if _type == EXTRACT:
                         _change = switch_change_mark(_change, __write_in_cache(choose))
@@ -578,7 +582,7 @@ def __sacnning_common_events(json_datas: list, _type: str) -> bool:
                 continue
 
             # 脚本
-            if code == 355 and isinstance(parameters[0], str):
+            if code in (355, 655) and isinstance(parameters[0], str):
                 if '"' not in parameters[0]:
                     continue
                 if _type == EXTRACT:
@@ -632,7 +636,7 @@ def __sacnning_common_events(json_datas: list, _type: str) -> bool:
                     lists[lists_idx][KEY_PARAMETERS][0] = txt
                 continue
 
-        if len(list_idx_record) > 0:
+        if list_idx_record:
             # 反向列表中元素
             list_idx_record.reverse()
             # 统一删除空文本行
@@ -651,14 +655,14 @@ def __scanning_system(json_datas: dict, _type: str, filename: str) -> bool:
     # 记录文本更改
     _change = False
 
-    if not json_datas or not isinstance(json_datas, dict) or len(json_datas) < 1:
+    if not json_datas or not isinstance(json_datas, dict):
         return _change
 
     # armorTypes是列表
     if (
         KEY_ARMORTYPES in json_datas
+        and json_datas[KEY_ARMORTYPES]
         and isinstance(json_datas[KEY_ARMORTYPES], list)
-        and len(json_datas[KEY_ARMORTYPES]) > 0
     ):
         for idx, armortype in enumerate(json_datas[KEY_ARMORTYPES]):
             _loc = get_md5("_".join([filename, KEY_ARMORTYPES, str(idx)]), True)
@@ -682,8 +686,8 @@ def __scanning_system(json_datas: dict, _type: str, filename: str) -> bool:
     # elements是列表
     if (
         KEY_ELEMENTS in json_datas
+        and json_datas[KEY_ELEMENTS]
         and isinstance(json_datas[KEY_ELEMENTS], list)
-        and len(json_datas[KEY_ELEMENTS]) > 0
     ):
         for idx, element in enumerate(json_datas[KEY_ELEMENTS]):
             _loc = get_md5("_".join([filename, KEY_ELEMENTS, str(idx)]), True)
@@ -695,8 +699,8 @@ def __scanning_system(json_datas: dict, _type: str, filename: str) -> bool:
     # equipTypes是列表
     if (
         KEY_EQUIPTYPES in json_datas
+        and json_datas[KEY_EQUIPTYPES]
         and isinstance(json_datas[KEY_EQUIPTYPES], list)
-        and len(json_datas[KEY_EQUIPTYPES]) > 0
     ):
         for idx, equiptype in enumerate(json_datas[KEY_EQUIPTYPES]):
             _loc = get_md5("_".join([filename, KEY_EQUIPTYPES, str(idx)]), True)
@@ -720,8 +724,8 @@ def __scanning_system(json_datas: dict, _type: str, filename: str) -> bool:
     # skillTypes是列表
     if (
         KEY_SKILLTYPES in json_datas
+        and json_datas[KEY_SKILLTYPES]
         and isinstance(json_datas[KEY_SKILLTYPES], list)
-        and len(json_datas[KEY_SKILLTYPES]) > 0
     ):
         for idx, skilltype in enumerate(json_datas[KEY_SKILLTYPES]):
             _loc = get_md5("_".join([filename, KEY_SKILLTYPES, str(idx)]), True)
@@ -733,8 +737,8 @@ def __scanning_system(json_datas: dict, _type: str, filename: str) -> bool:
     # weaponTypes是列表
     if (
         KEY_WEAPONTYPES in json_datas
+        and json_datas[KEY_WEAPONTYPES]
         and isinstance(json_datas[KEY_WEAPONTYPES], list)
-        and len(json_datas[KEY_WEAPONTYPES]) > 0
     ):
         for idx, weapontype in enumerate(json_datas[KEY_WEAPONTYPES]):
             _loc = get_md5("_".join([filename, KEY_WEAPONTYPES, str(idx)]), True)
@@ -750,8 +754,8 @@ def __scanning_system(json_datas: dict, _type: str, filename: str) -> bool:
         # basic是列表
         if (
             KEY_BASIC in _terms
+            and _terms[KEY_BASIC]
             and isinstance(_terms[KEY_BASIC], list)
-            and len(_terms[KEY_BASIC]) > 0
         ):
             for idx, basic in enumerate(_terms[KEY_BASIC]):
                 _loc = get_md5(
@@ -767,8 +771,8 @@ def __scanning_system(json_datas: dict, _type: str, filename: str) -> bool:
         # commands是列表
         if (
             KEY_COMMANDS in _terms
+            and _terms[KEY_COMMANDS]
             and isinstance(_terms[KEY_COMMANDS], list)
-            and len(_terms[KEY_COMMANDS]) > 0
         ):
             for idx, command in enumerate(_terms[KEY_COMMANDS]):
                 _loc = get_md5(
@@ -786,8 +790,8 @@ def __scanning_system(json_datas: dict, _type: str, filename: str) -> bool:
         # params是列表
         if (
             KEY_PARAMS in _terms
+            and _terms[KEY_PARAMS]
             and isinstance(_terms[KEY_PARAMS], list)
-            and len(_terms[KEY_PARAMS]) > 0
         ):
             for idx, param in enumerate(_terms[KEY_PARAMS]):
                 _loc = get_md5(
@@ -803,8 +807,8 @@ def __scanning_system(json_datas: dict, _type: str, filename: str) -> bool:
         # messages是字典
         if (
             KEY_MESSAGES in _terms
+            and _terms[KEY_MESSAGES]
             and isinstance(_terms[KEY_MESSAGES], dict)
-            and len(_terms[KEY_MESSAGES]) > 0
         ):
             for key, message in _terms[KEY_MESSAGES].items():
                 if message.strip() == "":
@@ -827,7 +831,7 @@ def __scanning_type_maps(json_datas: dict, _type: str, filename: str) -> bool:
     # 记录文本更改
     _change = False
 
-    if not json_datas or not isinstance(json_datas, dict) or len(json_datas) < 1:
+    if not json_datas or not isinstance(json_datas, dict):
         return _change
 
     # displayName是字串
@@ -845,8 +849,8 @@ def __scanning_type_maps(json_datas: dict, _type: str, filename: str) -> bool:
     # events是列表
     if (
         KEY_EVENTS not in json_datas
+        or not json_datas[KEY_EVENTS]
         or not isinstance(json_datas[KEY_EVENTS], list)
-        or len(json_datas[KEY_EVENTS]) < 1
     ):
         return _change
 
@@ -857,8 +861,8 @@ def __scanning_type_maps(json_datas: dict, _type: str, filename: str) -> bool:
         # pages是列表
         if (
             KEY_PAGES not in events_item
+            or not events_item[KEY_PAGES]
             or not isinstance(events_item[KEY_PAGES], list)
-            or len(events_item[KEY_PAGES]) < 1
         ):
             continue
 
@@ -867,8 +871,8 @@ def __scanning_type_maps(json_datas: dict, _type: str, filename: str) -> bool:
             # list是列表
             if (
                 KEY_LIST not in pages_item
+                or not pages_item[KEY_LIST]
                 or not isinstance(pages_item[KEY_LIST], list)
-                or len(pages_item[KEY_LIST]) < 1
             ):
                 continue
 
@@ -882,19 +886,15 @@ def __scanning_type_maps(json_datas: dict, _type: str, filename: str) -> bool:
                 # parameters是列表
                 if (
                     KEY_PARAMETERS not in lists_item
+                    or not lists_item[KEY_PARAMETERS]
                     or not isinstance(lists_item[KEY_PARAMETERS], list)
-                    or len(lists_item[KEY_PARAMETERS]) < 1
                 ):
                     continue
 
                 parameters = lists_item[KEY_PARAMETERS]
                 code = lists_item[KEY_CODE]
                 # 选择菜单
-                if (
-                    code == 102
-                    and isinstance(parameters[0], list)
-                    and len(parameters[0]) > 0
-                ):
+                if code == 102 and parameters[0] and isinstance(parameters[0], list):
                     for idx, choose in enumerate(parameters[0]):
                         if _type == EXTRACT:
                             _change = switch_change_mark(
@@ -935,7 +935,7 @@ def __scanning_type_maps(json_datas: dict, _type: str, filename: str) -> bool:
                     continue
 
                 # 脚本
-                if code in [355, 655] and isinstance(parameters[0], str):
+                if code in (355, 655) and isinstance(parameters[0], str):
                     if '"' not in parameters[0]:
                         continue
                     if _type == EXTRACT:
@@ -990,7 +990,7 @@ def __scanning_type_maps(json_datas: dict, _type: str, filename: str) -> bool:
                         lists[lists_idx][KEY_PARAMETERS][0] = txt
                     continue
 
-            if len(lists_idx_record) > 0:
+            if lists_idx_record:
                 # 反向列表中元素
                 lists_idx_record.reverse()
                 # 统一删除空文本行
@@ -1010,14 +1010,14 @@ def __scanning_type_maps(json_datas: dict, _type: str, filename: str) -> bool:
 #     # 记录文本更改
 #     _change = False
 
-#     if not json_datas or not isinstance(json_datas, dict) or len(json_datas) < 1:
+#     if not json_datas or not isinstance(json_datas, dict):
 #         return _change
 
 #     for i_json_datas, json_datas_item in json_datas.items():
 #         if (
 #             not json_datas_item
+#             or not json_datas_item
 #             or not isinstance(json_datas_item, list)
-#             or len(json_datas_item) < 1
 #         ):
 #             continue
 
@@ -1172,22 +1172,23 @@ def __choose_option(first_select=True):
     _inp = ""
     # 首次进入选项
     if first_select:
-        print("""1) 提取翻译文本
-2) 写入翻译文本
-0) 返回上一级
+        print("""1) 从data提取JSON翻译文本
+2) 将JSON翻译文本写回data
 """)
-        _inp = input("请输入要操作的序号或回车退出程序：").strip()
+        _inp = input("请输入要操作的序号或回车返回主菜单：").strip()
     else:
-        _inp = input("列表中不存在该序号，请重新输入正确序号或回车退出程序：").strip()
+        _inp = input("列表中不存在该序号，请重新输入正确序号或回车返回主菜单：").strip()
 
     match _inp:
-        case "":
-            sys.exit()
-        case "0":
-            main.start_main()
+        case "" | "\r" | "\n":
+            return False
         case "1":
             __walk_file(EXTRACT)
+            return True
         case "2":
             __walk_file(WRITEIN)
+            return True
         case _:
-            __choose_option(False)
+            return __choose_option(False)
+
+    return False

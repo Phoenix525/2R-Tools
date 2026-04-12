@@ -7,7 +7,7 @@ import time
 import volcenginesdktranslate20250301
 from volcenginesdkcore import Configuration, rest
 
-from src.api.base_translation import STRING_HUOSHAN, BaseTranslation
+from src.api.base_translation import BaseTranslation, ValidateStringsType
 from src.utils.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
 from src.utils.utils import (
     acquire_token,
@@ -132,16 +132,16 @@ class HuoshanTranslation(BaseTranslation):
                 length=47,
                 prompt="未配置AccessKeyID！请输入（敏感内容不显示）或回车返回引擎列表：",
             )
-            if inp == "":
+            if inp in ("", "\r", "\n"):
                 return False
             self.__access_key_id = keys["AccessKeyID"] = inp
         if not self.__secret_access_key:
             inp = self.input_what_we_need(
                 length=58,
-                validate_type=STRING_HUOSHAN,
+                validate_type=ValidateStringsType.STRING_HUOSHAN,
                 prompt="未配置SecretAccessKey！请输入（敏感内容不显示）或回车返回引擎列表：",
             )
-            if inp == "":
+            if inp in ("", "\r", "\n"):
                 return False
             self.__secret_access_key = keys["SecretAccessKey"] = inp
 

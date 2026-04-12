@@ -7,7 +7,6 @@
 
 import copy
 import os
-import sys
 
 import main
 from src.utils.utils import (
@@ -43,9 +42,8 @@ def start():
 ===========================================================================================
 """)
 
-    __choose_option()
-
-    sys.exit()
+    if not __choose_option():
+        main.start_main()
 
 
 def __walk_file():
@@ -135,7 +133,7 @@ def __scanning_rpy_file(
         if (
             old_say_match is not None
             and old_say_match.group(1) != "voice"
-            and _identifier not in ["", "strings"]
+            and _identifier not in ("", "strings")
         ):
             _old_say = old_say_match.group(2)
             continue
@@ -145,7 +143,7 @@ def __scanning_rpy_file(
         if (
             new_say_match is not None
             and new_say_match.group(1) != "voice"
-            and _identifier not in ["", "strings"]
+            and _identifier not in ("", "strings")
         ):
             if _old_say.strip() == "":
                 continue
@@ -223,23 +221,24 @@ def __choose_option(first_select=True):
     if first_select:
         print("""1) 更新译文库（待录入文本务必是标准rpy或json翻译文件，以免污染译文库）
 2) 更新JSON文本（试验功能，仅可输入合法文本路径，暂不支持路径验证及输入目录）
-0) 返回上一级
 """)
-        _inp = input("请输入要操作的序号（如1）或回车退出程序：").strip()
+        _inp = input("请输入要操作的序号或回车返回主菜单：").strip()
     else:
-        _inp = input("列表中不存在该序号，请重新输入正确序号或回车退出程序：").strip()
+        _inp = input("列表中不存在该序号，请重新输入正确序号或回车返回主菜单：").strip()
 
     match _inp:
-        case "":
-            sys.exit()
-        case "0":
-            main.start_main()
+        case "" | "\r" | "\n":
+            return False
         case "1":
             __walk_file()
+            return True
         case "2":
             _file1 = input("\n请输入原文本库路径：").strip()
             _file2 = input("\n请输入新文本库路径：").strip()
             # todo 此处需要增加验证路径和文件是否合法的逻辑
             __update_json_trans(_file1, _file2)
+            return True
         case _:
-            __choose_option(False)
+            return __choose_option(False)
+
+    return False

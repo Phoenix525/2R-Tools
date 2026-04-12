@@ -122,11 +122,7 @@ class Interpreter:
         - activate_context: 是否启用上下文
         """
 
-        if (
-            source_txt_dict is None
-            or not isinstance(source_txt_dict, dict)
-            or len(source_txt_dict) < 1
-        ):
+        if not source_txt_dict or not isinstance(source_txt_dict, dict):
             return None
 
         tmp_source_txt = copy.deepcopy(source_txt_dict)
@@ -169,11 +165,7 @@ class Interpreter:
         - activate_context: 是否启用上下文
         """
 
-        if (
-            source_txt_list is None
-            or not isinstance(source_txt_list, list)
-            or len(source_txt_list) < 1
-        ):
+        if not source_txt_list or not isinstance(source_txt_list, list):
             return None
 
         tmp_source_txt_list = []
@@ -320,7 +312,7 @@ class Interpreter:
 
             _inp = input("请选择翻译引擎，直接回车默认选1：").strip()
             # 如果输入为空，则选择默认引擎
-            if _inp == "":
+            if _inp in ("", "\r", "\n"):
                 print(f"""===========================================================================================
 当前翻译引擎：【{api_titles[0]}】""")
                 self.__curr_api_name = self.__api_names[0]
@@ -329,12 +321,12 @@ class Interpreter:
                 return
         else:
             # 再次进入选择列表
-            prin = f"翻译引擎列表中不存在序号 {serial_num}，请重新输入正确序号或回车退出程序："
+            prin = "翻译引擎列表中不存在该序号，请重新输入正确序号或回车退出程序："
             if validate_index(self.__api_names, serial_num - 1, False):
                 if GLOBAL_DATA[f"{self.__api_names[serial_num - 1]}"] is False:
                     prin = "当前翻译引擎未启用，请重新输入正确序号或回车退出程序："
             _inp = input(prin).strip()
-            if _inp == "":
+            if _inp in ("", "\r", "\n"):
                 sys.exit()
 
         _serial_inp = to_int(_inp)
@@ -355,11 +347,10 @@ class Interpreter:
         # 实例化翻译器
         self.__get_interpreter()
 
-    def __select_lang_type(self, serial_num="", first_select=True, *, target_langs=()):
+    def __select_lang_type(self, first_select=True, *, target_langs=()):
         """
         选择目标语种
 
-        - serial_num: 选定的操作序号
         - first_select: 是否为首次选择
         - target_langs 语种表
         """
@@ -381,8 +372,9 @@ class Interpreter:
                 "  序号 ",
                 "  语种名称 ",
             )
-            header_length = len(table_header)
             table = PrettyTable(table_header)
+            header_length = len(table_header)
+            langs_len = len(curr_langs)
             _row = []
             for idx, value in enumerate(curr_langs):
                 _row.append(idx + 1)
@@ -392,8 +384,9 @@ class Interpreter:
                     table.add_row(_row)
                     _row = []
                     continue
-                if idx == len(curr_langs) - 1 and len(_row) % header_length != 0:
-                    for _ in range(header_length - len(_row)):
+                row_len = len(_row)
+                if idx == langs_len - 1 and row_len % header_length != 0:
+                    for _ in range(header_length - row_len):
                         _row.append("")
                     # 添加数据行
                     table.add_row(_row)
@@ -401,22 +394,22 @@ class Interpreter:
 
             default = 0
             _inp = input(f"请选择目标语种序号，直接回车默认选 {default + 1}：").strip()
-            if _inp == "":
+            if _inp in ("", "\r", "\n"):
                 print(f"""===========================================================================================
 当前目标语种：【{curr_langs[default][0]}】""")
                 self._to_lang = curr_langs[default][-1]
                 return
         else:
             _inp = input(
-                f"语种列表中不存在序号 {serial_num}，请重新输入正确序号或回车退出程序："
+                "语种列表中不存在该序号，请重新输入正确序号或回车退出程序："
             ).strip()
-            if _inp == "":
+            if _inp in ("", "\r", "\n"):
                 sys.exit()
 
         # 输入的序号转换成整型
         _inp_serial = to_int(_inp) - 1
-        if _inp_serial < 0 or _inp_serial >= len(_inp_serial):
-            self.__select_lang_type(_inp, False, target_langs=target_langs)
+        if not validate_index(curr_langs, _inp_serial):
+            self.__select_lang_type(False, target_langs=target_langs)
             return
 
         print(f"""===========================================================================================

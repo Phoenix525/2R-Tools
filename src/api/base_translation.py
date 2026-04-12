@@ -17,10 +17,20 @@ from src.utils.utils import (
     validate_lang,
 )
 
-STRING_NUM = "STRING_NUM"
-STRING_LETTER_NUM = "STRING_LETTER_NUM"
-STRING_DEEPL = "STRING_DEEPL"
-STRING_HUOSHAN = "STRING_HUOSHAN"
+
+class ValidateStringsType:
+    """
+    字符串校验类型
+    """
+
+    # 全数字 0-9
+    STRING_NUM = "STRING_NUM"
+    # 大小写英文字母和数字 A-Za-z0-9
+    STRING_LETTER_NUM = "STRING_LETTER_NUM"
+    # 36位标准UUID
+    STRING_UUID = "STRING_UUID"
+    # 特殊：火山翻译
+    STRING_HUOSHAN = "STRING_HUOSHAN"
 
 
 class BaseTranslation(object):
@@ -140,7 +150,7 @@ class BaseTranslation(object):
         length: int,
         first_config=True,
         *,
-        validate_type=STRING_LETTER_NUM,
+        validate_type=ValidateStringsType.STRING_LETTER_NUM,
         prompt="请输入：",
     ):
         """
@@ -156,26 +166,24 @@ class BaseTranslation(object):
             prompt = "参数输入不正确，请重新输入或回车返回引擎列表："
 
         inp = get_password_with_mask(prompt)
-        if inp == "":
+        if inp in ("", "\r", "\n"):
             return ""
 
         validated = False
-        if validate_type == STRING_LETTER_NUM:
-            validated = is_letters_and_digits(inp, length)
-
-        elif validate_type == STRING_NUM:
-            validated = is_all_digits(inp, length)
-
-        elif validate_type == STRING_DEEPL:
-            # 免费版
-            if len(inp) == length:
-                validated = inp.endswith(":fx") and is_uuid_v1(inp[:-3])
-            # pro付费版
-            elif len(inp) == length - 3:
-                validated = is_uuid_v1(inp)
-
-        elif validate_type == STRING_HUOSHAN:
-            validated = inp.endswith("==") and is_letters_and_digits(inp, length)
+        match validate_type:
+            case ValidateStringsType.STRING_LETTER_NUM:
+                validated = is_letters_and_digits(inp, length)
+            case ValidateStringsType.STRING_NUM:
+                validated = is_all_digits(inp, length)
+            case ValidateStringsType.STRING_UUID:
+                # 免费版
+                if len(inp) == length:
+                    validated = inp.endswith(":fx") and is_uuid_v1(inp[:-3])
+                # pro付费版
+                elif len(inp) == length - 3:
+                    validated = is_uuid_v1(inp)
+            case ValidateStringsType.STRING_HUOSHAN:
+                validated = inp.endswith("==") and is_letters_and_digits(inp, length)
 
         if not validated:
             return self.input_what_we_need(length, False, validate_type=validate_type)

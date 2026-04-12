@@ -119,7 +119,7 @@ class CaiyunTranslation(BaseTranslation):
             length=20,
             prompt="未配置token！请输入（敏感内容不显示）或回车返回引擎列表：",
         )
-        if inp == "":
+        if inp in ("", "\r", "\n"):
             return False
         self.__token = inp
 

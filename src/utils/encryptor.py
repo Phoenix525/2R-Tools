@@ -78,7 +78,7 @@ class SimpleKeyStore:
         :param keys: 新增的键值对字典
         """
 
-        if keys is None or not isinstance(keys, dict) or len(keys) < 1:
+        if not keys or not isinstance(keys, dict):
             return
         for key, value in keys.items():
             encrypted = self.__encryptor.encrypt(value)

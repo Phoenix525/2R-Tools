@@ -112,19 +112,10 @@ class OllamaTranslation(BaseTranslation):
         检查是否配置模组名称
         """
 
-        def _check():
-            if not self.__model_name:
-                raise ToolException(
-                    "TranslationAPIErr", "模组调用失败：Ollama未配置模型名称！"
-                )
-
-        try:
-            _check()
-        except ToolException as e:
-            print_err(f"翻译引擎调用异常：{str(e)}")
+        if not self.__model_name:
+            print_err("TranslationAPIErr", "模组调用失败：Ollama未配置模型名称！")
             return False
-        else:
-            return True
+        return True
 
     def __get_config(self):
         """

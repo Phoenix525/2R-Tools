@@ -8,7 +8,6 @@ import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 from src.api.base_translation import BaseTranslation
-from src.exception.tool_exception import ToolException
 from src.utils.utils import (
     print_err,
     print_info,
@@ -139,36 +138,19 @@ class HunYuanMTTranslation(BaseTranslation):
         检查模组路径是否存在
         """
 
-        def _check():
-            if not self.__model_path:
-                raise ToolException(
-                    "TranslationAPIErr", "模组调用失败：未配置Hunyuan-MT模型路径！"
-                )
-            if not os.path.exists(self.__model_path):
-                raise ToolException(
-                    "TranslationAPIErr", "模组调用失败：路径不存在Hunyuan-MT模型！"
-                )
-
-        try:
-            _check()
-        except ToolException as e:
-            print_err(f"翻译引擎调用异常：{str(e)}")
+        if not os.path.exists(self.__model_path):
+            print_err("TranslationAPIErr", "模组调用失败：路径不存在Hunyuan-MT模型！")
             return False
-        else:
-            return True
+        return True
 
     def __load_model(self) -> bool:
         """
         加载模型与分词器
         """
 
-        # 如果模型路径错误，直接返回，此处无需抛出异常
-        if not self.__model_path or not os.path.exists(self.__model_path):
-            return
-
         # 如果分词器和模型都不为空，说明已加载，无需再次加载
         if self.__tokenizer is not None and self.__model is not None:
-            return
+            return False
 
         print_warn("请确保已关闭其他占用大量显存及内存的程序，否则可能加载失败!")
         print("正在加载模型和分词器……")

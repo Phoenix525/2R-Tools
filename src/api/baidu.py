@@ -8,7 +8,7 @@ from json import loads
 from random import randint
 from urllib import parse
 
-from src.api.base_translation import STRING_NUM, BaseTranslation
+from src.api.base_translation import BaseTranslation, ValidateStringsType
 from src.exception.tool_exception import ToolException
 from src.utils.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
 from src.utils.utils import (
@@ -96,6 +96,7 @@ class BaiduTranslation(BaseTranslation):
                 result = loads(result_all)
                 if "trans_result" in result:
                     trans_result = result["trans_result"]
+                    result_len = len(trans_result)
                     target = ""
                     for idx, value in enumerate(trans_result):
                         src = value.get("dst", "")
@@ -104,7 +105,7 @@ class BaiduTranslation(BaseTranslation):
                         src = src.encode("utf-8", "replace").decode("utf-8")
                         src = enpun_2_zhpun(src)
                         target += src
-                        if idx < len(trans_result) - 1:
+                        if idx < result_len - 1:
                             target += r"\n"
                     return target
 
@@ -149,10 +150,10 @@ class BaiduTranslation(BaseTranslation):
         if not self.__app_id:
             inp = self.input_what_we_need(
                 length=17,
-                validate_type=STRING_NUM,
+                validate_type=ValidateStringsType.STRING_NUM,
                 prompt="未配置appid！请输入（敏感内容不显示）或回车返回引擎列表：",
             )
-            if inp == "":
+            if inp in ("", "\r", "\n"):
                 return False
             self.__app_id = keys["appid"] = inp
         if not self.__secret_key:
@@ -160,7 +161,7 @@ class BaiduTranslation(BaseTranslation):
                 length=20,
                 prompt="未配置secretKey！请输入（敏感内容不显示）或回车返回引擎列表：",
             )
-            if inp == "":
+            if inp in ("", "\r", "\n"):
                 return False
             self.__secret_key = keys["secretKey"] = inp
 
