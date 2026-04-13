@@ -22,13 +22,13 @@ from src.utils.utils import (
 
 # pylint: disable=invalid-name
 # 待翻译文本
-__game_txt_cache = None
+__game_txt_cache: dict[str, str] = None
 # 翻译器实例
-__interpreter = None
+__interpreter: Interpreter = None
 # 当前rpgm项目名称
-__curr_rpgm_project_name = ""
+__curr_rpgm_project_name: str = ""
 # 当前rpgm翻译文件的绝对路径
-__curr_rpgm_project_path = ""
+__curr_rpgm_project_path: str = ""
 
 
 def start(project_name: str):
@@ -106,7 +106,8 @@ def __translate(filter_lang=""):
         if v != "" and v.upper() != GlobalData.MARK_TODO:  # 已翻译的
             continue
 
-        txt = k.split("_")[-1]
+        # 将字段按连字符切割成两份。为以防万一，只从左往右切割1次，前面的是md5值，后面是文本
+        txt = k.split("_", maxsplit=1)[-1]
 
         # 过滤指定语种文本
         if not match_lang(txt, filter_lang):
@@ -117,7 +118,9 @@ def __translate(filter_lang=""):
         _count += 1
         if _count >= GlobalData.json_max_cache:
             __wirte_in_file(_bak)
+            # 已备份过，无需再备份
             _bak = False
+            # 缓存数归零
             _count = 0
     if _count > 0:
         __wirte_in_file(_bak)
@@ -242,7 +245,7 @@ def __wirte_in_file(bak=True):
     write_json(__curr_rpgm_project_path, __game_txt_cache, backup=bak)
 
 
-def __choose_option(first_select=True):
+def __choose_option(first_select=True) -> bool:
     """
     输入序号选择对应的操作
 

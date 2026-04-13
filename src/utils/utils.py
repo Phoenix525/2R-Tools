@@ -24,13 +24,13 @@ from configparser import ConfigParser
 from datetime import datetime
 from hashlib import md5
 from itertools import cycle
+from typing import Optional
 
 import chardet
 
 # import pwinput
 import py3langid
 
-from src.exception.tool_exception import ToolException
 from src.utils.global_data import GlobalData
 
 
@@ -89,11 +89,11 @@ def merge_dicts(dicts: list[dict], rewrite=True) -> dict:
     """
 
     if not dicts:
-        return None
+        return {}
 
     if len(dicts) == 1:
         if not dicts[0] or not isinstance[dicts[0], dict]:
-            return None
+            return {}
 
     # 若要后面字典的值不覆盖前面字典的值，则反转传入的字典列表
     if rewrite is False:
@@ -110,7 +110,7 @@ def merge_dicts(dicts: list[dict], rewrite=True) -> dict:
     return merged_dict
 
 
-def del_key_from_dict(key: str, datas=None) -> bool:
+def del_key_from_dict(key: str, datas=None) -> Optional[dict]:
     """
     删除字典中指定key元素
 
@@ -122,7 +122,7 @@ def del_key_from_dict(key: str, datas=None) -> bool:
         return datas
 
     key = key.strip()
-    if key == "" or key not in datas:
+    if key not in datas:
         return datas
 
     # 深拷贝字典，避免影响到原字典
@@ -131,7 +131,7 @@ def del_key_from_dict(key: str, datas=None) -> bool:
     return _dict
 
 
-def read_json(file_path: str):
+def read_json(file_path: str) -> Optional[list | dict]:
     """
     读取JSON文件，并将其转换成python对象
 
@@ -194,9 +194,7 @@ def write_json(_file: str, datas=None, *, indent=4, backup=True):
             else:
                 print_info(f"{_filename} 已创建！\n")
     except Exception as e:
-        raise ToolException(
-            "WriteFileErr", f"write_json()写入{_filename}异常：{str(e)}"
-        ) from e
+        print_err(f"write_json()写入{_filename}异常：{str(e)}")
 
 
 def copy_file(source_file: str, target_dir: str, time_mark=True):
@@ -620,7 +618,7 @@ def validate_renpy_trans_file(file_path: str) -> bool:
     return False
 
 
-def get_projects_list(_type: str) -> list:
+def get_projects_list(_type: str) -> list[str]:
     """
     获取现有项目的名称列表，否则返回空列表
 
@@ -685,7 +683,7 @@ def validate_index(lst: list | tuple | str, index=0, with_negative=True) -> bool
     return 0 <= index < lst_length
 
 
-def acquire_token(qps=1, tokens=1, last_refill=0):
+def acquire_token(qps=1, tokens=1, last_refill=0) -> tuple[int | float]:
     """
     令牌桶限流器
 
@@ -710,7 +708,7 @@ def acquire_token(qps=1, tokens=1, last_refill=0):
     return tokens, last_refill
 
 
-def read_config(config_path="") -> ConfigParser | None:
+def read_config(config_path="") -> Optional[ConfigParser]:
     """
     读取项目配置文件
     """
@@ -767,7 +765,7 @@ def write_config(section: str, keys=None, add=True) -> bool:
     return True
 
 
-def get_password_with_mask(prompt="请输入密码: "):
+def get_password_with_mask(prompt="请输入密码: ") -> str:
     """
     控制台输入敏感内容非明文显示，返回实际输入内容
 
@@ -784,7 +782,7 @@ def get_password_with_mask(prompt="请输入密码: "):
     return inp.strip()
 
 
-def waiit_key_or_enter(prompt="按任意键继续或按回车退出程序："):
+def waiit_key_or_enter(prompt="按任意键继续或按回车退出程序：") -> bool:
     """
     获取输入，回车返回True，任意键返回False
 

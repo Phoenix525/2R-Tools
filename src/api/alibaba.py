@@ -36,10 +36,10 @@ class ALiBaBaTranslation(BaseTranslation):
             from_langs=_ALIBABA_FROM_LANGS,
             to_langs=_ALIBABA_TO_LANGS,
         )
-        self.__access_key_id = ""
-        self.__access_key_secret = ""
+        self.__access_key_id: str = ""
+        self.__access_key_secret: str = ""
 
-        self.__context = ""
+        self.__context: str = ""
 
         # 获取配置
         self.__get_config()

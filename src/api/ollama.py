@@ -23,17 +23,23 @@ class OllamaTranslation(BaseTranslation):
             from_langs=_OLLAMA_FROM_LANGS,
             to_langs=_OLLAMA_TO_LANGS,
         )
-        self.__model_name = ""  # Ollama当前调用模型名称
-        self.__num_predict = 2048  # 设置生成的最大 token 数（即输出长度上限）
-        self.__temperature = 1  # 控制输出的随机性，值越高越有创意，值越低越确定性
-        self.__min_p = 0.0
-        self.__top_p = (
-            1.0  # 核采样（top-p sampling），限制概率累积最高的 token 选择范围
-        )
-        self.__top_k = 40  # 限制采样到概率最高的前 k 个 token
-        self.__repeat_penalty = 1.1  # 惩罚重复内容，值越高越避免重复
-        self.__seed = 0  # 设置用于生成的随机数种子
-        self.__context = ""  # 上下文
+        # Ollama当前调用模型名称
+        self.__model_name: str = ""
+        # 设置生成的最大 token 数（即输出长度上限）
+        self.__num_predict: int = 2048
+        # 控制输出的随机性，值越高越有创意，值越低越确定性
+        self.__temperature: float = 1.0
+        self.__min_p: float = 0.0
+        # 核采样（top-p sampling），限制概率累积最高的 token 选择范围
+        self.__top_p: float = 1.0
+        # 限制采样到概率最高的前 k 个 token
+        self.__top_k: int = 40
+        # 惩罚重复内容，值越高越避免重复
+        self.__repeat_penalty: float = 1.1
+        # 设置用于生成的随机数种子
+        self.__seed: int = 0
+        # 上下文
+        self.__context: str = ""
 
         # 获取配置
         self.__get_config()

@@ -37,21 +37,21 @@ END_SAY = "-*- END -*-"
 
 # pylint: disable=invalid-name
 # 旧版本翻译文本路径
-__pre_trans_project_path = GlobalData.rpy_update_old_abspath
+__pre_trans_project_path: str = GlobalData.rpy_update_old_abspath
 # 等待更新的翻译文本路径
-__wait_trans_project_path = GlobalData.rpy_update_new_abspath
+__wait_trans_project_path: str = GlobalData.rpy_update_new_abspath
 # 更新后的翻译文本路径
-__new_trans_project_path = ""
+__new_trans_project_path: str = ""
 
 # 译文缓存库。key为原文，可储存who和strings。格式：{old_say:{identifier:[str,str]}}
-__txt_library_cache = {}
+__txt_library_cache: dict[str, dict[str, list[str]]] = {}
 # 标识符译文缓存库。key为标识符作，不可储存who和strings。格式：{identifier:[str,str]}
-__identifier_library_cache = {}
+__identifier_library_cache: dict[str, list[str]] = {}
 
 # 当前翻译项目名称
-__curr_renpy_project_name = "Test_v0.1"
+__curr_renpy_project_name: str = "Test_v0.1"
 # 当前翻译项目的绝对路径
-__curr_renpy_project_path = os.path.join(
+__curr_renpy_project_path: str = os.path.join(
     GlobalData.RENPY_PROJECT_PARENT_FOLDER, __curr_renpy_project_name
 )
 
@@ -515,7 +515,7 @@ def __write_in_txt_library_cache(
     return False
 
 
-def __read_from_identifier_library_cache(identifier: str) -> list:
+def __read_from_identifier_library_cache(identifier: str) -> list[str]:
     """
     从标识符缓存库读取
     """
@@ -552,7 +552,7 @@ def __read_from_identifier_library_cache(identifier: str) -> list:
     return []
 
 
-def __read_from_txt_library_cache(source_txt: str, identifier: str) -> list:
+def __read_from_txt_library_cache(source_txt: str, identifier: str) -> list[str]:
     """
     从文本缓存库读取
 

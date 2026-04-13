@@ -42,10 +42,10 @@ class TencentTranslation(BaseTranslation):
             from_langs=_TENCENT_FROM_LANGS,
             to_langs=_TENCENT_TO_LANGS,
         )
-        self.__secret_id = ""
-        self.__secret_key = ""
+        self.__secret_id: str = ""
+        self.__secret_key: str = ""
         # 翻译接口客户端
-        self.__client = ""
+        self.__client: tmt_client.TmtClient = None
 
         # 获取配置
         self.__get_config()

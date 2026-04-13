@@ -28,7 +28,7 @@ class GoogleTranslation(BaseTranslation):
             to_langs=_GOOGLE_TO_LANGS,
         )
         # 翻译接口客户端
-        self.__translator = None
+        self.__translator: google_trans_new.google_translator = None
 
         # 获取配置
         self.__get_config()

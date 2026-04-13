@@ -32,11 +32,11 @@ class XunFeiTranslation(BaseTranslation):
             from_langs=_XUNFEI_FROM_LANGS,
             to_langs=_XUNFEI_TO_LANGS,
         )
-        self.__app_id = ""
-        self.__api_secret = ""
-        self.__api_key = ""
+        self.__app_id: str = ""
+        self.__api_secret: str = ""
+        self.__api_key: str = ""
         # 翻译接口客户端
-        self.__client = None
+        self.__client: TranslateClient = None
 
         # 获取配置
         self.__get_config()

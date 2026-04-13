@@ -28,7 +28,7 @@ class DeepLTranslation(BaseTranslation):
             from_langs=_DEEPL_FROM_LANGS,
             to_langs=_DEEPL_TO_LANGS,
         )
-        self.__auth_key = ""
+        self.__auth_key: str = ""
 
         # 获取配置
         self.__get_config()

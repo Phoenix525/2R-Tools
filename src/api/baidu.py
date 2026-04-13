@@ -36,8 +36,8 @@ class BaiduTranslation(BaseTranslation):
             from_langs=_BAIDU_FROM_LANGS,
             to_langs=_BAIDU_TO_LANGS,
         )
-        self.__app_id = ""
-        self.__secret_key = ""
+        self.__app_id: str = ""
+        self.__secret_key: str = ""
 
         # 获取配置
         self.__get_config()

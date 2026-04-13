@@ -72,13 +72,13 @@ KEY_DISPLAYNAME = "displayName"
 
 # pylint: disable=invalid-name
 # 缓存文本
-__game_txt_cache = None
+__game_txt_cache: dict[str, str] = None
 # 默认文本
-__game_txt_library = None
+__game_txt_library: dict[str, str] = None
 # 当前rpgm项目名称
-__curr_rpgm_project_name = "Test_v0.1.json"
+__curr_rpgm_project_name: str = "Test_v0.1.json"
 # 当前rpgm翻译文件的绝对路径
-__curr_rpgm_project_path = os.path.join(
+__curr_rpgm_project_path: str = os.path.join(
     GlobalData.RPGM_PROJECT_PARENT_FOLDER, __curr_rpgm_project_name
 )
 
@@ -362,7 +362,7 @@ def __sacnning_type_player(json_datas: list, _type: str, filename: str) -> bool:
 
                 lists = pages_item[KEY_LIST]
                 # 记录各元素的索引位置，用于删除无用的文本行
-                list_idx_record = []
+                lists_idx_record: list[int] = []
                 for lists_idx, lists_item in enumerate(lists):
                     if not lists_item:
                         continue
@@ -434,7 +434,7 @@ def __sacnning_type_player(json_datas: list, _type: str, filename: str) -> bool:
                         else:
                             txt = __read_from_cache(parameters[0])
                             if txt.strip().upper() == GlobalData.none_filter:
-                                list_idx_record.append(lists_idx)
+                                lists_idx_record.append(lists_idx)
                                 txt = ""
                             lists[lists_idx][KEY_PARAMETERS][0] = txt
 
@@ -447,7 +447,7 @@ def __sacnning_type_player(json_datas: list, _type: str, filename: str) -> bool:
                         else:
                             txt = __read_from_cache(parameters[0])
                             if txt.strip().upper() == GlobalData.none_filter:
-                                list_idx_record.append(lists_idx)
+                                lists_idx_record.append(lists_idx)
                                 txt = ""
                             lists[lists_idx][KEY_PARAMETERS][0] = txt
                         continue
@@ -473,16 +473,16 @@ def __sacnning_type_player(json_datas: list, _type: str, filename: str) -> bool:
                         else:
                             txt = __read_from_cache(parameters[0])
                             if txt.strip().upper() == GlobalData.none_filter:
-                                list_idx_record.append(lists_idx)
+                                lists_idx_record.append(lists_idx)
                                 txt = ""
                             lists[lists_idx][KEY_PARAMETERS][0] = txt
                         continue
 
-                if list_idx_record:
+                if lists_idx_record:
                     # 反向列表中元素
-                    list_idx_record.reverse()
+                    lists_idx_record.reverse()
                     # 统一删除空文本行
-                    for v in list_idx_record:
+                    for v in lists_idx_record:
                         lists.pop(v)
                 pages[pages_idx][KEY_LIST] = lists
             json_datas[json_datas_idx][KEY_PAGES] = pages
@@ -515,7 +515,7 @@ def __sacnning_common_events(json_datas: list, _type: str) -> bool:
 
         lists = json_datas_item[KEY_LIST]
         # 记录各元素的索引位置，用于删除无用的文本行
-        list_idx_record = []
+        lists_idx_record: list[int] = []
         for lists_idx, lists_item in enumerate(lists):
             if not lists_item:
                 continue
@@ -580,7 +580,7 @@ def __sacnning_common_events(json_datas: list, _type: str) -> bool:
                 else:
                     txt = __read_from_cache(parameters[0])
                     if txt.strip().upper() == GlobalData.none_filter:
-                        list_idx_record.append(lists_idx)
+                        lists_idx_record.append(lists_idx)
                         txt = ""
                     lists[lists_idx][KEY_PARAMETERS][0] = txt
 
@@ -593,7 +593,7 @@ def __sacnning_common_events(json_datas: list, _type: str) -> bool:
                 else:
                     txt = __read_from_cache(parameters[0])
                     if txt.strip().upper() == GlobalData.none_filter:
-                        list_idx_record.append(lists_idx)
+                        lists_idx_record.append(lists_idx)
                         txt = ""
                     lists[lists_idx][KEY_PARAMETERS][0] = txt
                 continue
@@ -619,16 +619,16 @@ def __sacnning_common_events(json_datas: list, _type: str) -> bool:
                 else:
                     txt = __read_from_cache(parameters[0])
                     if txt.strip().upper() == GlobalData.none_filter:
-                        list_idx_record.append(lists_idx)
+                        lists_idx_record.append(lists_idx)
                         txt = ""
                     lists[lists_idx][KEY_PARAMETERS][0] = txt
                 continue
 
-        if list_idx_record:
+        if lists_idx_record:
             # 反向列表中元素
-            list_idx_record.reverse()
+            lists_idx_record.reverse()
             # 统一删除空文本行
-            for v in list_idx_record:
+            for v in lists_idx_record:
                 lists.pop(v)
         json_datas[json_datas_idx][KEY_LIST] = lists
 
@@ -866,7 +866,7 @@ def __scanning_type_maps(json_datas: dict, _type: str, filename: str) -> bool:
 
             lists = pages_item[KEY_LIST]
             # 记录各元素的索引位置，用于删除无用的文本行
-            lists_idx_record = []
+            lists_idx_record: list[int] = []
             for lists_idx, lists_item in enumerate(lists):
                 if not lists_item:
                     continue
@@ -1025,10 +1025,7 @@ def __read_game_txt(_type: str) -> bool:
     libraries = merge_dicts([default_libraries, translated_libraries])
     # 初始化译文库缓存
     global __game_txt_library
-    if libraries is not None:
-        __game_txt_library = libraries
-    else:
-        __game_txt_cache = {}
+    __game_txt_library = libraries
     return True
 
 
@@ -1105,7 +1102,7 @@ def __read_from_cache(key: str, _loc="") -> str:
     return __game_txt_cache[_key]
 
 
-def __choose_option(first_select=True):
+def __choose_option(first_select=True) -> bool:
     """
     输入序号选择对应的操作
 

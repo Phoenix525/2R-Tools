@@ -35,8 +35,8 @@ class YoudaoTranslation(BaseTranslation):
             from_langs=_YOUDAO_FROM_LANGS,
             to_langs=_YOUDAO_TO_LANGS,
         )
-        self.__app_id = ""
-        self.__app_key = ""
+        self.__app_id: str = ""
+        self.__app_key: str = ""
         # 获取配置
         self.__get_config()
 

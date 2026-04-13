@@ -43,18 +43,26 @@ class HunYuanMTTranslation(BaseTranslation):
             from_langs=_HUNYUAN_MT_FROM_LANGS,
             to_langs=_HUNYUAN_MT_TO_LANGS,
         )
-        self.__model_path = ""  # AI模型的绝对路径
-        self.__load_flag = ""  # 启用哪种量化加载
-        self.__tokenizer = None  # 加载完毕的分词器
-        self.__model = None  # 加载完毕的模型
-        self.__max_new_tokens = 2048  # 设置生成的最大 token 数（即输出长度上限）
-        self.__temperature = 0.7  # 控制输出的随机性，值越高越有创意，值越低越确定性
-        self.__top_p = (
-            0.6  # 核采样（top-p sampling），限制概率累积最高的 token 选择范围
-        )
-        self.__top_k = 20  # 限制采样到概率最高的前 k 个 token
-        self.__repetition_penalty = 1.05  # 惩罚重复内容，值越高越避免重复
-        self.__context = ""  # 上下文
+        # AI模型的绝对路径
+        self.__model_path: str = ""
+        # 启用哪种量化加载
+        self.__load_flag: str = ""
+        # 加载完毕的分词器
+        self.__tokenizer = None
+        # 加载完毕的模型
+        self.__model = None
+        # 设置生成的最大 token 数（即输出长度上限）
+        self.__max_new_tokens: int = 2048
+        # 控制输出的随机性，值越高越有创意，值越低越确定性
+        self.__temperature: float = 0.7
+        # 核采样（top-p sampling），限制概率累积最高的 token 选择范围
+        self.__top_p: float = 0.6
+        # 限制采样到概率最高的前 k 个 token
+        self.__top_k: int = 20
+        # 惩罚重复内容，值越高越避免重复
+        self.__repetition_penalty: float = 1.05
+        # 上下文
+        self.__context: str = ""
 
         # 获取配置
         self.__get_config()

@@ -7,6 +7,7 @@
 
 import os
 import sys
+from typing import Optional
 
 import src.core.json_translation as json_translation
 import src.core.renpy_translation as renpy_translation
@@ -105,7 +106,9 @@ def start_main(first_select=True):
             start_main(False)
 
 
-def __get_rpgm_project(select="", first_select=True, *, projects_list=None) -> str:
+def __get_rpgm_project(
+    select="", first_select=True, *, projects_list=None
+) -> Optional[str]:
     """
     获取当前要操作的rpgm翻译文件路径
     """
@@ -164,7 +167,9 @@ def __get_rpgm_project(select="", first_select=True, *, projects_list=None) -> s
     return __get_rpgm_project(select, False, projects_list=projects_list)
 
 
-def __get_renpy_project(select="", first_select=True, *, projects_list=None) -> str:
+def __get_renpy_project(
+    select="", first_select=True, *, projects_list=None
+) -> Optional[str]:
     """
     选择当前要操作的ren\'Py项目名称，若不存在则新建一个
     """

@@ -21,9 +21,9 @@ class SimpleAPIKeyEncryptor:
 
         :param password: 加密密码
         """
-        self.__password = password.encode("utf-8")
+        self.__password: bytes = password.encode("utf-8")
 
-        self.__cipher = self.__chipher(password)
+        self.__cipher: Fernet = self.__chipher(password)
 
     def encrypt(self, plain_text: str) -> str:
         """
@@ -59,7 +59,7 @@ class SimpleKeyStore:
     简单的密钥存储管理器
     """
 
-    def __init__(self, encryptor: SimpleAPIKeyEncryptor, keys=None):
+    def __init__(self, encryptor: SimpleAPIKeyEncryptor, keys: dict[str, str] = None):
         """
         初始化密钥存储
 

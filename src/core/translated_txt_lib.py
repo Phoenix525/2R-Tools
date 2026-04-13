@@ -19,7 +19,7 @@ from src.utils.utils import (
     write_json,
 )
 
-__txt_library_cache = None
+__txt_library_cache: dict[str, str] = None
 
 
 def start():
@@ -67,11 +67,7 @@ def __walk_file():
                 __txt_library_cache = merge_dicts(__txt_library_cache, json_datas)
                 print(f"{_file} 扫描完成！\n")
 
-    if (
-        __txt_library_cache is None
-        or not isinstance(__txt_library_cache, dict)
-        or len(__txt_library_cache) < 2
-    ):
+    if not __txt_library_cache or len(__txt_library_cache) < 2:
         print_info("待录入文本为空，译文库无需更新！")
         return
 
@@ -81,7 +77,7 @@ def __walk_file():
 
 def __scanning_rpy_file(
     file_path: str, filename: str, txt_libraries=None, rewrite=False
-) -> dict:
+):
     """
     扫描原翻译文本，将需要的数据存入缓存器
 
@@ -198,7 +194,7 @@ def __update_json_trans(pre_trans_path: str, new_trans_path: str):
     print("JSON文本已完成更新！")
 
 
-def __choose_option(first_select=True):
+def __choose_option(first_select=True) -> bool:
     """
     输入序号选择对应的操作
 

@@ -14,7 +14,7 @@ from src.utils.global_data import GlobalData
 from src.utils.utils import print_err, to_int, validate_index
 
 # 翻译引擎表，接口名称务必要和GlobalData里一致
-APIS = (
+APIS: dict[str, str] = (
     ("tencent", "传统机翻：腾讯翻译（每月免费500W字符）"),
     ("alibaba", "传统机翻：阿里翻译（每月免费100W字符）"),
     ("baidu", "传统机翻：百度翻译（高级版每月免费100W字符）"),
@@ -38,24 +38,26 @@ APIS = (
 
 class Interpreter:
     """
-    翻译器
+    翻译器。如果传入了翻译接口名称，则直接实例化该接口，反之进入翻译接口选择列表
+
+    :param api_name: 翻译接口名称
     """
 
     def __init__(self, *, api_name=""):
 
         # 从翻译引擎表获取引擎名称表
-        self.__api_names = self.__list_api_names()
+        self.__api_names: list[str] = self.__list_api_names()
 
         # 当前调用的翻译引擎
         self.__curr_api = None
 
         # 当前调用翻译引擎的名称
-        self.__curr_api_name = ""
+        self.__curr_api_name: str = ""
 
         # 源语种
-        self._from_lang = "auto"
+        self._from_lang: str = "auto"
         # 目标语种
-        self._to_lang = "zh"
+        self._to_lang: str = "zh"
 
         # 初始化翻译器时如果传入了合法翻译引擎名称，则直接实例化相应翻译引擎
         if api_name in self.__api_names:
@@ -104,8 +106,12 @@ class Interpreter:
         return translated
 
     def translate_txt_dict(
-        self, source_txt_dict=None, *, open_todo=False, activate_context="-1"
-    ) -> dict:
+        self,
+        source_txt_dict: dict[str, str],
+        *,
+        open_todo=False,
+        activate_context="-1",
+    ) -> dict[str, str]:
         """
         翻译多条文本【字典格式】
 
@@ -117,7 +123,7 @@ class Interpreter:
         """
 
         if not source_txt_dict or not isinstance(source_txt_dict, dict):
-            return None
+            return {}
 
         tmp_source_txt = copy.deepcopy(source_txt_dict)
         for key, text in tmp_source_txt.items():
@@ -147,8 +153,8 @@ class Interpreter:
         return tmp_source_txt
 
     def translate_txt_list(
-        self, source_txt_list: list, *, open_todo=False, activate_context="-1"
-    ) -> list:
+        self, source_txt_list: list[str], *, open_todo=False, activate_context="-1"
+    ) -> list[str]:
         """
         翻译多条文本【列表格式】
 
@@ -160,9 +166,9 @@ class Interpreter:
         """
 
         if not source_txt_list or not isinstance(source_txt_list, list):
-            return None
+            return []
 
-        tmp_source_txt_list = []
+        tmp_source_txt_list: list[str] = []
         for text in source_txt_list:
             print(f"原文：{text}")
             # 先从译文库中查找，如果有则直接取值返回
@@ -195,7 +201,7 @@ class Interpreter:
         self.__curr_api = None
         self.__curr_api_name = ""
 
-    def __get_value_from_library(self, source_txt: str):
+    def __get_value_from_library(self, source_txt: str) -> str:
         """
         从译文库中获取译文
         """
@@ -209,11 +215,11 @@ class Interpreter:
             return target
         return ""
 
-    def __list_api_names(self) -> list:
+    def __list_api_names(self) -> list[str]:
         """
         获取所有翻译引擎名称并组成列表
         """
-        lst = []
+        lst: list[str] = []
         for item in APIS:
             lst.append(item[0])
         return lst
@@ -287,7 +293,7 @@ class Interpreter:
             case _:
                 self.__curr_api = None
 
-        # 如果翻译器实例不存在或翻译器未就绪，重新返回引擎选项列表
+        # 在使用翻译器前，先检查引擎是否已就绪，如已就绪则自动启动加载流程；如果翻译器实例不存在或翻译器未就绪，重新返回引擎选项列表
         if self.__curr_api is None or not self.__curr_api.is_ready():
             self.clear_api_datas()
             return self.__select_api_type()

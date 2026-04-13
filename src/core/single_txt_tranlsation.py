@@ -10,7 +10,7 @@ import main
 from src.core.interpreter import Interpreter
 
 # pylint: disable=invalid-name
-__interpreter = None  # 翻译器实例
+__interpreter: Interpreter = None  # 翻译器实例
 
 
 def start():
@@ -32,7 +32,7 @@ def start():
         main.start_main()
 
 
-def __translate(first_trans=True):
+def __translate(first_trans=True) -> bool:
     """
     开始翻译
 

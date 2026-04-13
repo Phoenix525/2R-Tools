@@ -33,8 +33,8 @@ class XiaoNiuTranslation(BaseTranslation):
             from_langs=_XIAONIU_FROM_LANGS,
             to_langs=_XIAONIU_TO_LANGS,
         )
-        self.__app_id = ""
-        self.__api_key = ""
+        self.__app_id: str = ""
+        self.__api_key: str = ""
 
         # 获取配置
         self.__get_config()
@@ -117,7 +117,7 @@ class XiaoNiuTranslation(BaseTranslation):
         检查API密钥是否配置
         """
 
-        if self.__app_id and self.__secret_key:
+        if self.__app_id and self.__api_key:
             return True
 
         keys = {}

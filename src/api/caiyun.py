@@ -31,7 +31,7 @@ class CaiyunTranslation(BaseTranslation):
             from_langs=_CAIYUN_FROM_LANGS,
             to_langs=_CAIYUN_TO_LANGS,
         )
-        self.__token = ""
+        self.__token: str = ""
 
         # 获取配置
         self.__get_config()

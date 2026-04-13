@@ -32,22 +32,22 @@ from src.utils.utils import (
 END_SAY = "-*- END -*-"
 
 # pylint: disable=invalid-name
-__input_abspath = GlobalData.rpy_trans_input_abspath
-__output_abspath = ""
+__input_abspath: str = GlobalData.rpy_trans_input_abspath
+__output_abspath: str = ""
 
 # 是否覆盖所有译文
-__rewrite_all = False
+__rewrite_all: bool = False
 
 # 是否覆盖TODO译文
-__rewrite_todo = False
+__rewrite_todo: bool = False
 
 # 翻译器实例
-__interpreter = None
+__interpreter: Interpreter = None
 
 # 当前renpy项目名称
-__curr_renpy_project_name = "Test_v0.1"
+__curr_renpy_project_name: str = "Test_v0.1"
 # 当前renpy项目的绝对路径
-__curr_renpy_project_path = os.path.join(
+__curr_renpy_project_path: str = os.path.join(
     GlobalData.RENPY_PROJECT_PARENT_FOLDER, __curr_renpy_project_name
 )
 
@@ -145,7 +145,7 @@ def __process_file(old_path: str, new_path: str, filename: str):
         lightSen = inp.readlines()
 
     # 待翻译文本字典，将文本提取出来统一翻译。键为源文本的行索引，值为文本
-    translate_txts = {}
+    translate_txts: dict[int, dict[str, str]] = {}
     # 原文
     _old_say = ""
     # 标识符
@@ -257,7 +257,7 @@ def __process_file(old_path: str, new_path: str, filename: str):
 
     outp = open(new_path, "w", encoding=get_file_encoding(new_path))
 
-    tmp_translate_txts = {}
+    tmp_translate_txts: dict[int, dict[str, str]] = {}
     txts_len = len(translate_txts)
     for idx, key in enumerate(translate_txts.keys()):
         # 待翻文本
@@ -277,7 +277,7 @@ def __process_file(old_path: str, new_path: str, filename: str):
             for tmp_key, tmp_value in tmp_translate_txts.items():
                 src = tmp_value["src"]
                 dst = tmp_value["dst"]
-                if dst == "" or dst == src:
+                if dst in ("", src):
                     continue
                 reverse_line = tmp_value["line"][::-1]
                 reverse_dst = dst[::-1]
@@ -334,7 +334,9 @@ def __input_path(first_select=True) -> bool:
     return True
 
 
-def __create_new_trans_project_path(input_abspath: str, output_abspath: str) -> tuple:
+def __create_new_trans_project_path(
+    input_abspath: str, output_abspath: str
+) -> tuple[str]:
     """
     创建新翻译项目路径
 

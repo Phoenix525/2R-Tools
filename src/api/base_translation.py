@@ -45,29 +45,29 @@ class BaseTranslation(object):
         activated=False,
         max_qps=1,
         max_char=2000,
-        comment_langs=(),
-        from_langs=(),
-        to_langs=(),
+        comment_langs: tuple[str] = (),
+        from_langs: tuple[tuple[str]] = (),
+        to_langs: tuple[tuple[str]] = (),
     ):
         # 翻译接口配置文件中的节点名称
-        self._section = section
+        self._section: str = section
         # 翻译接口是否已激活
-        self._activated = activated
+        self._activated: bool = activated
         # api请求频率。次/每秒
-        self._max_qps = max_qps
+        self._max_qps: int = max_qps
         # 当前令牌数，初始等于最大申请频率
-        self._tokens = max_qps
+        self._tokens: int = max_qps
         # 最新补充令牌时间
-        self._last_refill = time.time()
+        self._last_refill: float = time.time()
         # 单次请求最大字符数
-        self._max_char = max_char
+        self._max_char: int = max_char
 
         # 所有支持的语种简写表
-        self.__api_comment_langs = comment_langs
+        self.__api_comment_langs: tuple[str] = comment_langs
         # 所有支持的源语种表
-        self.__api_from_langs = from_langs
+        self.__api_from_langs: tuple[tuple[str]] = from_langs
         # 常见目标语种表
-        self.__api_to_langs = to_langs
+        self.__api_to_langs: tuple[tuple[str]] = to_langs
 
     def translate(self) -> str:
         pass
@@ -78,13 +78,13 @@ class BaseTranslation(object):
         """
         return self._max_qps
 
-    def get_from_langs(self) -> tuple:
+    def get_from_langs(self) -> tuple[tuple[str]]:
         """
         获取源语种表
         """
         return self.__api_from_langs
 
-    def get_to_langs(self) -> tuple:
+    def get_to_langs(self) -> tuple[tuple[str]]:
         """
         获取目标语种表
         """
@@ -152,7 +152,7 @@ class BaseTranslation(object):
         *,
         validate_type=ValidateStringsType.STRING_LETTER_NUM,
         prompt="请输入：",
-    ):
+    ) -> str:
         """
         输入密钥，并验证是否合法，合法返回字串，反之返回空值
 

@@ -4,8 +4,8 @@
 import ast
 import time
 
-import volcenginesdktranslate20250301
 from volcenginesdkcore import Configuration, rest
+from volcenginesdktranslate20250301 import TRANSLATE20250301Api, TranslateTextRequest
 
 from src.api.base_translation import BaseTranslation, ValidateStringsType
 from src.utils.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
@@ -34,10 +34,10 @@ class HuoshanTranslation(BaseTranslation):
             from_langs=_HUOSHAN_FROM_LANGS,
             to_langs=_HUOSHAN_TO_LANGS,
         )
-        self.__access_key_id = ""
-        self.__secret_access_key = ""
+        self.__access_key_id: str = ""
+        self.__secret_access_key: str = ""
         # 翻译接口客户端
-        self.__client = None
+        self.__client: TRANSLATE20250301Api = None
 
         # 获取配置
         self.__get_config()
@@ -64,7 +64,7 @@ class HuoshanTranslation(BaseTranslation):
         if not from_lang:
             return ""
 
-        translate_txt_request = volcenginesdktranslate20250301.TranslateTextRequest(
+        translate_txt_request = TranslateTextRequest(
             source_language=from_lang,
             target_language=to_lang,
             text_list=[source_txt],
@@ -160,7 +160,7 @@ class HuoshanTranslation(BaseTranslation):
         # set default configuration
         Configuration.set_default(configuration)
         # use global default configuration
-        return volcenginesdktranslate20250301.TRANSLATE20250301Api()
+        return TRANSLATE20250301Api()
 
     def __get_config(self):
         """
@@ -193,7 +193,6 @@ class HuoshanTranslation(BaseTranslation):
 
 # 所有支持的语种简写表
 _HUOSHAN_COMMON_LANGS = (
-    "auto",
     "ab",
     "sq",
     "af",
@@ -317,7 +316,6 @@ _HUOSHAN_COMMON_LANGS = (
 
 # 所有支持的源语种表
 _HUOSHAN_FROM_LANGS = (
-    ("自动检测", "auto"),
     ("阿布哈兹语", "ab"),
     ("阿尔巴尼亚语", "sq"),
     ("阿非利堪斯语", "af"),
