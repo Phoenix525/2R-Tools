@@ -312,7 +312,7 @@ class Interpreter:
 """
             for idx, item in enumerate(APIS):
                 title = item[1]
-                if GlobalData[f"{item[0]}"] is False:
+                if GlobalData[item[0]] is False:
                     title += " (未启用)"
                 str_api += f"{idx + 1}) {title}\n"
                 api_titles.append(title)
@@ -331,7 +331,7 @@ class Interpreter:
             # 再次进入选择列表
             prin = "翻译引擎列表中不存在该序号，请重新输入正确序号或回车退出程序："
             if validate_index(self.__api_names, serial_num - 1, False):
-                if GlobalData[f"{self.__api_names[serial_num - 1]}"] is False:
+                if GlobalData[self.__api_names[serial_num - 1]] is False:
                     prin = "当前翻译引擎未启用，请重新输入正确序号或回车退出程序："
             _inp = input(prin).strip()
             if _inp in ("", "\r", "\n"):
@@ -344,7 +344,7 @@ class Interpreter:
             return
 
         # 若翻译引擎未启用则重新选择
-        if GlobalData[f"{self.__api_names[_serial_inp - 1]}"] is False:
+        if GlobalData[self.__api_names[_serial_inp - 1]] is False:
             self.__select_api_type(_serial_inp, False, api_titles=api_titles)
             return
 
