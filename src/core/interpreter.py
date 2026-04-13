@@ -10,16 +10,10 @@ import sys
 
 from prettytable import PrettyTable
 
-from src.utils.utils import (
-    GLOBAL_DATA,
-    MARK_TODO,
-    get_value_from_library,
-    print_err,
-    to_int,
-    validate_index,
-)
+from src.utils.global_data import GlobalData
+from src.utils.utils import print_err, to_int, validate_index
 
-# 翻译引擎表，接口名称务必要和GLOBAL_DATA里一致
+# 翻译引擎表，接口名称务必要和GlobalData里一致
 APIS = (
     ("tencent", "传统机翻：腾讯翻译（每月免费500W字符）"),
     ("alibaba", "传统机翻：阿里翻译（每月免费100W字符）"),
@@ -79,9 +73,9 @@ class Interpreter:
 
         所有可能出现的异常要在此函数处理完毕，并一定有返回值。
 
-        - source_txt: 输入文本
-        - open_todo: 是否在句首添加TODO标记，默认由config配置
-        - activate_context: 是否启用上下文
+        :param source_txt: 输入文本
+        :param open_todo: 是否在句首添加TODO标记，默认由config配置
+        :param activate_context: 是否启用上下文
         """
 
         if not source_txt.strip():
@@ -90,7 +84,7 @@ class Interpreter:
         print(f"原文：{source_txt}")
 
         # 先从译文库中查找，如果有则直接取值返回
-        translated = get_value_from_library(source_txt)
+        translated = self.__get_value_from_library(source_txt)
         if translated:
             return translated
 
@@ -103,7 +97,7 @@ class Interpreter:
             )
             print(f"译文：{translated}\n")
             if open_todo and translated:
-                translated = MARK_TODO + translated
+                translated = GlobalData.MARK_TODO + translated
         except Exception as e:
             translated = ""
             print_err(f"{str(e)}")
@@ -117,9 +111,9 @@ class Interpreter:
 
         所有可能出现的异常要在此函数处理完毕，并一定有返回值。
 
-        - source_txt_dict: 输入文本
-        - open_todo: 是否在句首添加TODO标记，默认由config配置
-        - activate_context: 是否启用上下文
+        :param source_txt_dict: 输入文本
+        :param open_todo: 是否在句首添加TODO标记，默认由config配置
+        :param activate_context: 是否启用上下文
         """
 
         if not source_txt_dict or not isinstance(source_txt_dict, dict):
@@ -130,7 +124,7 @@ class Interpreter:
             print(f"原文：{text}")
 
             # 先从译文库中查找，如果有则直接取值返回
-            translated = get_value_from_library(text)
+            translated = self.__get_value_from_library(text)
             if translated:
                 tmp_source_txt[key] = translated
                 continue
@@ -144,7 +138,7 @@ class Interpreter:
                 )
                 print(f"译文：{translated}\n")
                 if open_todo and translated:
-                    translated = MARK_TODO + translated
+                    translated = GlobalData.MARK_TODO + translated
             except Exception as e:
                 translated = ""
                 print_err(f"{str(e)}")
@@ -160,9 +154,9 @@ class Interpreter:
 
         所有可能出现的异常要在此函数处理完毕，并一定有返回值。
 
-        - source_txt_list: 输入文本
-        - open_todo: 是否在句首添加TODO标记，默认由config配置
-        - activate_context: 是否启用上下文
+        :param source_txt_list: 输入文本
+        :param open_todo: 是否在句首添加TODO标记，默认由config配置
+        :param activate_context: 是否启用上下文
         """
 
         if not source_txt_list or not isinstance(source_txt_list, list):
@@ -172,7 +166,7 @@ class Interpreter:
         for text in source_txt_list:
             print(f"原文：{text}")
             # 先从译文库中查找，如果有则直接取值返回
-            translated = get_value_from_library(text)
+            translated = self.__get_value_from_library(text)
             if translated:
                 tmp_source_txt_list.append(translated)
                 continue
@@ -186,7 +180,7 @@ class Interpreter:
                 )
                 print(f"译文：{translated}\n")
                 if open_todo and translated:
-                    translated = MARK_TODO + translated
+                    translated = GlobalData.MARK_TODO + translated
             except Exception as e:
                 translated = ""
                 print_err(f"{str(e)}")
@@ -200,6 +194,20 @@ class Interpreter:
         """
         self.__curr_api = None
         self.__curr_api_name = ""
+
+    def __get_value_from_library(self, source_txt: str):
+        """
+        从译文库中获取译文
+        """
+
+        if (
+            source_txt in GlobalData.translated_lib_library
+            and GlobalData.translated_lib_library[source_txt] != ""
+        ):
+            target = GlobalData.translated_lib_library[source_txt]
+            print(f"库译文：{target}\n")
+            return target
+        return ""
 
     def __list_api_names(self) -> list:
         """
@@ -290,9 +298,9 @@ class Interpreter:
         """
         选择翻译引擎
 
-        - serial_num: 选中的翻译引擎序号
-        - first_select: 是否首次进入选择列表
-        - api_titles: 可选参数。翻译引擎标题列表，用于输出供用户查看
+        :param serial_num: 选中的翻译引擎序号
+        :param first_select: 是否首次进入选择列表
+        :param api_titles: 可选参数。翻译引擎标题列表，用于输出供用户查看
         """
 
         # 用户输入内容
@@ -304,7 +312,7 @@ class Interpreter:
 """
             for idx, item in enumerate(APIS):
                 title = item[1]
-                if GLOBAL_DATA[f"{item[0]}"] is False:
+                if GlobalData[f"{item[0]}"] is False:
                     title += " (未启用)"
                 str_api += f"{idx + 1}) {title}\n"
                 api_titles.append(title)
@@ -323,7 +331,7 @@ class Interpreter:
             # 再次进入选择列表
             prin = "翻译引擎列表中不存在该序号，请重新输入正确序号或回车退出程序："
             if validate_index(self.__api_names, serial_num - 1, False):
-                if GLOBAL_DATA[f"{self.__api_names[serial_num - 1]}"] is False:
+                if GlobalData[f"{self.__api_names[serial_num - 1]}"] is False:
                     prin = "当前翻译引擎未启用，请重新输入正确序号或回车退出程序："
             _inp = input(prin).strip()
             if _inp in ("", "\r", "\n"):
@@ -336,7 +344,7 @@ class Interpreter:
             return
 
         # 若翻译引擎未启用则重新选择
-        if GLOBAL_DATA[f"{self.__api_names[_serial_inp - 1]}"] is False:
+        if GlobalData[f"{self.__api_names[_serial_inp - 1]}"] is False:
             self.__select_api_type(_serial_inp, False, api_titles=api_titles)
             return
 
@@ -351,8 +359,8 @@ class Interpreter:
         """
         选择目标语种
 
-        - first_select: 是否为首次选择
-        - target_langs 语种表
+        :param first_select: 是否为首次选择
+        :param target_langs 语种表
         """
 
         # 用户输入内容

@@ -12,16 +12,8 @@ from datetime import datetime
 from shutil import copy, rmtree
 
 import main
+from src.utils.global_data import GlobalData
 from src.utils.utils import (
-    BASE_ABSPATH,
-    GLOBAL_DATA,
-    KEY_PHOENIX,
-    MARK_TODO,
-    PATTERN_MAP,
-    RPGM_INPUT_ABSPATH,
-    RPGM_OUTPUT_ABSPATH,
-    RPGM_PROJECT_PARENT_FOLDER,
-    TRANSLATED_FILE_MARK,
     del_key_from_dict,
     get_md5,
     match_lang,
@@ -87,7 +79,7 @@ __game_txt_library = None
 __curr_rpgm_project_name = "Test_v0.1.json"
 # 当前rpgm翻译文件的绝对路径
 __curr_rpgm_project_path = os.path.join(
-    RPGM_PROJECT_PARENT_FOLDER, __curr_rpgm_project_name
+    GlobalData.RPGM_PROJECT_PARENT_FOLDER, __curr_rpgm_project_name
 )
 
 
@@ -99,7 +91,9 @@ def start(project_name: str):
     global __curr_rpgm_project_name, __curr_rpgm_project_path
 
     __curr_rpgm_project_name = project_name
-    __curr_rpgm_project_path = os.path.join(RPGM_PROJECT_PARENT_FOLDER, project_name)
+    __curr_rpgm_project_path = os.path.join(
+        GlobalData.RPGM_PROJECT_PARENT_FOLDER, project_name
+    )
 
     print("""
 ===========================================================================================
@@ -115,7 +109,10 @@ def start(project_name: str):
         return
 
     # 判断翻译文本是否有变动，没有则跳过
-    if KEY_PHOENIX in __game_txt_cache and not __game_txt_cache[KEY_PHOENIX]:
+    if (
+        GlobalData.KEY_PHOENIX in __game_txt_cache
+        and not __game_txt_cache[GlobalData.KEY_PHOENIX]
+    ):
         print(f"{__curr_rpgm_project_name} 未发生更改，无需写入！\n")
     else:
         # 将更新标识的值重置为False
@@ -136,22 +133,22 @@ def __walk_file(_type: str):
     遍历文件夹内所有内容
     """
 
-    pathlib.Path(RPGM_INPUT_ABSPATH).mkdir(parents=True, exist_ok=True)
-    if os.path.exists(RPGM_OUTPUT_ABSPATH):
-        rmtree(RPGM_OUTPUT_ABSPATH)
-    os.makedirs(RPGM_OUTPUT_ABSPATH)
+    pathlib.Path(GlobalData.RPGM_INPUT_ABSPATH).mkdir(parents=True, exist_ok=True)
+    if os.path.exists(GlobalData.RPGM_OUTPUT_ABSPATH):
+        rmtree(GlobalData.RPGM_OUTPUT_ABSPATH)
+    os.makedirs(GlobalData.RPGM_OUTPUT_ABSPATH)
 
     if not __read_game_txt(_type):
         return
 
     # 遍历所有文件，筛选出需要的json文件进行处理
-    for root, dirs, files in os.walk(RPGM_INPUT_ABSPATH, topdown=False):
+    for root, dirs, files in os.walk(GlobalData.RPGM_INPUT_ABSPATH, topdown=False):
         # 新文件目录
-        relative_path = os.path.relpath(root, RPGM_INPUT_ABSPATH)
+        relative_path = os.path.relpath(root, GlobalData.RPGM_INPUT_ABSPATH)
         new_path = (
-            RPGM_OUTPUT_ABSPATH
+            GlobalData.RPGM_OUTPUT_ABSPATH
             if relative_path == "."
-            else os.path.join(RPGM_OUTPUT_ABSPATH, relative_path)
+            else os.path.join(GlobalData.RPGM_OUTPUT_ABSPATH, relative_path)
         )
         # 自动创建新目录
         os.makedirs(new_path, exist_ok=True)
@@ -161,9 +158,11 @@ def __walk_file(_type: str):
             if not json_file.endswith(".json"):
                 continue
             # 如果当前json文件不在白名单内，且不符合Map地图文件，则跳过它
-            if json_file[:-5] not in GLOBAL_DATA[
-                "rpg_white_list"
-            ] and not PATTERN_MAP.match(json_file[:-5]):
+            if json_file[
+                :-5
+            ] not in GlobalData.rpg_white_list and not GlobalData.PATTERN_MAP.match(
+                json_file[:-5]
+            ):
                 # 如果当前为写入模式，在新目录拷贝一份该文件
                 if _type == WRITEIN:
                     copy(os.path.join(root, json_file), new_path)
@@ -191,19 +190,19 @@ def __deal_with_json_file(root: str, json_file: str, _type: str, new_path: str):
     # 当前为提取模式时，在处理文本之前，将标识行写入缓存
     if _type == EXTRACT:
         time = datetime.now().strftime("%Y_%m_%d %H:%M")
-        file_mark = f"{TRANSLATED_FILE_MARK}{filename}_{time}"
+        file_mark = f"{GlobalData.TRANSLATED_FILE_MARK}{filename}_{time}"
         __write_in_cache(file_mark, "", "", file_mark)
 
     # 记录文本更改
     _change = False
 
-    if filename in GLOBAL_DATA["rpg_type_array_object"]:
+    if filename in GlobalData.rpg_type_array_object:
         _change = __sacnning_type_player(json_datas, _type, filename)
     elif filename == TYPE_COMMONEVENTS:
         _change = __sacnning_common_events(json_datas, _type)
     elif filename == TYPE_SYSTEM:
         _change = __scanning_system(json_datas, _type, filename)
-    elif PATTERN_MAP.match(filename):
+    elif GlobalData.PATTERN_MAP.match(filename):
         _change = __scanning_type_maps(json_datas, _type, filename)
 
     # 提取模式
@@ -236,7 +235,7 @@ def __sacnning_type_player(json_datas: list, _type: str, filename: str) -> bool:
 
         if KEY_NAME in json_datas_item and isinstance(json_datas_item[KEY_NAME], str):
             # 人名基本不会出现歧义，可以去重
-            if filename in GLOBAL_DATA["rpg_duplicate_removal_list"]:
+            if filename in GlobalData.rpg_duplicate_removal_list:
                 if _type == EXTRACT:
                     _change = switch_change_mark(
                         _change, __write_in_cache(json_datas_item[KEY_NAME])
@@ -434,7 +433,7 @@ def __sacnning_type_player(json_datas: list, _type: str, filename: str) -> bool:
                             )
                         else:
                             txt = __read_from_cache(parameters[0])
-                            if txt.strip().upper() == GLOBAL_DATA["none_filter"]:
+                            if txt.strip().upper() == GlobalData.none_filter:
                                 list_idx_record.append(lists_idx)
                                 txt = ""
                             lists[lists_idx][KEY_PARAMETERS][0] = txt
@@ -447,7 +446,7 @@ def __sacnning_type_player(json_datas: list, _type: str, filename: str) -> bool:
                             )
                         else:
                             txt = __read_from_cache(parameters[0])
-                            if txt.strip().upper() == GLOBAL_DATA["none_filter"]:
+                            if txt.strip().upper() == GlobalData.none_filter:
                                 list_idx_record.append(lists_idx)
                                 txt = ""
                             lists[lists_idx][KEY_PARAMETERS][0] = txt
@@ -473,7 +472,7 @@ def __sacnning_type_player(json_datas: list, _type: str, filename: str) -> bool:
                             )
                         else:
                             txt = __read_from_cache(parameters[0])
-                            if txt.strip().upper() == GLOBAL_DATA["none_filter"]:
+                            if txt.strip().upper() == GlobalData.none_filter:
                                 list_idx_record.append(lists_idx)
                                 txt = ""
                             lists[lists_idx][KEY_PARAMETERS][0] = txt
@@ -580,7 +579,7 @@ def __sacnning_common_events(json_datas: list, _type: str) -> bool:
                     )
                 else:
                     txt = __read_from_cache(parameters[0])
-                    if txt.strip().upper() == GLOBAL_DATA["none_filter"]:
+                    if txt.strip().upper() == GlobalData.none_filter:
                         list_idx_record.append(lists_idx)
                         txt = ""
                     lists[lists_idx][KEY_PARAMETERS][0] = txt
@@ -593,7 +592,7 @@ def __sacnning_common_events(json_datas: list, _type: str) -> bool:
                     )
                 else:
                     txt = __read_from_cache(parameters[0])
-                    if txt.strip().upper() == GLOBAL_DATA["none_filter"]:
+                    if txt.strip().upper() == GlobalData.none_filter:
                         list_idx_record.append(lists_idx)
                         txt = ""
                     lists[lists_idx][KEY_PARAMETERS][0] = txt
@@ -619,7 +618,7 @@ def __sacnning_common_events(json_datas: list, _type: str) -> bool:
                     )
                 else:
                     txt = __read_from_cache(parameters[0])
-                    if txt.strip().upper() == GLOBAL_DATA["none_filter"]:
+                    if txt.strip().upper() == GlobalData.none_filter:
                         list_idx_record.append(lists_idx)
                         txt = ""
                     lists[lists_idx][KEY_PARAMETERS][0] = txt
@@ -934,7 +933,7 @@ def __scanning_type_maps(json_datas: dict, _type: str, filename: str) -> bool:
                         )
                     else:
                         txt = __read_from_cache(parameters[0])
-                        if txt.strip().upper() == GLOBAL_DATA["none_filter"]:
+                        if txt.strip().upper() == GlobalData.none_filter:
                             lists_idx_record.append(lists_idx)
                             txt = ""
                         lists[lists_idx][KEY_PARAMETERS][0] = txt
@@ -947,7 +946,7 @@ def __scanning_type_maps(json_datas: dict, _type: str, filename: str) -> bool:
                         )
                     else:
                         txt = __read_from_cache(parameters[0])
-                        if txt.strip().upper() == GLOBAL_DATA["none_filter"]:
+                        if txt.strip().upper() == GlobalData.none_filter:
                             lists_idx_record.append(lists_idx)
                             txt = ""
                         lists[lists_idx][KEY_PARAMETERS][0] = txt
@@ -973,7 +972,7 @@ def __scanning_type_maps(json_datas: dict, _type: str, filename: str) -> bool:
                         )
                     else:
                         txt = __read_from_cache(parameters[0])
-                        if txt.strip().upper() == GLOBAL_DATA["none_filter"]:
+                        if txt.strip().upper() == GlobalData.none_filter:
                             lists_idx_record.append(lists_idx)
                             txt = ""
                         lists[lists_idx][KEY_PARAMETERS][0] = txt
@@ -1014,12 +1013,12 @@ def __read_game_txt(_type: str) -> bool:
 
     # 读取引擎默认文本库
     default_libraries = read_json(
-        os.path.join(BASE_ABSPATH, "Translated Libraries", RPGMZ_DEFAULT_LIBRARY)
+        os.path.join(GlobalData.TRANSLATED_LIBRARIES_ABSPATH, RPGMZ_DEFAULT_LIBRARY)
     )
     # 读取游戏已有译文
     translated_libraries = read_json(
         os.path.join(
-            BASE_ABSPATH, "Translated Libraries", GLOBAL_DATA["rpg_game_default_txt"]
+            GlobalData.TRANSLATED_LIBRARIES_ABSPATH, GlobalData.rpg_game_default_txt
         )
     )
     # 合并两个译文为一个译文库，若有相同键，游戏译文覆盖默认译文
@@ -1051,7 +1050,7 @@ def __write_in_cache(key: str, _loc="", _filter="", value="") -> bool:
     if (
         _key in __game_txt_cache
         and __game_txt_cache[_key] != ""
-        and __game_txt_cache[_key].strip().upper() != MARK_TODO
+        and __game_txt_cache[_key].strip().upper() != GlobalData.MARK_TODO
     ):
         return False
 
@@ -1059,7 +1058,7 @@ def __write_in_cache(key: str, _loc="", _filter="", value="") -> bool:
     if (
         _key in __game_txt_library
         and __game_txt_library[_key] != ""
-        and __game_txt_library[_key].strip().upper() != MARK_TODO
+        and __game_txt_library[_key].strip().upper() != GlobalData.MARK_TODO
     ):
         __game_txt_cache[_key] = __game_txt_library[_key]
         update_phoenix_mark(__game_txt_cache, True)
@@ -1068,7 +1067,7 @@ def __write_in_cache(key: str, _loc="", _filter="", value="") -> bool:
     # 如果参数中直接传入了文本值value且不为空字符串时，直接赋值
     if value != "":
         __game_txt_cache[_key] = value
-        if _key.startswith(TRANSLATED_FILE_MARK):
+        if _key.startswith(GlobalData.TRANSLATED_FILE_MARK):
             return True
         update_phoenix_mark(__game_txt_cache, True)
         return True
@@ -1096,9 +1095,11 @@ def __read_from_cache(key: str, _loc="") -> str:
         return key
     # if TODO_FILTER in _game_txt_cache[_key].upper():    # 标记。待复核文本
     #     return key
-    if __game_txt_cache[_key].strip().upper() == MARK_TODO:  # 标记。待翻译文本
+    if (
+        __game_txt_cache[_key].strip().upper() == GlobalData.MARK_TODO
+    ):  # 标记。待翻译文本
         return key
-    if __game_txt_cache[_key].upper() in GLOBAL_DATA["pass_filter"]:  # 标记。不翻译文本
+    if __game_txt_cache[_key].upper() in GlobalData.pass_filter:  # 标记。不翻译文本
         return key
 
     return __game_txt_cache[_key]

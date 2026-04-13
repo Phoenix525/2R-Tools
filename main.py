@@ -16,13 +16,8 @@ import src.core.rpgm_mz_extraction_writing as rpgm_mz_extraction_writing
 import src.core.rpgm_vx_ace_extraction_writing as rpgm_vx_ace_extraction_writing
 import src.core.single_txt_tranlsation as single_txt_tranlsation
 import src.core.translated_txt_lib as translated_txt_lib
-from src.utils.utils import (
-    RENPY_PROJECT_PARENT_FOLDER,
-    get_projects_list,
-    print_info,
-    to_int,
-    validate_index,
-)
+from src.utils.global_data import GlobalData
+from src.utils.utils import get_projects_list, print_info, to_int, validate_index
 
 
 def start_main(first_select=True):
@@ -185,7 +180,7 @@ def __get_renpy_project(select="", first_select=True, *, projects_list=None) -> 
             ).strip()
             if _inp in ("", "\r", "\n"):
                 return None
-            os.makedirs(os.path.join(RENPY_PROJECT_PARENT_FOLDER, _inp))
+            os.makedirs(os.path.join(GlobalData.RENPY_PROJECT_PARENT_FOLDER, _inp))
             print_info(f"当前Ren'Py翻译项目：{_inp}")
             return _inp
 
@@ -210,7 +205,7 @@ def __get_renpy_project(select="", first_select=True, *, projects_list=None) -> 
         ).strip()
         if _inp in ("", "\r", "\n"):
             return None
-        os.makedirs(os.path.join(RENPY_PROJECT_PARENT_FOLDER, _inp))
+        os.makedirs(os.path.join(GlobalData.RENPY_PROJECT_PARENT_FOLDER, _inp))
         print_info(f"当前Ren'Py翻译项目：{_inp}")
         return _inp
 

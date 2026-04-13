@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import sys
-
 
 class ToolException(Exception):
     """
@@ -20,10 +18,7 @@ class ToolException(Exception):
             self.message,
             self.requestId,
         )
-        if sys.version_info[0] < 3 and isinstance(s, unicode):  # noqa: F821
-            return s.encode("utf8")
-        else:
-            return s
+        return s
 
     def get_code(self):
         return self.code

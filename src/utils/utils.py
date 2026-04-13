@@ -31,13 +31,14 @@ import chardet
 import py3langid
 
 from src.exception.tool_exception import ToolException
+from src.utils.global_data import GlobalData
 
 
 def print_debug(value: str):
     """
     打印调试信息，绿色字体，生产环境下屏蔽
     """
-    if GLOBAL_DATA["debug"]:
+    if GlobalData.debug:
         print(f"\033[0;32;40mDEBUG: {value}\033[0m")
 
 
@@ -62,93 +63,12 @@ def print_warn(value: str):
     print(f"\033[0;33;40mWARNING: {value}\033[0m")
 
 
-# 全局变量
-GLOBAL_DATA = {
-    "debug": False,
-    "open_todo": False,
-    "rpy_trans_input_abspath": "",
-    "rpy_trans_bap_max_cache": 0,
-    "rpy_update_old_abspath": "",
-    "rpy_update_new_abspath": "",
-    "rpy_update_bap_max_cache": 0,
-    "none_filter": "NONE",
-    "pass_filter": [],
-    "json_max_cache": 0,
-    "rpg_white_list": [],
-    "rpg_duplicate_removal_list": [],
-    "rpg_type_array_object": [],
-    "rpg_script_regexp": [],
-    "rpg_game_default_txt": "gameText.json",
-    "tencent": False,
-    "alibaba": False,
-    "baidu": False,
-    "caiyun": False,
-    "huoshan": False,
-    "xiaoniu": False,
-    "xunfei": False,
-    "youdao": False,
-    "deepL": False,
-    "google": False,
-    "ollama": False,
-    "hunyuan_mt": False,
-}
-
-# 项目所在绝对路径
-BASE_ABSPATH = pathlib.Path(__file__).parent.parent.parent
-# 项目代码绝对路径
-SRC_ABSPATH = os.path.join(BASE_ABSPATH, "src")
-
-# 配置文件绝对路径
-CONFIG_ABSPATH = os.path.join(BASE_ABSPATH, "config.ini")
-
-# rpgm项目工作区的绝对路径
-RPGM_PROJECT_PARENT_FOLDER = os.path.join(BASE_ABSPATH, "RPGM Workspace")
-
-# renpy项目工作区的绝对路径
-RENPY_PROJECT_PARENT_FOLDER = os.path.join(BASE_ABSPATH, "RenPy Workspace")
-# 存放rpgm初始data游戏数据目录的绝对路径
-RPGM_INPUT_ABSPATH = os.path.join(BASE_ABSPATH, "RPGM Data Input")
-# 存放生成的rpgm新data游戏数据目录的绝对路径
-RPGM_OUTPUT_ABSPATH = os.path.join(BASE_ABSPATH, "RPGM Data Output")
-
-# 译文库
-TRANSLATED_LIB_LIBRARY_FILE = "TransLib.json"
-
-# 待处理标记，此处写死，避免用户修改导致文本不通用
-MARK_TODO = "TODO"
-
-# json更新标记
-KEY_PHOENIX = "__PHOENIX__"
-
-# JSON翻译文本中标记当前率属于的文件名
-TRANSLATED_FILE_MARK = "<==M==A==R==K==> "
-
-# 正则：匹配空行
-PATTERN_EMPTY_LINE = re.compile(r"^\s*$")
-# 正则：匹配rpy的文本标识符行
-PATTERN_IDENTIFIER = re.compile(r"^\s*translate\s*.*\s(.*):")
-# 正则：匹配rpy的old语句
-PATTERN_OLD = re.compile(r'^\s*old\s*"(.*)"')
-# 正则：匹配rpy的new语句
-PATTERN_NEW = re.compile(r'^\s*new\s*"(.*)"')
-# 正则匹配rpy的say原文
-PATTERN_OLD_SAY = re.compile(r'^\s*#+\s*(".*?[^\\]"|[\S\s]*?)\s*"(.*)"')
-# 正则：匹配rpy的say译文
-PATTERN_NEW_SAY = re.compile(r'(?!\s*#+)\s*(".*?[^\\]"|[\S\s]*?)\s*"(.*)"\s*(.*)')
-# 正则：匹配rpy的who
-PATTERN_WHO = re.compile(r'^"(.*?[^\\])"')
-# 正则：匹配注释符号
-PATTERN_ANNOTATION = re.compile(r"^\s*#\s*")
-# 正则：匹配rpg的Mapxxx.json文件
-PATTERN_MAP = re.compile(r"^Map\d{3}$")
-
-
 def get_md5(parm_str: any, cut=False) -> str:
     """
     获取字符串32/16位md5值
 
-    - parm_str: 要计算md5值的数据
-    - cut：是否截取中间16位md5值，默认返回完整32位
+    :param parm_str: 要计算md5值的数据
+    :param cut：是否截取中间16位md5值，默认返回完整32位
     """
 
     # 创建一个md5对象
@@ -164,8 +84,8 @@ def merge_dicts(dicts: list[dict], rewrite=True) -> dict:
     """
     将多个字典合并成一个字典
 
-    - dicts: 要合并的字典列表
-    - rewrite: 遇到相同key时，后面字典的值是否覆盖前面字典的值。默认覆盖
+    :param dicts: 要合并的字典列表
+    :param rewrite: 遇到相同key时，后面字典的值是否覆盖前面字典的值。默认覆盖
     """
 
     if not dicts:
@@ -194,8 +114,8 @@ def del_key_from_dict(key: str, datas=None) -> bool:
     """
     删除字典中指定key元素
 
-    - key: 要删除的key
-    - datas: 要调整的字典
+    :param key: 要删除的key
+    :param datas: 要调整的字典
     """
 
     if not datas or not isinstance(datas, dict):
@@ -215,7 +135,7 @@ def read_json(file_path: str):
     """
     读取JSON文件，并将其转换成python对象
 
-    - _file: 文件的绝对路径
+    :param _file: 文件的绝对路径
     """
 
     filename = os.path.basename(file_path)
@@ -240,10 +160,10 @@ def write_json(_file: str, datas=None, *, indent=4, backup=True):
     """
     将python对象转换成JSON格式并写入文件
 
-    - _file: 文件的绝对路径
-    - datas: 要写入json的数据
-    - indent: JSON每个层级的缩进长度
-    - backup: 是否备份原文件。默认备份
+    :param _file: 文件的绝对路径
+    :param datas: 要写入json的数据
+    :param indent: JSON每个层级的缩进长度
+    :param backup: 是否备份原文件。默认备份
     """
 
     if datas is None:
@@ -283,9 +203,9 @@ def copy_file(source_file: str, target_dir: str, time_mark=True):
     """
     将文件拷贝到指定路径。
 
-    - source_file: 要拷贝的文件路径
-    - target_dir: 拷贝文件存放目录路径
-    - time_mark: 是否在文件名后面加上拷贝日期时间。默认添加
+    :param source_file: 要拷贝的文件路径
+    :param target_dir: 拷贝文件存放目录路径
+    :param time_mark: 是否在文件名后面加上拷贝日期时间。默认添加
     """
 
     if not os.path.isfile(source_file) or not os.path.isdir(target_dir):
@@ -446,8 +366,8 @@ def match_lang(txt: str, lang: str) -> bool:
     匹配符合指定列表中语种的文本。匹配返回True，反之返回False。
     由于语言检测程序的限制，此方法存在一定误差。
 
-    - txt: 待匹配文本
-    - langs: 语种列表只能是字符串的形式，多种语种可用','隔开的形式，如：'zh,ru'
+    :param txt: 待匹配文本
+    :param langs: 语种列表只能是字符串的形式，多种语种可用','隔开的形式，如：'zh,ru'
     """
 
     # 传入的待匹配文本为空字符串或语种列表为空字符串时，返回True
@@ -631,10 +551,14 @@ def update_phoenix_mark(datas=None, update=False):
     切换JSON文本更新标记
     """
 
-    if datas is None or not isinstance(datas, dict) or KEY_PHOENIX not in datas:
+    if (
+        datas is None
+        or not isinstance(datas, dict)
+        or GlobalData.KEY_PHOENIX not in datas
+    ):
         return
 
-    datas[KEY_PHOENIX] = update
+    datas[GlobalData.KEY_PHOENIX] = update
 
 
 def switch_change_mark(base=False, change=False) -> bool:
@@ -675,7 +599,7 @@ def validate_renpy_trans_file(file_path: str) -> bool:
     """
     判断指定文件是否是Ren'Py翻译文件。
 
-    - file_path: 文件绝对路径
+    :param file_path: 文件绝对路径
     """
 
     if not os.path.exists(file_path):
@@ -691,7 +615,7 @@ def validate_renpy_trans_file(file_path: str) -> bool:
         lines = inp.read(1024)
     for line in lines:
         # 如果能匹配到translate标识符，则返回True
-        if PATTERN_IDENTIFIER.match(line) is not None:
+        if GlobalData.PATTERN_IDENTIFIER.match(line) is not None:
             return True
     return False
 
@@ -705,7 +629,7 @@ def get_projects_list(_type: str) -> list:
 
     if _type == "renpy":
         # 判断ren'Py项目工作区是否存在，不存在则新建一个，并返回空列表
-        _path = pathlib.Path(RENPY_PROJECT_PARENT_FOLDER)
+        _path = pathlib.Path(GlobalData.RENPY_PROJECT_PARENT_FOLDER)
         if not _path.exists():
             _path.mkdir(parents=True)
             return []
@@ -716,7 +640,7 @@ def get_projects_list(_type: str) -> list:
 
     elif _type == "rpgm":
         # 判断rpgm项目工作区是否存在，不存在则新建一个，并返回空列表
-        _path = pathlib.Path(RPGM_PROJECT_PARENT_FOLDER)
+        _path = pathlib.Path(GlobalData.RPGM_PROJECT_PARENT_FOLDER)
         if not _path.exists():
             _path.mkdir(parents=True)
             return []
@@ -792,7 +716,7 @@ def read_config(config_path="") -> ConfigParser | None:
     """
 
     if not config_path:
-        config_path = CONFIG_ABSPATH
+        config_path = GlobalData.CONFIG_ABSPATH
     if not os.path.exists(config_path) or not os.path.isfile(config_path):
         return None
     conf = ConfigParser()  # 调用读取配置模块中的类
@@ -833,8 +757,12 @@ def write_config(section: str, keys=None, add=True) -> bool:
         else:
             conf.remove_option(section, key)
 
-    copy_file(CONFIG_ABSPATH, BASE_ABSPATH)
-    with open(CONFIG_ABSPATH, "w", encoding=get_file_encoding(CONFIG_ABSPATH)) as f:
+    copy_file(GlobalData.CONFIG_ABSPATH, GlobalData.BASE_ABSPATH)
+    with open(
+        GlobalData.CONFIG_ABSPATH,
+        "w",
+        encoding=get_file_encoding(GlobalData.CONFIG_ABSPATH),
+    ) as f:
         conf.write(f)
     return True
 
@@ -854,21 +782,6 @@ def get_password_with_mask(prompt="请输入密码: "):
     # 空白显示，这个方法不会遇到掩码显示的超长自动换行的问题，但不够直观
     inp = getpass.getpass(prompt)
     return inp.strip()
-
-
-def get_value_from_library(source_txt: str):
-    """
-    从译文库中获取译文
-    """
-
-    if (
-        source_txt in TRANSLATED_LIB_LIBRARY
-        and TRANSLATED_LIB_LIBRARY[source_txt] != ""
-    ):
-        target = TRANSLATED_LIB_LIBRARY[source_txt]
-        print(f"库译文：{target}\n")
-        return target
-    return ""
 
 
 def waiit_key_or_enter(prompt="按任意键继续或按回车退出程序："):
@@ -915,64 +828,51 @@ def get_config():
     if conf is None:
         return
 
-    GLOBAL_DATA["debug"] = conf.getboolean("common_settings", "debug")
-    GLOBAL_DATA["open_todo"] = conf.getboolean("common_settings", "open_todo")
-    GLOBAL_DATA["none_filter"] = conf.get("filter_texts", "none_filter")
-    GLOBAL_DATA["pass_filter"] = (
-        conf.get("filter_texts", "pass_filter").upper().split(",")
-    )
-    GLOBAL_DATA["rpy_trans_input_abspath"] = conf.get(
-        "rpy_trans_tool", "rpy_input_abspath"
-    )
+    GlobalData.debug = conf.getboolean("common_settings", "debug")
+    GlobalData.open_todo = conf.getboolean("common_settings", "open_todo")
+    GlobalData.none_filter = conf.get("filter_texts", "none_filter")
+    GlobalData.pass_filter = conf.get("filter_texts", "pass_filter").upper().split(",")
+    GlobalData.rpy_trans_input_abspath = conf.get("rpy_trans_tool", "rpy_input_abspath")
 
     rpy_bap_max_cache = conf.getint("rpy_trans_tool", "rpy_bap_max_cache")
     if rpy_bap_max_cache > 0:
-        GLOBAL_DATA["rpy_trans_bap_max_cache"] = rpy_bap_max_cache
+        GlobalData.rpy_trans_bap_max_cache = rpy_bap_max_cache
 
-    GLOBAL_DATA["rpy_update_old_abspath"] = conf.get(
-        "rpy_update_tool", "rpy_old_abspath"
-    )
-    GLOBAL_DATA["rpy_update_new_abspath"] = conf.get(
-        "rpy_update_tool", "rpy_new_abspath"
-    )
+    GlobalData.rpy_update_old_abspath = conf.get("rpy_update_tool", "rpy_old_abspath")
+    GlobalData.rpy_update_new_abspath = conf.get("rpy_update_tool", "rpy_new_abspath")
 
     rpy_bap_max_cache = conf.getint("rpy_update_tool", "rpy_bap_max_cache")
     if rpy_bap_max_cache > 0:
-        GLOBAL_DATA["rpy_update_bap_max_cache"] = rpy_bap_max_cache
+        GlobalData.rpy_update_bap_max_cache = rpy_bap_max_cache
 
     json_max_cache = conf.getint("json_trans_tool", "json_max_cache")
     if json_max_cache > 0:
-        GLOBAL_DATA["json_max_cache"] = json_max_cache
+        GlobalData.json_max_cache = json_max_cache
 
-    GLOBAL_DATA["rpg_game_default_txt"] = conf.get(
+    GlobalData.rpg_game_default_txt = conf.get(
         "rpgm_extraction_writing", "rpg_game_default_txt"
     )
-    GLOBAL_DATA["rpg_white_list"] = conf.get(
+    GlobalData.rpg_white_list = conf.get(
         "rpgm_extraction_writing", "rpg_white_list"
     ).split(",")
-    GLOBAL_DATA["rpg_duplicate_removal_list"] = conf.get(
+    GlobalData.rpg_duplicate_removal_list = conf.get(
         "rpgm_extraction_writing", "rpg_duplicate_removal_list"
     ).split(",")
-    GLOBAL_DATA["rpg_type_array_object"] = conf.get(
+    GlobalData.rpg_type_array_object = conf.get(
         "rpgm_extraction_writing", "rpg_type_array_object"
     ).split(",")
-    GLOBAL_DATA["rpg_script_regexp"] = conf.get(
+    GlobalData.rpg_script_regexp = conf.get(
         "rpgm_extraction_writing", "rpg_script_regexp"
     ).split(",")
-    GLOBAL_DATA["tencent"] = conf.getboolean("tencent", "activate")
-    GLOBAL_DATA["alibaba"] = conf.getboolean("alibaba", "activate")
-    GLOBAL_DATA["baidu"] = conf.getboolean("baidu", "activate")
-    GLOBAL_DATA["caiyun"] = conf.getboolean("caiyun", "activate")
-    GLOBAL_DATA["huoshan"] = conf.getboolean("huoshan", "activate")
-    GLOBAL_DATA["xiaoniu"] = conf.getboolean("xiaoniu", "activate")
-    GLOBAL_DATA["xunfei"] = conf.getboolean("xunfei", "activate")
-    GLOBAL_DATA["youdao"] = conf.getboolean("youdao", "activate")
-    GLOBAL_DATA["deepL"] = conf.getboolean("deepL", "activate")
-    GLOBAL_DATA["google"] = conf.getboolean("google", "activate")
-    GLOBAL_DATA["ollama"] = conf.getboolean("ollama", "activate")
-    GLOBAL_DATA["hunyuan_mt"] = conf.getboolean("hunyuan_mt", "activate")
-
-
-TRANSLATED_LIB_LIBRARY = read_json(
-    os.path.join(BASE_ABSPATH, "Translated Libraries", TRANSLATED_LIB_LIBRARY_FILE)
-)
+    GlobalData.tencent = conf.getboolean("tencent", "activate")
+    GlobalData.alibaba = conf.getboolean("alibaba", "activate")
+    GlobalData.baidu = conf.getboolean("baidu", "activate")
+    GlobalData.caiyun = conf.getboolean("caiyun", "activate")
+    GlobalData.huoshan = conf.getboolean("huoshan", "activate")
+    GlobalData.xiaoniu = conf.getboolean("xiaoniu", "activate")
+    GlobalData.xunfei = conf.getboolean("xunfei", "activate")
+    GlobalData.youdao = conf.getboolean("youdao", "activate")
+    GlobalData.deepL = conf.getboolean("deepL", "activate")
+    GlobalData.google = conf.getboolean("google", "activate")
+    GlobalData.ollama = conf.getboolean("ollama", "activate")
+    GlobalData.hunyuan_mt = conf.getboolean("hunyuan_mt", "activate")

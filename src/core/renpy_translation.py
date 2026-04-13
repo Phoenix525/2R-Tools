@@ -19,16 +19,8 @@ from datetime import datetime
 
 import main
 from src.core.interpreter import Interpreter
+from src.utils.global_data import GlobalData
 from src.utils.utils import (
-    GLOBAL_DATA,
-    MARK_TODO,
-    PATTERN_EMPTY_LINE,
-    PATTERN_IDENTIFIER,
-    PATTERN_NEW,
-    PATTERN_NEW_SAY,
-    PATTERN_OLD,
-    PATTERN_OLD_SAY,
-    RENPY_PROJECT_PARENT_FOLDER,
     copy_directory,
     get_file_encoding,
     print_info,
@@ -40,7 +32,7 @@ from src.utils.utils import (
 END_SAY = "-*- END -*-"
 
 # pylint: disable=invalid-name
-__input_abspath = GLOBAL_DATA["rpy_trans_input_abspath"]
+__input_abspath = GlobalData.rpy_trans_input_abspath
 __output_abspath = ""
 
 # 是否覆盖所有译文
@@ -56,7 +48,7 @@ __interpreter = None
 __curr_renpy_project_name = "Test_v0.1"
 # 当前renpy项目的绝对路径
 __curr_renpy_project_path = os.path.join(
-    RENPY_PROJECT_PARENT_FOLDER, __curr_renpy_project_name
+    GlobalData.RENPY_PROJECT_PARENT_FOLDER, __curr_renpy_project_name
 )
 
 
@@ -162,11 +154,11 @@ def __process_file(old_path: str, new_path: str, filename: str):
     # 获取要翻译的文本列表
     for idx, line in enumerate(lightSen):
         # 空行
-        if PATTERN_EMPTY_LINE.match(line) is not None:
+        if GlobalData.PATTERN_EMPTY_LINE.match(line) is not None:
             continue
 
         # 标志符行
-        identifier_match = PATTERN_IDENTIFIER.match(line)
+        identifier_match = GlobalData.PATTERN_IDENTIFIER.match(line)
         if identifier_match is not None:
             _identifier = identifier_match.group(1)
             # 扫描到标志符行，说明进入了新的BAP，原文清空
@@ -175,7 +167,7 @@ def __process_file(old_path: str, new_path: str, filename: str):
             continue
 
         # 原文行
-        old_say_match = PATTERN_OLD_SAY.match(line)
+        old_say_match = GlobalData.PATTERN_OLD_SAY.match(line)
         if old_say_match is not None and _identifier not in ("", "strings"):
             # 跳过cv语音行
             if old_say_match.group(1) != "voice":
@@ -183,7 +175,7 @@ def __process_file(old_path: str, new_path: str, filename: str):
             continue
 
         # 译文行
-        new_say_match = PATTERN_NEW_SAY.match(line)
+        new_say_match = GlobalData.PATTERN_NEW_SAY.match(line)
         if new_say_match is not None and _identifier not in ("", "strings"):
             _who = new_say_match.group(1)
             # 跳过cv语音行
@@ -208,11 +200,11 @@ def __process_file(old_path: str, new_path: str, filename: str):
             if (
                 original_new_say != ""  # 当译文不为空
                 and not __rewrite_all  # 当未启用覆盖所有译文
-                and original_new_say.upper() != MARK_TODO  # 当译文不为TODO
+                and original_new_say.upper() != GlobalData.MARK_TODO  # 当译文不为TODO
                 and (
                     not __rewrite_todo  # 当未启用覆盖TODO译文
                     or not original_new_say.upper().startswith(
-                        MARK_TODO
+                        GlobalData.MARK_TODO
                     )  # 或当译文开头不为TODO
                 )
             ):
@@ -227,13 +219,13 @@ def __process_file(old_path: str, new_path: str, filename: str):
             continue
 
         # old行
-        old_match = PATTERN_OLD.match(line)
+        old_match = GlobalData.PATTERN_OLD.match(line)
         if old_match is not None and _identifier == "strings":
             _old_say = old_match.group(1)
             continue
 
         # new行
-        new_match = PATTERN_NEW.match(line)
+        new_match = GlobalData.PATTERN_NEW.match(line)
         if new_match is not None and _identifier == "strings":
             if _old_say == "":
                 continue
@@ -242,11 +234,11 @@ def __process_file(old_path: str, new_path: str, filename: str):
             if (
                 original_new != ""  # 当译文不为空
                 and not __rewrite_all  # 当未启用覆盖所有译文
-                and original_new.upper() != MARK_TODO  # 当译文不为TODO
+                and original_new.upper() != GlobalData.MARK_TODO  # 当译文不为TODO
                 and (
                     not __rewrite_todo  # 当未启用覆盖TODO译文
                     or not original_new.upper().startswith(
-                        MARK_TODO
+                        GlobalData.MARK_TODO
                     )  # 或当译文开头不为TODO
                 )
             ):
@@ -273,14 +265,14 @@ def __process_file(old_path: str, new_path: str, filename: str):
         # 翻译文本
         # 虽然翻译接口大多支持一次翻译多条文本，但存在翻译失败，个别文本丢失的情况，无法保证传入的文本和传回的结果对上号，所以这里还是一条文本发起一次请求
         translated = __interpreter.translate_txt(
-            value["src"], activate_context="1", open_todo=GLOBAL_DATA["open_todo"]
+            value["src"], activate_context="1", open_todo=GlobalData.open_todo
         )
         tmp_translate_txts[key]["dst"] = translated
 
         # 当为最后一个索引或缓存已达设定值，则写入文件，避免意外退出导致翻译结果完全丢失
         if (
             idx == txts_len - 1
-            or len(tmp_translate_txts) == GLOBAL_DATA["rpy_trans_bap_max_cache"]
+            or len(tmp_translate_txts) == GlobalData.rpy_trans_bap_max_cache
         ):
             for tmp_key, tmp_value in tmp_translate_txts.items():
                 src = tmp_value["src"]

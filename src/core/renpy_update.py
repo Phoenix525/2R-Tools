@@ -18,16 +18,8 @@ import sys
 from datetime import datetime
 
 import main
+from src.utils.global_data import GlobalData
 from src.utils.utils import (
-    GLOBAL_DATA,
-    MARK_TODO,
-    PATTERN_EMPTY_LINE,
-    PATTERN_IDENTIFIER,
-    PATTERN_NEW,
-    PATTERN_NEW_SAY,
-    PATTERN_OLD,
-    PATTERN_OLD_SAY,
-    RENPY_PROJECT_PARENT_FOLDER,
     del_key_from_dict,
     get_file_encoding,
     has_lower_letter,
@@ -45,9 +37,9 @@ END_SAY = "-*- END -*-"
 
 # pylint: disable=invalid-name
 # 旧版本翻译文本路径
-__pre_trans_project_path = GLOBAL_DATA["rpy_update_old_abspath"]
+__pre_trans_project_path = GlobalData.rpy_update_old_abspath
 # 等待更新的翻译文本路径
-__wait_trans_project_path = GLOBAL_DATA["rpy_update_new_abspath"]
+__wait_trans_project_path = GlobalData.rpy_update_new_abspath
 # 更新后的翻译文本路径
 __new_trans_project_path = ""
 
@@ -60,7 +52,7 @@ __identifier_library_cache = {}
 __curr_renpy_project_name = "Test_v0.1"
 # 当前翻译项目的绝对路径
 __curr_renpy_project_path = os.path.join(
-    RENPY_PROJECT_PARENT_FOLDER, __curr_renpy_project_name
+    GlobalData.RENPY_PROJECT_PARENT_FOLDER, __curr_renpy_project_name
 )
 
 
@@ -175,11 +167,11 @@ def __scanning_file(file_path: str, filename: str):
 
     for line in lightSen:
         # 空行
-        if PATTERN_EMPTY_LINE.match(line) is not None:
+        if GlobalData.PATTERN_EMPTY_LINE.match(line) is not None:
             continue
 
         # 标志符行
-        identifier_match = PATTERN_IDENTIFIER.match(line)
+        identifier_match = GlobalData.PATTERN_IDENTIFIER.match(line)
         if identifier_match is not None:
             _identifier = identifier_match.group(1)
             # 扫描到标志符行，说明进入了新的BAP，清空原文
@@ -191,7 +183,7 @@ def __scanning_file(file_path: str, filename: str):
             continue
 
         # 原文本行
-        old_say_match = PATTERN_OLD_SAY.match(line)
+        old_say_match = GlobalData.PATTERN_OLD_SAY.match(line)
         if old_say_match is not None and _identifier not in ("", "strings"):
             old_say_list = old_say_match.groups()
             _who = old_say_list[0]
@@ -209,7 +201,7 @@ def __scanning_file(file_path: str, filename: str):
             continue
 
         # old行
-        old_match = PATTERN_OLD.match(line)
+        old_match = GlobalData.PATTERN_OLD.match(line)
         if old_match is not None and _identifier == "strings":
             # 获取原文，在存入缓存库之前，不能修改_old_say
             _old_say = old_match.group(1)
@@ -221,7 +213,7 @@ def __scanning_file(file_path: str, filename: str):
             continue
 
         # 译文行
-        new_say_match = PATTERN_NEW_SAY.match(line)
+        new_say_match = GlobalData.PATTERN_NEW_SAY.match(line)
         if new_say_match is not None and _identifier not in ("", "strings"):
             new_say_list = new_say_match.groups()
             _who = new_say_list[0]
@@ -249,7 +241,7 @@ def __scanning_file(file_path: str, filename: str):
             continue
 
         # new 行
-        new_match = PATTERN_NEW.match(line)
+        new_match = GlobalData.PATTERN_NEW.match(line)
         if new_match is not None and _identifier == "strings":
             # 写入文本缓存库
             __write_in_txt_library_cache(_old_say, new_match.group(1), _identifier)
@@ -282,11 +274,11 @@ def __process_file(wait_trans_path: str, new_trans_path: str, filename: str):
     for line in lightSen:
         _tmp_idx += 1
         # 空行
-        if PATTERN_EMPTY_LINE.match(line) is not None:
+        if GlobalData.PATTERN_EMPTY_LINE.match(line) is not None:
             continue
 
         # 标志符行
-        identifier_match = PATTERN_IDENTIFIER.match(line)
+        identifier_match = GlobalData.PATTERN_IDENTIFIER.match(line)
         if identifier_match is not None:
             _identifier = identifier_match.group(1)
             # 进入新的BAP，缓存量+1
@@ -297,7 +289,7 @@ def __process_file(wait_trans_path: str, new_trans_path: str, filename: str):
             continue
 
         # 原文本行
-        old_say_match = PATTERN_OLD_SAY.match(line)
+        old_say_match = GlobalData.PATTERN_OLD_SAY.match(line)
         if old_say_match is not None and _identifier not in ("", "strings"):
             _old_say_list = old_say_match.groups()
             # 跳过cv语音行
@@ -307,7 +299,7 @@ def __process_file(wait_trans_path: str, new_trans_path: str, filename: str):
             continue
 
         # 译文行
-        new_say_match = PATTERN_NEW_SAY.match(line)
+        new_say_match = GlobalData.PATTERN_NEW_SAY.match(line)
         if new_say_match is not None and _identifier not in ("", "strings"):
             _new_say_list = new_say_match.groups()
             _who = _new_say_list[0]
@@ -333,7 +325,7 @@ def __process_file(wait_trans_path: str, new_trans_path: str, filename: str):
                             _tmp_idx += 1
                             _tmp_lightSen.insert(_tmp_idx, reverse_line)
 
-                if _bap_count >= GLOBAL_DATA["rpy_update_bap_max_cache"]:
+                if _bap_count >= GlobalData.rpy_update_bap_max_cache:
                     outp.writelines(_tmp_lightSen)
                     outp.flush()
                     # 清空BAP缓存
@@ -379,7 +371,7 @@ def __process_file(wait_trans_path: str, new_trans_path: str, filename: str):
                         _tmp_idx += 1
                         _tmp_lightSen.insert(_tmp_idx, reverse_line)
 
-            if _bap_count >= GLOBAL_DATA["rpy_update_bap_max_cache"]:
+            if _bap_count >= GlobalData.rpy_update_bap_max_cache:
                 outp.writelines(_tmp_lightSen)
                 outp.flush()
                 # 清空BAP缓存
@@ -389,16 +381,16 @@ def __process_file(wait_trans_path: str, new_trans_path: str, filename: str):
             continue
 
         # old行
-        old_match = PATTERN_OLD.match(line)
+        old_match = GlobalData.PATTERN_OLD.match(line)
         if old_match is not None and _identifier == "strings":
             _old_say = old_match.group(1)
             continue
 
         # new 行
-        new_match = PATTERN_NEW.match(line)
+        new_match = GlobalData.PATTERN_NEW.match(line)
         if new_match is not None and _identifier == "strings":
             if _old_say == "":
-                if _bap_count >= GLOBAL_DATA["rpy_update_bap_max_cache"]:
+                if _bap_count >= GlobalData.rpy_update_bap_max_cache:
                     outp.writelines(_tmp_lightSen)
                     outp.flush()
                     # 清空BAP缓存
@@ -413,7 +405,7 @@ def __process_file(wait_trans_path: str, new_trans_path: str, filename: str):
                     # strings只可能有一行，所以直接取首位索引值即可
                     _tmp_lightSen[_tmp_idx] = '    new "' + translated_list[0] + '"\n'
 
-            if _bap_count >= GLOBAL_DATA["rpy_update_bap_max_cache"]:
+            if _bap_count >= GlobalData.rpy_update_bap_max_cache:
                 outp.writelines(_tmp_lightSen)
                 outp.flush()
                 # 清空BAP缓存
@@ -438,7 +430,7 @@ def __write_in_identifier_library_cache(identifier="", translated_txt=""):
 
     global __identifier_library_cache
     # 如果译文为空，或译文中含有TODO，不写入缓存库，已写入缓存库的也删除
-    if translated_txt.strip() == "" or MARK_TODO in translated_txt:
+    if translated_txt.strip() == "" or GlobalData.MARK_TODO in translated_txt:
         if identifier in __identifier_library_cache:
             __identifier_library_cache = del_key_from_dict(
                 identifier, __identifier_library_cache
@@ -478,7 +470,7 @@ def __write_in_txt_library_cache(
 
     global __txt_library_cache
     # 如果译文为空，或译文中含有TODO，不写入缓存库，已写入缓存库的也删除
-    if translated_txt.strip() == "" or MARK_TODO in translated_txt:
+    if translated_txt.strip() == "" or GlobalData.MARK_TODO in translated_txt:
         if identifier not in ("who", "strings"):
             if (
                 source_txt in __txt_library_cache
@@ -538,7 +530,7 @@ def __read_from_identifier_library_cache(identifier: str) -> list:
     if identifier in __identifier_library_cache:
         txt_list = __identifier_library_cache[identifier]
         for txt in txt_list:
-            if txt.startswith(MARK_TODO):
+            if txt.startswith(GlobalData.MARK_TODO):
                 return []
         return txt_list
 
@@ -553,7 +545,7 @@ def __read_from_identifier_library_cache(identifier: str) -> list:
             continue
         if ident == cache_ident:
             for tex in value:
-                if tex.startswith(MARK_TODO):
+                if tex.startswith(GlobalData.MARK_TODO):
                     return []
             return value
 
@@ -595,7 +587,7 @@ def __read_from_txt_library_cache(source_txt: str, identifier: str) -> list:
     if identifier in li:
         txt_list = li[identifier]
         for txt in txt_list:
-            if txt.startswith(MARK_TODO):
+            if txt.startswith(GlobalData.MARK_TODO):
                 return []
         return txt_list
 
@@ -611,14 +603,14 @@ def __read_from_txt_library_cache(source_txt: str, identifier: str) -> list:
                 continue
             if ident == cache_ident:
                 for tex in value:
-                    if tex.startswith(MARK_TODO):
+                    if tex.startswith(GlobalData.MARK_TODO):
                         return []
                 return value
 
     for key, value in li.items():
         succ = True
         for txt in value:
-            if txt.startswith(MARK_TODO):
+            if txt.startswith(GlobalData.MARK_TODO):
                 succ = False
                 break
         if not succ:

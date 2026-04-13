@@ -4,7 +4,6 @@
 from ollama import ChatResponse, chat
 
 from src.api.base_translation import BaseTranslation
-from src.exception.tool_exception import ToolException
 from src.utils.utils import print_err, read_config, remove_escapes
 
 
@@ -43,9 +42,9 @@ class OllamaTranslation(BaseTranslation):
         """
         开始翻译，必定有返回值
 
-        - source_txt: 输入文本
-        - to_lang: 目标语种
-        - **kwargs: 其他参数
+        :param source_txt: 输入文本
+        :param to_lang: 目标语种
+        :param **kwargs: 其他参数
         """
 
         # 删除转义符

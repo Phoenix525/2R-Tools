@@ -37,9 +37,9 @@ class GoogleTranslation(BaseTranslation):
         """
         开始翻译，必定有返回值
 
-        - source_txt: 输入文本
-        - to_lang: 目标语种
-        - **kwargs: 其他参数
+        :param source_txt: 输入文本
+        :param to_lang: 目标语种
+        :param **kwargs: 其他参数
         """
 
         if self.__translator is None:

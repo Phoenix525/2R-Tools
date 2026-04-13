@@ -10,11 +10,8 @@ import sys
 
 import main
 from src.core.interpreter import Interpreter
+from src.utils.global_data import GlobalData
 from src.utils.utils import (
-    GLOBAL_DATA,
-    KEY_PHOENIX,
-    MARK_TODO,
-    RPGM_PROJECT_PARENT_FOLDER,
     match_lang,
     print_info,
     print_warn,
@@ -42,7 +39,9 @@ def start(project_name: str):
     global __curr_rpgm_project_name, __curr_rpgm_project_path
 
     __curr_rpgm_project_name = project_name
-    __curr_rpgm_project_path = os.path.join(RPGM_PROJECT_PARENT_FOLDER, project_name)
+    __curr_rpgm_project_path = os.path.join(
+        GlobalData.RPGM_PROJECT_PARENT_FOLDER, project_name
+    )
 
     print("""
 ===========================================================================================
@@ -96,15 +95,15 @@ def __translate(filter_lang=""):
         if not isinstance(k, str) or not isinstance(v, str):  # 键或值非字串的跳过
             continue
         v = v.strip()
-        if v.upper() == GLOBAL_DATA["none_filter"]:  # 无需显示的行，不翻译
+        if v.upper() == GlobalData.none_filter:  # 无需显示的行，不翻译
             continue
-        if v.upper() in GLOBAL_DATA["pass_filter"]:  # 不翻译文本
+        if v.upper() in GlobalData.pass_filter:  # 不翻译文本
             continue
         if (
-            MARK_TODO in v.upper() and v.upper() != MARK_TODO
+            GlobalData.MARK_TODO in v.upper() and v.upper() != GlobalData.MARK_TODO
         ):  # 已经有翻译但不确定的不翻译
             continue
-        if v != "" and v.upper() != MARK_TODO:  # 已翻译的
+        if v != "" and v.upper() != GlobalData.MARK_TODO:  # 已翻译的
             continue
 
         txt = k.split("_")[-1]
@@ -116,7 +115,7 @@ def __translate(filter_lang=""):
         __game_txt_cache[k] = __interpreter.translate_txt(txt)
         __update_phoenix_mark(True)
         _count += 1
-        if _count >= GLOBAL_DATA["json_max_cache"]:
+        if _count >= GlobalData.json_max_cache:
             __wirte_in_file(_bak)
             _bak = False
             _count = 0
@@ -150,10 +149,10 @@ def __add_todo(_filter=""):
             continue
 
         _count += 1
-        __game_txt_cache[k] = MARK_TODO
+        __game_txt_cache[k] = GlobalData.MARK_TODO
 
     if _count > 0:
-        __game_txt_cache[KEY_PHOENIX] = True
+        __game_txt_cache[GlobalData.KEY_PHOENIX] = True
     print_info(f"空值字段扫描结果为：{_count}\n")
 
     __wirte_in_file()
@@ -191,10 +190,10 @@ def __add_pass(_filter="ru"):
             continue
 
         _count += 1
-        __game_txt_cache[k] = MARK_TODO + "_" + GLOBAL_DATA["pass_filter"][0]
+        __game_txt_cache[k] = GlobalData.MARK_TODO + "_" + GlobalData.pass_filter[0]
 
     if _count > 0:
-        __game_txt_cache[KEY_PHOENIX] = True
+        __game_txt_cache[GlobalData.KEY_PHOENIX] = True
     print_info(f"指定字段扫描结果为：{_count}\n")
 
     __wirte_in_file()
@@ -225,7 +224,7 @@ def __update_phoenix_mark(update=False):
     切换更新标记
     """
 
-    __game_txt_cache[KEY_PHOENIX] = update
+    __game_txt_cache[GlobalData.KEY_PHOENIX] = update
 
 
 def __wirte_in_file(bak=True):
@@ -235,7 +234,7 @@ def __wirte_in_file(bak=True):
     :param bak: 启用备份
     """
 
-    if not __game_txt_cache[KEY_PHOENIX]:
+    if not __game_txt_cache[GlobalData.KEY_PHOENIX]:
         print(f"{__curr_rpgm_project_name} 未发生更改，无需写入！\n")
         return
 
@@ -255,8 +254,8 @@ def __choose_option(first_select=True):
     # 首次进入选项
     if first_select:
         print(f"""1) 翻译JSON翻译文本
-2) 检索值为空的字段，并添加{MARK_TODO}
-3) 检索指定语种字段，并添加{GLOBAL_DATA["pass_filter"][0]}
+2) 检索值为空的字段，并添加{GlobalData.MARK_TODO}
+3) 检索指定语种字段，并添加{GlobalData.pass_filter[0]}
 """)
         _inp = input("请输入要操作的序号或回车返回主菜单：")
     else:
