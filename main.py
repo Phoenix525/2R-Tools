@@ -5,20 +5,18 @@
 @Date: 2020-07-04 23:33:35
 """
 
-import os
-import sys
-from typing import Optional
+from sys import exit
 
-import src.core.json_translation as json_translation
-import src.core.renpy_translation as renpy_translation
-import src.core.renpy_update as renpy_update
-import src.core.rpgm_mv_extraction_writing as rpgm_mv_extraction_writing
-import src.core.rpgm_mz_extraction_writing as rpgm_mz_extraction_writing
-import src.core.rpgm_vx_ace_extraction_writing as rpgm_vx_ace_extraction_writing
-import src.core.single_txt_tranlsation as single_txt_tranlsation
-import src.core.translated_txt_lib as translated_txt_lib
-from src.utils.global_data import GlobalData
-from src.utils.utils import get_projects_list, print_info, to_int, validate_index
+import app.controllers.json_translation as json_translation
+import app.controllers.renpy_translation as renpy_translation
+import app.controllers.renpy_update as renpy_update
+import app.controllers.rpgm_mv_extraction_writing as rpgm_mv_extraction_writing
+import app.controllers.rpgm_mz_extraction_writing as rpgm_mz_extraction_writing
+import app.controllers.rpgm_vx_ace_extraction_writing as rpgm_vx_ace_extraction_writing
+import app.controllers.single_txt_tranlsation as single_txt_tranlsation
+import app.controllers.translated_txt_lib as translated_txt_lib
+from app.utils.global_data import GlobalData
+from app.utils.utils import get_projects_list, print_info, to_int, validate_index
 
 
 def start_main(first_select=True):
@@ -55,46 +53,46 @@ def start_main(first_select=True):
 
     match _inp:
         case "" | "\r" | "\n":
-            sys.exit()
+            exit()
         case "1":
             # 选择renpy项目文件夹
             # _curr_renpy_project = __get_renpy_project()
-            # if _curr_renpy_project in (None, ""):
+            # if not _curr_renpy_project:
             # start_main()
             # else:
             renpy_translation.start()
         case "2":
             # 选择renpy项目文件夹
             # _curr_renpy_project = __get_renpy_project()
-            # if _curr_renpy_project in (None, ""):
+            # if not _curr_renpy_project:
             #     start_main()
             # else:
             renpy_update.start()
         case "3":
             # 选择rpgm翻译文件
             _curr_rpgm_project = __get_rpgm_project()
-            if _curr_rpgm_project in (None, ""):
+            if not _curr_rpgm_project:
                 start_main()
             else:
                 rpgm_mz_extraction_writing.start(_curr_rpgm_project)
         case "4":
             # 选择rpgm翻译文件
             _curr_rpgm_project = __get_rpgm_project()
-            if _curr_rpgm_project in (None, ""):
+            if not _curr_rpgm_project:
                 start_main()
             else:
                 rpgm_mv_extraction_writing.start(_curr_rpgm_project)
         case "5":
             # 选择rpgm翻译文件
             _curr_rpgm_project = __get_rpgm_project()
-            if _curr_rpgm_project in (None, ""):
+            if not _curr_rpgm_project:
                 start_main()
             else:
                 rpgm_vx_ace_extraction_writing.start(_curr_rpgm_project)
         case "6":
             # 选择rpgm翻译文件
             _curr_rpgm_project = __get_rpgm_project("JSON")
-            if _curr_rpgm_project in (None, ""):
+            if not _curr_rpgm_project:
                 start_main()
             else:
                 json_translation.start(_curr_rpgm_project)
@@ -107,8 +105,12 @@ def start_main(first_select=True):
 
 
 def __get_rpgm_project(
-    select="", first_select=True, *, projects_list=None
-) -> Optional[str]:
+    select="",
+    first_select=True,
+    *,
+    projects_list=None,
+    prompt="",
+) -> str:
     """
     获取当前要操作的rpgm翻译文件路径
     """
@@ -128,9 +130,15 @@ def __get_rpgm_project(
                 "工作区无项目，请新建一个项目，输入项目名称及版本号（例：Test_v0.1）或回车返回主菜单："
             ).strip()
             if _inp in ("", "\r", "\n"):
-                return None
-            print_info(f"当前RPGM翻译项目：{_inp}.json")
-            return f"{_inp}.json"
+                return ""
+
+            filename = f"{_inp}.json"
+            # 创建新文件
+            GlobalData.rpgm_project_folder_abspath.joinpath(filename).touch(
+                exist_ok=True
+            )
+            print_info(f"当前RPGM翻译项目：{filename}")
+            return filename
 
         print_msg = """===========================================================================================
 工作区现有项目如下：
@@ -146,16 +154,28 @@ def __get_rpgm_project(
 
     # 回车返回主界面
     if _inp in ("", "\r", "\n"):
-        return None
+        return ""
 
     if _inp == "0":
         _inp = input(
             "请新建一个项目，输入项目名称及版本号（例：Test_v0.1）或回车返回主菜单："
         ).strip()
         if _inp in ("", "\r", "\n"):
-            return None
-        print_info(f"当前RPGM翻译项目：{_inp}.json")
-        return f"{_inp}.json"
+            return ""
+
+        filename = f"{_inp}.json"
+        while filename in projects_list:
+            _inp = input(
+                "项目已存在，请重新输入项目名称及版本号或回车返回主菜单："
+            ).strip()
+            if _inp in ("", "\r", "\n"):
+                return ""
+            filename = f"{_inp}.json"
+
+        # 创建新文件
+        GlobalData.rpgm_project_folder_abspath.joinpath(filename).touch(exist_ok=True)
+        print_info(f"当前RPGM翻译项目：{filename}")
+        return filename
 
     # 索引
     index = to_int(_inp) - 1
@@ -169,7 +189,7 @@ def __get_rpgm_project(
 
 def __get_renpy_project(
     select="", first_select=True, *, projects_list=None
-) -> Optional[str]:
+) -> str:
     """
     选择当前要操作的ren\'Py项目名称，若不存在则新建一个
     """
@@ -184,8 +204,11 @@ def __get_renpy_project(
                 "Ren'Py工作区无项目，请新建一个项目，输入项目名称及版本号（例：Test_v0.1）或回车返回主菜单："
             ).strip()
             if _inp in ("", "\r", "\n"):
-                return None
-            os.makedirs(os.path.join(GlobalData.RENPY_PROJECT_PARENT_FOLDER, _inp))
+                return ""
+
+            GlobalData.renpy_project_folder_abspath.joinpath(_inp).mkdir(
+                parents=True, exist_ok=True
+            )
             print_info(f"当前Ren'Py翻译项目：{_inp}")
             return _inp
 
@@ -202,15 +225,25 @@ def __get_renpy_project(
         ).strip()
 
     if _inp in ("", "\r", "\n"):
-        return None
+        return ""
 
     if _inp == "0":
         _inp = input(
             "请新建一个项目，输入项目名称及版本号（例：Test_v0.1）或回车返回主菜单："
         ).strip()
         if _inp in ("", "\r", "\n"):
-            return None
-        os.makedirs(os.path.join(GlobalData.RENPY_PROJECT_PARENT_FOLDER, _inp))
+            return ""
+
+        while _inp in projects_list:
+            _inp = input(
+                "项目已存在，请重新输入项目名称及版本号或回车返回主菜单："
+            ).strip()
+            if _inp in ("", "\r", "\n"):
+                return ""
+
+        GlobalData.renpy_project_folder_abspath.joinpath(_inp).mkdir(
+            parents=True, exist_ok=True
+        )
         print_info(f"当前Ren'Py翻译项目：{_inp}")
         return _inp
 

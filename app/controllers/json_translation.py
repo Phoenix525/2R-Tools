@@ -5,18 +5,18 @@
 @Date: 2020-08-04 23:33:35
 """
 
-import os
-import sys
+from gc import collect
+from sys import exit
 
 import main
-from src.core.interpreter import Interpreter
-from src.utils.global_data import GlobalData
-from src.utils.utils import (
+from app.controllers.interpreter import Interpreter
+from app.utils.global_data import GlobalData
+from app.utils.utils import (
     match_lang,
     print_info,
     print_warn,
     read_json,
-    waiit_key_or_enter,
+    update_phoenix_mark,
     write_json,
 )
 
@@ -28,7 +28,7 @@ __interpreter: Interpreter = None
 # 当前rpgm项目名称
 __curr_rpgm_project_name: str = ""
 # 当前rpgm翻译文件的绝对路径
-__curr_rpgm_project_path: str = ""
+__curr_rpgm_project_path = ""
 
 
 def start(project_name: str):
@@ -39,9 +39,7 @@ def start(project_name: str):
     global __curr_rpgm_project_name, __curr_rpgm_project_path
 
     __curr_rpgm_project_name = project_name
-    __curr_rpgm_project_path = os.path.join(
-        GlobalData.RPGM_PROJECT_PARENT_FOLDER, project_name
-    )
+    __curr_rpgm_project_path = GlobalData.rpgm_project_folder_abspath / project_name
 
     print("""
 ===========================================================================================
@@ -52,16 +50,39 @@ def start(project_name: str):
 """)
 
     no_skip = __choose_option()
+
+    #  初始化全局变量数据，避免数据干扰
+    init_global_datas()
+
     if not no_skip:
         main.start_main()
         return
 
-    inp = waiit_key_or_enter("按任意键返回主菜单或回车退出程序：")
-    if inp:
-        sys.exit()
+    inp = input("按任意键返回主菜单或回车退出程序：").strip()
+    if inp in ("", "\r", "\n"):
+        exit()
     else:
         # 返回主菜单
         main.start_main()
+
+
+def init_global_datas():
+    """
+    初始化全局变量数据
+    """
+
+    global \
+        __game_txt_cache, \
+        __interpreter, \
+        __curr_rpgm_project_name, \
+        __curr_rpgm_project_path
+
+    __game_txt_cache = None
+    __interpreter = None
+    __curr_rpgm_project_name = ""
+    __curr_rpgm_project_path = ""
+
+    collect()
 
 
 def __initialize():
@@ -92,18 +113,23 @@ def __translate(filter_lang=""):
     _count = 0
     _bak = True
     for k, v in __game_txt_cache.items():
-        if not isinstance(k, str) or not isinstance(v, str):  # 键或值非字串的跳过
+        # 键或值非字串的跳过
+        if not isinstance(k, str) or not isinstance(v, str):
             continue
+
         v = v.strip()
-        if v.upper() == GlobalData.none_filter:  # 无需显示的行，不翻译
+        v_upper = v.upper()
+        # 无需显示的行，不翻译
+        if v_upper == GlobalData.none_filter:
             continue
-        if v.upper() in GlobalData.pass_filter:  # 不翻译文本
+        # 不翻译文本
+        if v_upper in GlobalData.pass_filter:
             continue
-        if (
-            GlobalData.MARK_TODO in v.upper() and v.upper() != GlobalData.MARK_TODO
-        ):  # 已经有翻译但不确定的不翻译
+        # 已经有翻译但不确定的不翻译
+        if GlobalData.MARK_TODO in v_upper and v_upper != GlobalData.MARK_TODO:
             continue
-        if v != "" and v.upper() != GlobalData.MARK_TODO:  # 已翻译的
+        # 已翻译的
+        if v and v_upper != GlobalData.MARK_TODO:
             continue
 
         # 将字段按连字符切割成两份。为以防万一，只从左往右切割1次，前面的是md5值，后面是文本
@@ -114,7 +140,7 @@ def __translate(filter_lang=""):
             continue
 
         __game_txt_cache[k] = __interpreter.translate_txt(txt)
-        __update_phoenix_mark(True)
+        update_phoenix_mark(__game_txt_cache, True)
         _count += 1
         if _count >= GlobalData.json_max_cache:
             __wirte_in_file(_bak)
@@ -155,7 +181,7 @@ def __add_todo(_filter=""):
         __game_txt_cache[k] = GlobalData.MARK_TODO
 
     if _count > 0:
-        __game_txt_cache[GlobalData.KEY_PHOENIX] = True
+        update_phoenix_mark(__game_txt_cache, True)
     print_info(f"空值字段扫描结果为：{_count}\n")
 
     __wirte_in_file()
@@ -196,7 +222,7 @@ def __add_pass(_filter="ru"):
         __game_txt_cache[k] = GlobalData.MARK_TODO + "_" + GlobalData.pass_filter[0]
 
     if _count > 0:
-        __game_txt_cache[GlobalData.KEY_PHOENIX] = True
+        update_phoenix_mark(__game_txt_cache, True)
     print_info(f"指定字段扫描结果为：{_count}\n")
 
     __wirte_in_file()
@@ -217,17 +243,9 @@ def __read_game_txt() -> bool:
     __game_txt_cache = cache
 
     # 将更新标记设置为False
-    __update_phoenix_mark()
+    update_phoenix_mark(__game_txt_cache)
 
     return True
-
-
-def __update_phoenix_mark(update=False):
-    """
-    切换更新标记
-    """
-
-    __game_txt_cache[GlobalData.KEY_PHOENIX] = update
 
 
 def __wirte_in_file(bak=True):
@@ -237,11 +255,11 @@ def __wirte_in_file(bak=True):
     :param bak: 启用备份
     """
 
-    if not __game_txt_cache[GlobalData.KEY_PHOENIX]:
+    if not __game_txt_cache.get(GlobalData.KEY_PHOENIX, False):
         print(f"{__curr_rpgm_project_name} 未发生更改，无需写入！\n")
         return
 
-    __update_phoenix_mark()
+    update_phoenix_mark(__game_txt_cache)
     write_json(__curr_rpgm_project_path, __game_txt_cache, backup=bak)
 
 

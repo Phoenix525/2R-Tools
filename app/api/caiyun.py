@@ -5,10 +5,10 @@ from json import dumps, loads
 
 from requests import request
 
-from src.api.base_translation import BaseTranslation
-from src.exception.tool_exception import ToolException
-from src.utils.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
-from src.utils.utils import (
+from app.api.base_translation import BaseTranslation
+from app.exception.tool_exception import ToolException
+from app.utils.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
+from app.utils.utils import (
     acquire_token,
     enpun_2_zhpun,
     print_err,

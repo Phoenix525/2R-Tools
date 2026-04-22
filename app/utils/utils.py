@@ -7,31 +7,28 @@
 工具集
 """
 
-import ast
-import base64
-import copy
-import getpass
-import hashlib
-import json
-import os
-import pathlib
-import re
-import shutil
-import sys
-import time
-import uuid
+from ast import literal_eval
+from base64 import b64encode
 from configparser import ConfigParser
+from copy import deepcopy
 from datetime import datetime
-from hashlib import md5
+from getpass import getpass
+from hashlib import md5, sha256
 from itertools import cycle
-from typing import Optional
+from json import JSONDecodeError, dump, load
+from pathlib import Path
+from re import S, compile, findall, match, sub
+from shutil import copy
+from sys import platform, stdin
+from time import sleep, time
+from uuid import UUID
 
-import chardet
+from chardet import detect
+from py3langid import classify
 
-# import pwinput
-import py3langid
+from app.utils.global_data import GlobalData
 
-from src.utils.global_data import GlobalData
+# from pwinput import pwinput
 
 
 def print_debug(value: str):
@@ -100,7 +97,7 @@ def merge_dicts(dicts: list[dict], rewrite=True) -> dict:
         dicts = dicts.reverse()
 
     # 深拷贝首个字典作为新字典的初始字典，避免影响原有字典
-    merged_dict = copy.deepcopy(dicts[0])
+    merged_dict = deepcopy(dicts[0])
     for idx, _dict in enumerate(dicts):
         if idx == 0 or not _dict or not isinstance(_dict, dict):
             continue
@@ -110,7 +107,7 @@ def merge_dicts(dicts: list[dict], rewrite=True) -> dict:
     return merged_dict
 
 
-def del_key_from_dict(key: str, datas=None) -> Optional[dict]:
+def del_key_from_dict(key: str, datas=None):
     """
     删除字典中指定key元素
 
@@ -126,78 +123,79 @@ def del_key_from_dict(key: str, datas=None) -> Optional[dict]:
         return datas
 
     # 深拷贝字典，避免影响到原字典
-    _dict = copy.deepcopy(datas)
+    _dict = deepcopy(datas)
     del _dict[key]
     return _dict
 
 
-def read_json(file_path: str) -> Optional[list | dict]:
+def read_json(file_path: str | Path) -> list | dict | None:
     """
     读取JSON文件，并将其转换成python对象
 
     :param _file: 文件的绝对路径
     """
 
-    filename = os.path.basename(file_path)
-    if not os.path.exists(file_path):
-        print_warn(f"{filename}的路径不存在！")
+    file = Path(file_path)
+    if not file.exists():
+        print_warn(f"{file.name}的路径不存在！")
         return None
-    if not os.path.isfile(file_path):
-        print_warn(f"{filename}不是文件")
+    if not file.is_file():
+        print_warn(f"{file.name}不是文件！")
         return None
 
     try:
         with open(file_path, "r", encoding=get_file_encoding(file_path)) as f:
-            json_data = json.load(f)
-        print_debug(f"{filename}是标准JSON文件！")
+            json_data = load(f)
         return json_data
-    except json.JSONDecodeError:
-        print_err(f"{filename}不是标准JSON文件！")
+    except JSONDecodeError:
+        print_err(f"{file.name}不是标准JSON文件！")
         return None
 
 
-def write_json(_file: str, datas=None, *, indent=4, backup=True):
+def write_json(file_abspath: str | Path, datas=None, *, indent=4, backup=True):
     """
     将python对象转换成JSON格式并写入文件
 
-    :param _file: 文件的绝对路径
+    :param file_abspath: 文件的绝对路径
     :param datas: 要写入json的数据
     :param indent: JSON每个层级的缩进长度
     :param backup: 是否备份原文件。默认备份
     """
 
-    if datas is None:
-        print_warn(f"要写入JSON文件的数据不存在：{_file}")
+    if not datas:
+        print_warn(f"要写入JSON文件的数据不存在：{file_abspath}")
         return
 
-    file_is_exist = os.path.exists(_file)
-    _path, _filename = os.path.split(_file)
+    file_abspath = Path(file_abspath)
+    file_is_exist = file_abspath.exists()
     # 如果路径存在
     if file_is_exist:
         # 如果不是文件路径，返回
-        if not os.path.isfile(_file):
-            print_warn(f"路径非文件：{_file}")
+        if not file_abspath.is_file():
+            print_warn(f"路径非文件：{file_abspath}")
             return
         # 如果文件需要备份
         if backup:
-            copy_file(_file, os.path.join(_path, "bak"))
+            copy_file(file_abspath, file_abspath.parent / "bak")
 
     try:
-        with open(_file, "w", encoding=get_file_encoding(_file)) as fp:
+        with open(file_abspath, "w", encoding=get_file_encoding(file_abspath)) as fp:
             if file_is_exist:
-                print(f"正在更新 {_filename} 中……")
+                print(f"正在更新 {file_abspath.name} 中……")
             else:
-                print(f"正在创建 {_filename} 中……")
-            json.dump(datas, fp, indent=indent, skipkeys=True, ensure_ascii=False)
+                print(f"正在创建 {file_abspath.name} 中……")
+            dump(datas, fp, indent=indent, skipkeys=True, ensure_ascii=False)
             if file_is_exist:
-                print_info(f"{_filename} 已更新！\n")
+                print_info(f"{file_abspath.name} 已更新！")
             else:
-                print_info(f"{_filename} 已创建！\n")
+                print_info(f"{file_abspath.name} 已创建！")
     except Exception as e:
-        print_err(f"write_json()写入{_filename}异常：{str(e)}")
+        print_err(f"write_json()写入{file_abspath.name}异常：{str(e)}")
 
 
-def copy_file(source_file: str, target_dir: str, time_mark=True):
+def copy_file(
+    source_file_abspath: str | Path, target_dir_abspath: str | Path, time_mark=True
+):
     """
     将文件拷贝到指定路径。
 
@@ -206,24 +204,21 @@ def copy_file(source_file: str, target_dir: str, time_mark=True):
     :param time_mark: 是否在文件名后面加上拷贝日期时间。默认添加
     """
 
-    if not os.path.isfile(source_file) or not os.path.isdir(target_dir):
+    source_file_abspath = Path(source_file_abspath)
+    target_dir_abspath = Path(target_dir_abspath)
+    if not source_file_abspath.is_file() or not target_dir_abspath.is_dir():
         return
 
-    pathlib.Path(target_dir).mkdir(parents=True, exist_ok=True)
+    target_dir_abspath.mkdir(parents=True, exist_ok=True)
 
-    new_file = source_file
+    new_file_abspath = target_dir_abspath
     if time_mark:
-        source_file_path = pathlib.Path(source_file)
-        new_file = (
-            source_file_path.stem
-            + "_"
-            + datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-            + source_file_path.suffix
-        )
-    shutil.copy(source_file, os.path.join(target_dir, new_file))
+        time = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+        new_file_abspath = replace_complex_stem(source_file_abspath, f"_{time}")
+    copy(str(source_file_abspath), str(new_file_abspath))
 
 
-def copy_directory(source_path: str, target_path: str):
+def copy_directory(source_abspath: str | Path, target_abspath: str | Path):
     """
     拷贝目录和文件
 
@@ -231,26 +226,26 @@ def copy_directory(source_path: str, target_path: str):
     :param target_path: 目标路径
     """
 
-    src_path = pathlib.Path(source_path)
-    if not src_path.exists():
-        print_err(f"待拷贝路径不存在：{src_path} ")
+    source_abspath = Path(source_abspath)
+    if not source_abspath.exists():
+        print_err(f"待拷贝路径不存在：{source_abspath} ")
         return
 
-    dest_path = pathlib.Path(target_path)
+    target_abspath = Path(target_abspath)
     # 确保目标路径存在
-    dest_path.mkdir(parents=True, exist_ok=True)
+    target_abspath.mkdir(parents=True, exist_ok=True)
 
     # 待拷贝对象是文件
-    if src_path.is_file():
-        shutil.copy(src_path, dest_path)
+    if source_abspath.is_file():
+        copy(str(source_abspath), str(target_abspath))
         return
 
-    for item in src_path.iterdir():
-        target = dest_path / item.name
+    for item in source_abspath.iterdir():
+        target = target_abspath / item.name
         if item.is_dir():
             copy_directory(item, target)
         else:
-            shutil.copy(item, target)
+            copy(str(item), str(target))
 
 
 def to_int(val: any) -> int:
@@ -290,7 +285,7 @@ def to_boolean(val: any) -> bool:
     """
 
     try:
-        _bool = ast.literal_eval(val)
+        _bool = literal_eval(val)
         return _bool
     except (ValueError, SyntaxError):
         print_err(f"传入的值{val} 非布尔字符串！")
@@ -303,7 +298,7 @@ def is_uuid_v1(val: str) -> bool:
     """
     # ^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}(?::(?:fx|adm))?$
     try:
-        uuid.UUID(val)
+        UUID(val)
         return True
     except ValueError:
         return False
@@ -332,7 +327,7 @@ def is_all_digits(string: str, length: int) -> bool:
     if not length:
         length = len(string)
     pattern = r"^\d{" + str(length) + r"}$"
-    return bool(re.match(pattern, string))
+    return bool(match(pattern, string))
 
 
 def is_letters_and_digits(string: str, length: int) -> bool:
@@ -345,7 +340,7 @@ def is_letters_and_digits(string: str, length: int) -> bool:
     if not length:
         length = len(string)
     pattern = r"^[A-Za-z0-9]{" + str(length) + r"}$"
-    return bool(re.match(pattern, string))
+    return bool(match(pattern, string))
 
 
 def validate_lang(txt: str) -> str:
@@ -356,7 +351,7 @@ def validate_lang(txt: str) -> str:
     if txt.strip() == "":
         return "auto"
 
-    return py3langid.classify(txt)[0]
+    return classify(txt)[0]
 
 
 def match_lang(txt: str, lang: str) -> bool:
@@ -388,7 +383,7 @@ def match_lang(txt: str, lang: str) -> bool:
             continue
 
         try:
-            if py3langid.classify(txt)[0] == lang:
+            if classify(txt)[0] == lang:
                 return True
         except Exception:
             continue
@@ -471,7 +466,7 @@ def enpun_2_zhpun(txt: str, no_blank=False) -> str:
     def _obj2():
         return next(cycle(["“", "”"]))
 
-    txt = re.sub(r"[\"]", _obj2(), txt)
+    txt = sub(r"[\"]", _obj2(), txt)
 
     # 处理常用标点符号
     # E_pun = u',.!?:;[]()<>'
@@ -495,8 +490,8 @@ def has_upper_letter(txt: str) -> bool:
     if txt.strip() == "":
         return False
 
-    my_re = re.compile(r"[A-Z]", re.S)
-    res = re.findall(my_re, txt)
+    my_re = compile(r"[A-Z]", S)
+    res = findall(my_re, txt)
     if not res:
         return False
 
@@ -511,8 +506,8 @@ def has_lower_letter(txt: str) -> bool:
     if txt.strip() == "":
         return False
 
-    my_re = re.compile(r"[a-z]", re.S)
-    res = re.findall(my_re, txt)
+    my_re = compile(r"[a-z]", S)
+    res = findall(my_re, txt)
     if not res:
         return False
 
@@ -546,14 +541,10 @@ def remove_escapes(txt: str) -> str:
 
 def update_phoenix_mark(datas=None, update=False):
     """
-    切换JSON文本更新标记
+    切换JSON文本更新标记。用于判断是否要对json文件进行更新写入。
     """
 
-    if (
-        datas is None
-        or not isinstance(datas, dict)
-        or GlobalData.KEY_PHOENIX not in datas
-    ):
+    if datas is None or not isinstance(datas, dict):
         return
 
     datas[GlobalData.KEY_PHOENIX] = update
@@ -568,14 +559,14 @@ def switch_change_mark(base=False, change=False) -> bool:
     return change
 
 
-def get_file_encoding(file_path: str) -> str:
+def get_file_encoding(file_path: str | Path) -> str:
     """
     获取文本编码
     """
     try:
         with open(file_path, "rb") as f:
             raw_data = f.read()
-            result = chardet.detect(raw_data)
+            result = detect(raw_data)
             encoding = result["encoding"]
 
         # Check for BOM
@@ -593,61 +584,59 @@ def get_file_encoding(file_path: str) -> str:
     return encoding
 
 
-def validate_renpy_trans_file(file_path: str) -> bool:
+def validate_renpy_trans_file(file_path: str | Path) -> bool:
     """
     判断指定文件是否是Ren'Py翻译文件。
 
     :param file_path: 文件绝对路径
     """
 
-    if not os.path.exists(file_path):
+    file_path = Path(file_path)
+    if not file_path.exists():
         return False
 
-    f = os.path.split(file_path)[-1]
     # 只处理可以被renPy直接读取的后缀，其他后缀的文件即便内容是标准renPy翻译文本，也不进行处理
-    if not f.endswith((".rpy", ".rpym")):
+    if file_path.suffix not in (".rpy", ".rpym"):
         return False
 
     with open(file_path, "r", encoding=get_file_encoding(file_path)) as inp:
-        # 只需要读取开头部分用来判断即可
-        lines = inp.read(1024)
-    for line in lines:
-        # 如果能匹配到translate标识符，则返回True
-        if GlobalData.PATTERN_IDENTIFIER.match(line) is not None:
-            return True
+        for line in inp:
+            # 如果能匹配到translate标识符，则返回True
+            if GlobalData.pattern_identifier.match(line) is not None:
+                return True
     return False
 
 
-def get_projects_list(_type: str) -> list[str]:
+def get_projects_list(engine_type: str) -> list[str]:
     """
     获取现有项目的名称列表，否则返回空列表
 
-    :param _type: 获取哪种引擎的列表
+    :param engine_type: 引擎种类
     """
 
-    if _type == "renpy":
+    if engine_type == "renpy":
         # 判断ren'Py项目工作区是否存在，不存在则新建一个，并返回空列表
-        _path = pathlib.Path(GlobalData.RENPY_PROJECT_PARENT_FOLDER)
-        if not _path.exists():
-            _path.mkdir(parents=True)
+        if not GlobalData.renpy_project_folder_abspath.exists():
+            GlobalData.renpy_project_folder_abspath.mkdir(parents=True)
             return []
 
         # 获取所有翻译文件夹
-        folders = [item.name for item in _path.iterdir() if item.is_dir()]
+        folders = [
+            item.name
+            for item in GlobalData.renpy_project_folder_abspath.iterdir()
+            if item.is_dir()
+        ]
         return folders
 
-    elif _type == "rpgm":
+    elif engine_type == "rpgm":
         # 判断rpgm项目工作区是否存在，不存在则新建一个，并返回空列表
-        _path = pathlib.Path(GlobalData.RPGM_PROJECT_PARENT_FOLDER)
-        if not _path.exists():
-            _path.mkdir(parents=True)
+        if not GlobalData.rpgm_project_folder_abspath.exists():
+            GlobalData.rpgm_project_folder_abspath.mkdir(parents=True)
             return []
 
         # 获取所有JSON文件
         files = [
-            item.name
-            for item in _path.iterdir()
-            if item.is_file() and item.name.endswith(".json")
+            item.name for item in GlobalData.rpgm_project_folder_abspath.glob("*.json")
         ]
         return files
 
@@ -661,8 +650,8 @@ def hashlib_256(res: str) -> str:
 
     :param res: 要加密的字串
     """
-    m = hashlib.sha256(bytes(res.encode(encoding="utf-8"))).digest()
-    result = base64.b64encode(m).decode(encoding="utf-8")
+    m = sha256(bytes(res.encode(encoding="utf-8"))).digest()
+    result = b64encode(m).decode(encoding="utf-8")
     return result
 
 
@@ -692,7 +681,7 @@ def acquire_token(qps=1, tokens=1, last_refill=0) -> tuple[int | float]:
     :param last_refill: 最新补充令牌时间
     """
 
-    now = time.time()
+    now = time()
     # 补充令牌
     elapsed = now - last_refill
     tokens = min(qps, tokens + elapsed * qps)
@@ -700,7 +689,7 @@ def acquire_token(qps=1, tokens=1, last_refill=0) -> tuple[int | float]:
 
     if tokens < 1:
         wait_time = (1 - tokens) / qps
-        time.sleep(wait_time)
+        sleep(wait_time)
         tokens = 0
     else:
         tokens -= 1
@@ -708,22 +697,30 @@ def acquire_token(qps=1, tokens=1, last_refill=0) -> tuple[int | float]:
     return tokens, last_refill
 
 
-def read_config(config_path="") -> Optional[ConfigParser]:
+def read_config(
+    config_abspath: str | Path = GlobalData.config_abspath,
+) -> ConfigParser | None:
     """
     读取项目配置文件
+
+    :param config_abspath: 配置文件绝对路径
     """
 
-    if not config_path:
-        config_path = GlobalData.CONFIG_ABSPATH
-    if not os.path.exists(config_path) or not os.path.isfile(config_path):
+    config_abspath = Path(config_abspath)
+    if not config_abspath.exists() or not config_abspath.is_file():
         return None
     conf = ConfigParser()  # 调用读取配置模块中的类
     conf.optionxform = lambda option: option
-    conf.read(config_path, encoding=get_file_encoding(config_path))
+    conf.read(config_abspath, encoding=get_file_encoding(config_abspath))
     return conf
 
 
-def write_config(section: str, keys=None, add=True) -> bool:
+def write_config(
+    section: str,
+    keys=None,
+    add=True,
+    config_abspath: str | Path = GlobalData.config_abspath,
+) -> bool:
     """
     写入项目配置文件
 
@@ -732,7 +729,7 @@ def write_config(section: str, keys=None, add=True) -> bool:
     :param add: 新增/修改配置 or 删减配置
     """
 
-    if not section or not isinstance(section, str):
+    if not isinstance(section, str) or not section.strip():
         return False
     if not keys or not isinstance(keys, dict):
         return False
@@ -755,12 +752,8 @@ def write_config(section: str, keys=None, add=True) -> bool:
         else:
             conf.remove_option(section, key)
 
-    copy_file(GlobalData.CONFIG_ABSPATH, GlobalData.BASE_ABSPATH)
-    with open(
-        GlobalData.CONFIG_ABSPATH,
-        "w",
-        encoding=get_file_encoding(GlobalData.CONFIG_ABSPATH),
-    ) as f:
+    copy_file(config_abspath, GlobalData.base_abspath)
+    with open(config_abspath, "w", encoding=get_file_encoding(config_abspath)) as f:
         conf.write(f)
     return True
 
@@ -774,11 +767,11 @@ def get_password_with_mask(prompt="请输入密码: ") -> str:
 
     # 掩码显示
     # todo 存在输入长度超过命令行窗口宽度自动换行后无法退格到上一行的问题，会导致命令行窗口卡死，只能关闭重启
-    # inp = pwinput.pwinput(prompt, mask="*")
+    # inp = pwinput(prompt, mask="*")
     # return inp.strip()
 
     # 空白显示，这个方法不会遇到掩码显示的超长自动换行的问题，但不够直观
-    inp = getpass.getpass(prompt)
+    inp = getpass(prompt)
     return inp.strip()
 
 
@@ -798,8 +791,10 @@ def waiit_key_or_enter(prompt="按任意键继续或按回车退出程序：") -
 def get_key() -> str:
     """
     跨平台获取单个按键（Windows用msvcrt，Unix-like用termios）
+
+    todo 存在阻塞问题，暂时弃用
     """
-    if sys.platform == "win32":
+    if platform == "win32":
         import msvcrt
 
         return msvcrt.getch().decode("utf-8", errors="ignore")
@@ -807,14 +802,67 @@ def get_key() -> str:
         import termios
         import tty
 
-        fd = sys.stdin.fileno()
+        fd = stdin.fileno()
         old_settings = termios.tcgetattr(fd)
         try:
             tty.setraw(fd)
-            ch = sys.stdin.read(1)
+            ch = stdin.read(1)
         finally:
             termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
         return ch
+
+
+def iter_files(
+    directory: str | Path,
+    *,
+    create_dir: bool = False,
+    target_abspath: str | Path = None,
+):
+    """
+    生成器，逐个返回文件
+    """
+
+    directory = Path(directory)
+    if target_abspath:
+        target_abspath = Path(target_abspath)
+
+    for file in directory.rglob("*"):
+        if file.is_file():
+            target_path: Path = None
+            if create_dir:
+                # 保持相对路径结构
+                relative_path = file.parent.relative_to(directory)
+                target_path = target_abspath / relative_path
+                target_path.mkdir(parents=True, exist_ok=True)
+            yield file, target_path
+
+
+def replace_complex_stem(source_path: Path, new_stem: str) -> Path:
+    """
+    精确替换文件名中最核心的stem部分，并保留所有扩展名
+    """
+
+    # 仅文件需要获取后缀名
+    if source_path.is_file():
+        stem_with_suffix = get_file_stem(source_path.name)
+        # 用新的stem和原来的所有扩展名组成新文件名
+        new_name = stem_with_suffix[0] + new_stem + "." + stem_with_suffix[1]
+    else:
+        new_name = source_path.name + new_stem
+    # 用with_name进行整体替换
+    return source_path.with_name(new_name)
+
+
+def get_file_stem(file_name_suffix: str) -> list[str] | tuple[str]:
+    """
+    增加多个后缀名的文件的判断，正确获取不带后缀名的文件名及后缀。
+
+    :param file_name_suffix: 带后缀名的文件名
+    """
+    if file_name_suffix.endswith((".tar.xz", ".tar.bz2", ".tar.gz")):
+        return (file_name_suffix[:-7], file_name_suffix[-6:])
+    else:
+        return file_name_suffix.rsplit(".", maxsplit=1)
 
 
 def get_config():
@@ -847,7 +895,7 @@ def get_config():
     if json_max_cache > 0:
         GlobalData.json_max_cache = json_max_cache
 
-    GlobalData.rpg_game_default_txt = conf.get(
+    GlobalData.RPGM_GAME_DEFAULT_TXT = conf.get(
         "rpgm_extraction_writing", "rpg_game_default_txt"
     )
     GlobalData.rpg_white_list = conf.get(

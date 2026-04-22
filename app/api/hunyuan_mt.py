@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import os
-import time
 
-import torch
+from pathlib import Path
+from time import time
+
+from torch import bfloat16, float16
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
-from src.api.base_translation import BaseTranslation
-from src.utils.utils import (
+from app.api.base_translation import BaseTranslation
+from app.utils.utils import (
     print_err,
     print_info,
     print_warn,
@@ -146,7 +147,7 @@ class HunYuanMTTranslation(BaseTranslation):
         检查模组路径是否存在
         """
 
-        if not os.path.exists(self.__model_path):
+        if not Path(self.__model_path).exists():
             print_err("TranslationAPIErr", "模组调用失败：路径不存在Hunyuan-MT模型！")
             return False
         return True
@@ -162,7 +163,7 @@ class HunYuanMTTranslation(BaseTranslation):
 
         print_warn("请确保已关闭其他占用大量显存及内存的程序，否则可能加载失败!")
         print("正在加载模型和分词器……")
-        start_time = time.time()
+        start_time = time()
 
         try:
             # 加载分词器
@@ -196,7 +197,7 @@ class HunYuanMTTranslation(BaseTranslation):
                         load_in_4bit=True,
                         bnb_4bit_use_double_quant=True,
                         bnb_4bit_quant_type="nf4",
-                        bnb_4bit_compute_dtype=torch.bfloat16,
+                        bnb_4bit_compute_dtype=bfloat16,
                     )
                 case _:  # 完整加载
                     config = None
@@ -205,7 +206,7 @@ class HunYuanMTTranslation(BaseTranslation):
             self.__model = AutoModelForCausalLM.from_pretrained(
                 self.__model_path,
                 device_map="auto",  # 自动分配GPU/CPU资源
-                dtype=torch.float16,
+                dtype=float16,
                 quantization_config=config,
                 trust_remote_code=True,
             )

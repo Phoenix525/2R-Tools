@@ -5,13 +5,13 @@
 @Date: 2020-08-10 23:33:35
 """
 
-import copy
-import sys
+from copy import deepcopy
+from sys import exit
 
 from prettytable import PrettyTable
 
-from src.utils.global_data import GlobalData
-from src.utils.utils import print_err, to_int, validate_index
+from app.utils.global_data import GlobalData
+from app.utils.utils import print_debug, print_err, to_int, validate_index
 
 # 翻译引擎表，接口名称务必要和GlobalData里一致
 APIS: dict[str, str] = (
@@ -125,7 +125,7 @@ class Interpreter:
         if not source_txt_dict or not isinstance(source_txt_dict, dict):
             return {}
 
-        tmp_source_txt = copy.deepcopy(source_txt_dict)
+        tmp_source_txt = deepcopy(source_txt_dict)
         for key, text in tmp_source_txt.items():
             print(f"原文：{text}")
 
@@ -232,64 +232,101 @@ class Interpreter:
         match self.__curr_api_name:
             # 腾讯翻译
             case "tencent":
-                from src.api.tencent import TencentTranslation
+                if not GlobalData.tencent_api:
+                    from app.api.tencent import TencentTranslation
 
-                self.__curr_api = TencentTranslation()
+                    GlobalData.tencent_api = TencentTranslation()
+                self.__curr_api = GlobalData.tencent_api
+
             # 阿里翻译
             case "alibaba":
-                from src.api.alibaba import ALiBaBaTranslation
+                print_debug(f"阿里API全局实例：{GlobalData.alibaba_api}")
+                if not GlobalData.alibaba_api:
+                    from app.api.alibaba import ALiBaBaTranslation
 
-                self.__curr_api = ALiBaBaTranslation()
+                    GlobalData.alibaba_api = ALiBaBaTranslation()
+                self.__curr_api = GlobalData.alibaba_api
+
             # 百度翻译
             case "baidu":
-                from src.api.baidu import BaiduTranslation
+                if not GlobalData.baidu_api:
+                    from app.api.baidu import BaiduTranslation
 
-                self.__curr_api = BaiduTranslation()
+                    GlobalData.baidu_api = BaiduTranslation()
+                self.__curr_api = GlobalData.baidu_api
+
             # 彩云小译
             case "caiyun":
-                from src.api.caiyun import CaiyunTranslation
+                if not GlobalData.caiyun_api:
+                    from app.api.caiyun import CaiyunTranslation
 
-                self.__curr_api = CaiyunTranslation()
+                    GlobalData.caiyun_api = CaiyunTranslation()
+                self.__curr_api = GlobalData.caiyun_api
+
             # 火山翻译
             case "huoshan":
-                from src.api.huoshan import HuoshanTranslation
+                if not GlobalData.huoshan_api:
+                    from app.api.huoshan import HuoshanTranslation
 
-                self.__curr_api = HuoshanTranslation()
+                    GlobalData.huoshan_api = HuoshanTranslation()
+                self.__curr_api = GlobalData.huoshan_api
+
             # 小牛翻译
             case "xiaoniu":
-                from src.api.xiaoniu import XiaoNiuTranslation
+                if not GlobalData.xiaoniu_api:
+                    from app.api.xiaoniu import XiaoNiuTranslation
 
-                self.__curr_api = XiaoNiuTranslation()
+                    GlobalData.xiaoniu_api = XiaoNiuTranslation()
+                self.__curr_api = GlobalData.xiaoniu_api
+
             # 讯飞翻译
             case "xunfei":
-                from src.api.xunfei import XunFeiTranslation
+                if not GlobalData.xunfei_api:
+                    from app.api.xunfei import XunFeiTranslation
 
-                self.__curr_api = XunFeiTranslation()
+                    GlobalData.xunfei_api = XunFeiTranslation()
+                self.__curr_api = GlobalData.xunfei_api
+
             # 有道智云
             case "youdao":
-                from src.api.youdao import YoudaoTranslation
+                if not GlobalData.youdao_api:
+                    from app.api.youdao import YoudaoTranslation
 
-                self.__curr_api = YoudaoTranslation()
+                    GlobalData.youdao_api = YoudaoTranslation()
+                self.__curr_api = GlobalData.youdao_api
+
             # DeepL翻译
             case "deepL":
-                from src.api.deepL import DeepLTranslation
+                if not GlobalData.deepL_api:
+                    from app.api.deepL import DeepLTranslation
 
-                self.__curr_api = DeepLTranslation()
+                    GlobalData.deepL_api = DeepLTranslation()
+                self.__curr_api = GlobalData.deepL_api
+
             # 谷歌翻译
             case "google":
-                from src.api.google import GoogleTranslation
+                if not GlobalData.google_api:
+                    from app.api.google import GoogleTranslation
 
-                self.__curr_api = GoogleTranslation()
+                    GlobalData.google_api = GoogleTranslation()
+                self.__curr_api = GlobalData.google_api
+
             # Ollama平台
             case "ollama":
-                from src.api.ollama import OllamaTranslation
+                if not GlobalData.ollama_api:
+                    from app.api.ollama import OllamaTranslation
 
-                self.__curr_api = OllamaTranslation()
+                    GlobalData.ollama_api = OllamaTranslation()
+                self.__curr_api = GlobalData.ollama_api
+
             # 腾讯Hunyuan-MT
             case "hunyuan_mt":
-                from src.api.hunyuan_mt import HunYuanMTTranslation
+                if GlobalData.hunyuan_mt_api:
+                    from app.api.hunyuan_mt import HunYuanMTTranslation
 
-                self.__curr_api = HunYuanMTTranslation()
+                    GlobalData.hunyuan_mt_api = HunYuanMTTranslation()
+                self.__curr_api = GlobalData.hunyuan_mt_api
+
             case _:
                 self.__curr_api = None
 
@@ -341,7 +378,7 @@ class Interpreter:
                     prin = "当前翻译引擎未启用，请重新输入正确序号或回车退出程序："
             _inp = input(prin).strip()
             if _inp in ("", "\r", "\n"):
-                sys.exit()
+                exit()
 
         _serial_inp = to_int(_inp)
         # 若序号不存在，重新选择
@@ -418,7 +455,7 @@ class Interpreter:
                 "语种列表中不存在该序号，请重新输入正确序号或回车退出程序："
             ).strip()
             if _inp in ("", "\r", "\n"):
-                sys.exit()
+                exit()
 
         # 输入的序号转换成整型
         _inp_serial = to_int(_inp) - 1

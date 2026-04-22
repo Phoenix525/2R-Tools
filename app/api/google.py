@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import google_trans_new
+from google_trans_new import google_translator
 
-from src.api.base_translation import BaseTranslation
-from src.utils.utils import (
+from app.api.base_translation import BaseTranslation
+from app.utils.utils import (
     acquire_token,
     enpun_2_zhpun,
     print_err,
@@ -28,7 +28,7 @@ class GoogleTranslation(BaseTranslation):
             to_langs=_GOOGLE_TO_LANGS,
         )
         # 翻译接口客户端
-        self.__translator: google_trans_new.google_translator = None
+        self.__translator: google_translator = None
 
         # 获取配置
         self.__get_config()
@@ -80,7 +80,7 @@ class GoogleTranslation(BaseTranslation):
         """
         if self._activated:
             # 初始化谷歌翻译
-            self.__translator = google_trans_new.google_translator()
+            self.__translator = google_translator()
         return self._activated
 
     def __get_config(self):

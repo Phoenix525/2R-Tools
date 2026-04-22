@@ -5,10 +5,10 @@
 @Date: 2020-08-10 23:33:35
 """
 
-import time
+from time import time
 
-from src.exception.tool_exception import ToolException
-from src.utils.utils import (
+from app.exception.tool_exception import ToolException
+from app.utils.utils import (
     get_password_with_mask,
     is_all_digits,
     is_letters_and_digits,
@@ -58,7 +58,7 @@ class BaseTranslation(object):
         # 当前令牌数，初始等于最大申请频率
         self._tokens: int = max_qps
         # 最新补充令牌时间
-        self._last_refill: float = time.time()
+        self._last_refill: float = time()
         # 单次请求最大字符数
         self._max_char: int = max_char
 

@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import time
 from hashlib import md5
 from http.client import HTTPConnection
 from json import loads
 from random import randint
+from time import sleep
 from urllib import parse
 
-from src.api.base_translation import BaseTranslation, ValidateStringsType
-from src.exception.tool_exception import ToolException
-from src.utils.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
-from src.utils.utils import (
+from app.api.base_translation import BaseTranslation, ValidateStringsType
+from app.exception.tool_exception import ToolException
+from app.utils.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
+from app.utils.utils import (
     acquire_token,
     enpun_2_zhpun,
     print_err,
@@ -116,7 +116,7 @@ class BaiduTranslation(BaseTranslation):
                     # 指数退避
                     wait = 2**attempt
                     print_info(f"{wait}秒后重试……")
-                    time.sleep(wait)
+                    sleep(wait)
                 else:
                     raise ToolException(
                         "APIRequestErr", f"错误代码：{err_code}，报错信息：{err_msg}"

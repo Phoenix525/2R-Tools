@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from ollama import ChatResponse, chat
+from app.api.ollama import ChatResponse, chat
 
-from src.api.base_translation import BaseTranslation
-from src.utils.utils import print_err, read_config, remove_escapes
+from app.api.base_translation import BaseTranslation
+from app.utils.utils import print_err, read_config, remove_escapes
 
 
 class OllamaTranslation(BaseTranslation):
     """
     基于Ollama（LLM）平台的本地AI翻译引擎，本地部署，无需联网，本地翻译。
-    需自行下载安装Ollama，并下载要使用的AI模型，在当前api目录下的config.ini中配置该模型名称。
+    需自行下载安装Ollama，并下载要使用的AI模型，在config.ini中配置该模型名称。
     使用该翻译引擎，需要先启动Ollama。
     """
 

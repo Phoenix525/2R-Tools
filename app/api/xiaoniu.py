@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import hashlib
-import time
 
-import requests
+from hashlib import md5
+from time import sleep, time
 
-from src.api.base_translation import BaseTranslation
-from src.exception.tool_exception import ToolException
-from src.utils.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
-from src.utils.utils import (
+from requests import post
+
+from app.api.base_translation import BaseTranslation
+from app.exception.tool_exception import ToolException
+from app.utils.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
+from app.utils.utils import (
     acquire_token,
     enpun_2_zhpun,
     print_err,
@@ -61,7 +62,7 @@ class XiaoNiuTranslation(BaseTranslation):
             "from": from_lang,
             "to": to_lang,
             "appId": self.__app_id,
-            "timestamp": int(time.time()),
+            "timestamp": int(time()),
             "srcText": source_txt,
         }
         data["authStr"] = self.__generate_auth_str(data)
@@ -75,9 +76,7 @@ class XiaoNiuTranslation(BaseTranslation):
             )
 
             try:
-                response = requests.post(
-                    "https://api.niutrans.com/v2/text/translate", data=data
-                )
+                response = post("https://api.niutrans.com/v2/text/translate", data=data)
                 result = response.json()
                 if "tgtText" in result:
                     target = result["tgtText"]
@@ -94,7 +93,7 @@ class XiaoNiuTranslation(BaseTranslation):
                     # 指数退避
                     wait = 2**attempt
                     print_info(f"{wait}秒后重试……")
-                    time.sleep(wait)
+                    sleep(wait)
                 else:
                     raise ToolException("APIRequestErr", f"错误代码：{err_code}")
             except Exception as e:
@@ -148,9 +147,9 @@ class XiaoNiuTranslation(BaseTranslation):
             list(params.items()) + [("apikey", self.__api_key)], key=lambda x: x[0]
         )
         param_str = "&".join([f"{key}={value}" for key, value in sorted_params])
-        md5 = hashlib.md5()
-        md5.update(param_str.encode("utf-8"))
-        auth_str = md5.hexdigest()
+        md5_val = md5()
+        md5_val.update(param_str.encode("utf-8"))
+        auth_str = md5_val.hexdigest()
         return auth_str
 
     def __get_config(self):

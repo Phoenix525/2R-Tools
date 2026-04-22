@@ -6,8 +6,10 @@
 机器翻译工具
 """
 
+from gc import collect
+
 import main
-from src.core.interpreter import Interpreter
+from app.controllers.interpreter import Interpreter
 
 # pylint: disable=invalid-name
 __interpreter: Interpreter = None  # 翻译器实例
@@ -29,7 +31,21 @@ def start():
     __interpreter = Interpreter()
     # 开始翻译
     if not __translate():
+        #  初始化全局变量数据，避免数据干扰
+        init_global_datas()
         main.start_main()
+
+
+def init_global_datas():
+    """
+    初始化全局变量数据
+    """
+
+    global __interpreter
+
+    __interpreter = None
+
+    collect()
 
 
 def __translate(first_trans=True) -> bool:

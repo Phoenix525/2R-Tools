@@ -2,9 +2,8 @@
 # -*- coding: utf-8 -*-
 
 
-import os
-import pathlib
-import re
+from pathlib import Path
+from re import Pattern, compile
 
 
 class GlobalData:
@@ -12,72 +11,79 @@ class GlobalData:
     全局变量类
     """
 
-    BASE_ABSPATH = pathlib.Path(__file__).parent.parent.parent
-    """项目所在绝对路径"""
-
-    SRC_ABSPATH = os.path.join(BASE_ABSPATH, "src")
-    """项目代码绝对路径"""
-
-    RPGM_PROJECT_PARENT_FOLDER = os.path.join(BASE_ABSPATH, "RPGM Workspace")
-    """rpgm项目工作区的绝对路径"""
-
-    RENPY_PROJECT_PARENT_FOLDER = os.path.join(BASE_ABSPATH, "RenPy Workspace")
-    """renpy项目工作区的绝对路径"""
-
-    RPGM_INPUT_ABSPATH = os.path.join(BASE_ABSPATH, "RPGM Data Input")
-    """存放rpgm初始data游戏数据目录的绝对路径"""
-
-    RPGM_OUTPUT_ABSPATH = os.path.join(BASE_ABSPATH, "RPGM Data Output")
-    """存放生成的rpgm新data游戏数据目录的绝对路径"""
-
-    WAITING_FOR_ENTRY = os.path.join(BASE_ABSPATH, "waiting-for-entry")
-    """本地译文库更新目录。\n\n将rpy或json翻译文件置入其中，便可使用程序将其中的文本写入本地译文库。"""
-
-    TRANSLATED_LIBRARIES_ABSPATH = os.path.join(BASE_ABSPATH, "Translated Libraries")
-    """初始译文目录的绝对路径"""
-
-    CONFIG_ABSPATH = os.path.join(BASE_ABSPATH, "config.ini")
-    """配置文件绝对路径"""
-
-    TRANSLATED_LIB_ABSPATH = os.path.join(TRANSLATED_LIBRARIES_ABSPATH, "TransLib.json")
-    """本地译文库绝对路径"""
-
-    translated_lib_library: dict = None
-    """自定义本地译文库\n\n翻译器在发起翻译请求前会先查询本地译文库是否有该语句的译文。"""
-
-    MARK_TODO = "TODO"
-    """译文TODO标识符\n\n此处写死，避免用户修改导致文本不通用。由open_todo决定是否开启。"""
-
+    # 常量
     # json更新标记
-    KEY_PHOENIX = "__PHOENIX__"
+    KEY_PHOENIX: str = "__PHOENIX__"
 
     # JSON翻译文本中标记当前率属于的文件名
-    TRANSLATED_FILE_MARK = "<==M==A==R==K==> "
+    TRANSLATED_FILE_MARK: str = "<==M==A==R==K==> "
+
+    MARK_TODO: str = "TODO"
+    """译文TODO标识符\n\n此处写死，避免用户修改导致文本不通用。由open_todo决定是否开启。"""
+
+    RPGM_GAME_DEFAULT_TXT: str = "gameText.json"
+    """RPGM旧版本翻译文件\n\n将翻译项目改成此名后置入Translated Libraries文件夹，程序在提取RPGM翻译文本时会自动从旧版本翻译文件中查询并写入已有译文。"""
+
+    base_abspath = Path(__file__).parent.parent.parent
+    """项目所在绝对路径"""
+
+    rpgm_project_folder_abspath = base_abspath / "RPGM Workspace"
+    """rpgm项目工作区的绝对路径"""
+
+    renpy_project_folder_abspath = base_abspath / "RenPy Workspace"
+    """renpy项目工作区的绝对路径"""
+
+    rpgm_input_abspath = base_abspath / "RPGM Data Input"
+    """存放rpgm初始data游戏数据目录的绝对路径"""
+
+    rpgm_output_abspath = base_abspath / "RPGM Data Output"
+    """存放生成的rpgm新data游戏数据目录的绝对路径"""
+
+    waiting_for_entry = base_abspath / "waiting-for-entry"
+    """本地译文库更新目录。\n\n将rpy或json翻译文件置入其中，便可使用程序将其中的文本写入本地译文库。"""
+
+    translated_libraries_abspath = base_abspath / "Translated Libraries"
+    """初始译文目录的绝对路径"""
+
+    config_abspath = base_abspath / "config.ini"
+    """配置文件绝对路径"""
+
+    translated_lib_abspath = translated_libraries_abspath / "TransLib.json"
+    """本地译文库绝对路径"""
 
     # 正则：匹配空行
-    PATTERN_EMPTY_LINE = re.compile(r"^\s*$")
+    pattern_empty_line: Pattern[str] = compile(r"^\s*$")
     # 正则：匹配rpy的文本标识符行
-    PATTERN_IDENTIFIER = re.compile(r"^\s*translate\s*.*\s(.*):")
+    pattern_identifier: Pattern[str] = compile(r"^\s*translate\s*.*\s(.*):")
     # 正则：匹配rpy的old语句
-    PATTERN_OLD = re.compile(r'^\s*old\s*"(.*)"')
+    pattern_old: Pattern[str] = compile(r'^\s*old\s*"(.*)"')
     # 正则：匹配rpy的new语句
-    PATTERN_NEW = re.compile(r'^\s*new\s*"(.*)"')
+    pattern_new: Pattern[str] = compile(r'^\s*new\s*"(.*)"')
     # 正则匹配rpy的say原文
-    PATTERN_OLD_SAY = re.compile(r'^\s*#+\s*(".*?[^\\]"|[\S\s]*?)\s*"(.*)"')
+    pattern_old_say: Pattern[str] = compile(r'^\s*#+\s*(".*?[^\\]"|[\S\s]*?)\s*"(.*)"')
     # 正则：匹配rpy的say译文
-    PATTERN_NEW_SAY = re.compile(r'(?!\s*#+)\s*(".*?[^\\]"|[\S\s]*?)\s*"(.*)"\s*(.*)')
+    pattern_new_say: Pattern[str] = compile(
+        r'(?!\s*#+)\s*(".*?[^\\]"|[\S\s]*?)\s*"(.*)"\s*(.*)'
+    )
     # 正则：匹配rpy的who
-    PATTERN_WHO = re.compile(r'^"(.*?[^\\])"')
+    pattern_who: Pattern[str] = compile(r'^"(.*?[^\\])"')
     # 正则：匹配注释符号
-    PATTERN_ANNOTATION = re.compile(r"^\s*#\s*")
+    pattern_annotation: Pattern[str] = compile(r"^\s*#\s*")
     # 正则：匹配rpg的Mapxxx.json文件
-    PATTERN_MAP = re.compile(r"^Map\d{3}$")
+    pattern_map: Pattern[str] = compile(r"^Map\d{3}$")
 
+    # 变量
     debug: bool = False
     """开启调试模式\n\n用于区分开发和生产环境。默认关闭，可在配置文件中调整。"""
 
     open_todo: bool = False
     """开启译文TODO标识符\n\n用于区分已润色译文和未润色译文。默认关闭，可在配置文件中调整。"""
+
+    none_filter: str = "NONE"
+    """JSON翻译文件文本写入忽略标记\n\n程序在写入data时会忽略带该标记的文本，以起到在游戏中屏蔽该文本的作用。可在配置文件中调整。"""
+
+    pass_filter: list[str] = []
+    """JSON翻译文件文本翻译忽略标记\n\n程序在翻译时，会忽略带有该标记的文本，以保持原文本。可在配置文件中调整。"""
 
     rpy_trans_input_abspath: str = ""
     """Ren'Py翻译项目的绝对路径。可在配置文件中调整。"""
@@ -94,12 +100,6 @@ class GlobalData:
     rpy_update_bap_max_cache: int = 0
     """Ren'Py更新最大缓存量。可在配置文件中调整。"""
 
-    none_filter: str = "NONE"
-    """JSON翻译文件文本写入忽略标记\n\n程序在写入data时会忽略带该标记的文本，以起到在游戏中屏蔽该文本的作用。可在配置文件中调整。"""
-
-    pass_filter: list[str] = []
-    """JSON翻译文件文本翻译忽略标记\n\n程序在翻译时，会忽略带有该标记的文本，以保持原文本。可在配置文件中调整。"""
-
     json_max_cache: int = 0
     """JSON翻译最大缓存量。可在配置文件中调整。"""
 
@@ -115,8 +115,8 @@ class GlobalData:
     rpg_script_regexp: list[str] = []
     """RPGM脚本\n\n使用正则匹配。可同时匹配多项。可在配置文件中调整。"""
 
-    rpg_game_default_txt: str = "gameText.json"
-    """RPGM旧版本翻译文件\n\n将翻译项目改成此名后置入Translated Libraries文件夹，程序在提取RPGM翻译文本时会自动从旧版本翻译文件中查询并写入已有译文。"""
+    translated_lib_library: dict = None
+    """自定义本地译文库\n\n翻译器在发起翻译请求前会先查询本地译文库是否有该语句的译文。"""
 
     # 翻译引擎启用标记
     tencent: bool = False
@@ -132,6 +132,21 @@ class GlobalData:
     ollama: bool = False
     hunyuan_mt: bool = False
 
+    # 翻译引擎实例
+    tencent_api = None
+    alibaba_api = None
+    baidu_api = None
+    caiyun_api = None
+    huoshan_api = None
+    xiaoniu_api = None
+    xunfei_api = None
+    youdao_api = None
+    deepL_api = None
+    google_api = None
+    ollama_api = None
+    hunyuan_mt_api = None
+
     @classmethod
     def __class_getitem__(cls, key):
+        """使外部可以通过GlobalData["xxx"]的形式调用GlobalData的属性"""
         return getattr(cls, key)

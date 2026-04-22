@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import time
 from json import dumps
+from time import sleep
 
 from tencentcloud.common import credential
 from tencentcloud.common.exception.tencent_cloud_sdk_exception import (
@@ -16,9 +16,9 @@ from tencentcloud.common.profile.http_profile import HttpProfile
 # 导入对应产品模块的client models
 from tencentcloud.tmt.v20180321 import models, tmt_client
 
-from src.api.base_translation import BaseTranslation
-from src.utils.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
-from src.utils.utils import (
+from app.api.base_translation import BaseTranslation
+from app.utils.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
+from app.utils.utils import (
     acquire_token,
     enpun_2_zhpun,
     print_err,
@@ -105,7 +105,7 @@ class TencentTranslation(BaseTranslation):
                     # 指数退避
                     wait = 2**attempt
                     print_info(f"{wait}秒后重试……")
-                    time.sleep(wait)
+                    sleep(wait)
                 else:
                     print_err(f"翻译引擎出现异常！请查看报错信息：{str(e)}")
                     break

@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import ast
-import time
+from ast import literal_eval
+from time import sleep
 
 from volcenginesdkcore import Configuration, rest
 from volcenginesdktranslate20250301 import TRANSLATE20250301Api, TranslateTextRequest
 
-from src.api.base_translation import BaseTranslation, ValidateStringsType
-from src.utils.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
-from src.utils.utils import (
+from app.api.base_translation import BaseTranslation, ValidateStringsType
+from app.utils.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
+from app.utils.utils import (
     acquire_token,
     enpun_2_zhpun,
     print_debug,
@@ -90,7 +90,7 @@ class HuoshanTranslation(BaseTranslation):
                         target = enpun_2_zhpun(target)
                         return target
             except rest.ApiException as e:
-                err = ast.literal_eval(e.reason)
+                err = literal_eval(e.reason)
                 # 请求频率超限且还有重试次数时，阻塞N秒后重新发起请求
                 if err.get("Code", "0") == "-429" and attempt < retry - 1:
                     err_code = err["Code"]
@@ -99,7 +99,7 @@ class HuoshanTranslation(BaseTranslation):
                     # 指数退避
                     wait = 2**attempt
                     print_info(f"{wait}秒后重试……")
-                    time.sleep(wait)
+                    sleep(wait)
                 else:
                     print_err(f"翻译引擎出现异常！请查看报错信息：{str(e)}")
                     break

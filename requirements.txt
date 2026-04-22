@@ -3,7 +3,7 @@ alibabacloud_alimt20181012==1.5.2
 alibabacloud_credentials==1.0.8
 alibabacloud_tea_openapi==0.4.4
 alibabacloud_tea_util==0.3.14
-bitsandbytes==0.49.2    # 如果本地语言大模型需要开启量化加载，这个模块必须装
+bitsandbytes==0.49.2
 chardet==7.4.1
 cryptography==46.0.7
 deepl==1.29.0

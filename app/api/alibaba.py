@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import time
+from time import sleep
 
 from alibabacloud_alimt20181012 import models as alimt_20181012_models
 from alibabacloud_alimt20181012.client import Client as alimt20181012Client
@@ -10,10 +10,10 @@ from alibabacloud_credentials.client import Client as CredentialClient
 from alibabacloud_tea_openapi import models as open_api_models
 from alibabacloud_tea_util import models as util_models
 
-from src.api.base_translation import BaseTranslation
-from src.exception.tool_exception import ToolException
-from src.utils.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
-from src.utils.utils import (
+from app.api.base_translation import BaseTranslation
+from app.exception.tool_exception import ToolException
+from app.utils.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
+from app.utils.utils import (
     acquire_token,
     print_err,
     print_info,
@@ -100,7 +100,7 @@ class ALiBaBaTranslation(BaseTranslation):
                     # 指数退避
                     wait = 2**attempt
                     print_info(f"{wait}秒后重试……")
-                    time.sleep(wait)
+                    sleep(wait)
                 else:
                     raise ToolException(
                         "APIRequestErr",

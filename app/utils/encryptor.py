@@ -6,8 +6,8 @@ import hashlib
 
 from cryptography.fernet import Fernet
 
-from src.utils.global_data import GlobalData
-from src.utils.utils import print_debug, print_err, write_config
+from app.utils.global_data import GlobalData
+from app.utils.utils import print_debug, print_err, write_config
 
 
 class SimpleAPIKeyEncryptor:
@@ -19,9 +19,8 @@ class SimpleAPIKeyEncryptor:
         """
         初始化加密器
 
-        :param password: 加密密码
+        :param password: 密码
         """
-        self.__password: bytes = password.encode("utf-8")
 
         self.__cipher: Fernet = self.__chipher(password)
 
@@ -46,8 +45,12 @@ class SimpleAPIKeyEncryptor:
         return decrypted.decode()
 
     def __chipher(self, input_str="") -> Fernet:
-        # 从密码生成确定的密钥
-        hash_obj = hashlib.sha256(self.__password)
+        """
+        从密码生成费尔内特令牌
+
+        :param input_str: 密码
+        """
+        hash_obj = hashlib.sha256(input_str.encode("utf-8"))
         salt = hash_obj.digest()[:32]
         key_bytes = hashlib.pbkdf2_hmac("sha256", input_str.encode(), salt, 100000, 32)
         key = base64.urlsafe_b64encode(key_bytes)

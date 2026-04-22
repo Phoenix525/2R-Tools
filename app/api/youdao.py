@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import json
-import time
 from hashlib import sha256
+from json import loads
+from time import time
 from uuid import uuid1
 
 from requests import post
 
-from src.api.base_translation import BaseTranslation
-from src.exception.tool_exception import ToolException
-from src.utils.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
-from src.utils.utils import (
+from app.api.base_translation import BaseTranslation
+from app.exception.tool_exception import ToolException
+from app.utils.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
+from app.utils.utils import (
     acquire_token,
     enpun_2_zhpun,
     print_err,
@@ -73,7 +73,7 @@ class YoudaoTranslation(BaseTranslation):
                 else source[0:10] + str(size) + source[size - 10 : size]
             )
 
-        curtime = str(int(time.time()))
+        curtime = str(int(time()))
         salt = str(uuid1())
         signStr = (
             self.__app_id + _truncate(source_txt) + salt + curtime + self.__app_key
@@ -102,7 +102,7 @@ class YoudaoTranslation(BaseTranslation):
                     "https://openapi.youdao.com/api", data=data, headers=headers
                 )
                 # print_debug(response.text)
-                result = json.loads(response.text)
+                result = loads(response.text)
                 if "translation" in result:
                     target = result["translation"][0]
                     # 翻译引擎返回的字符串可能存在一些\u开头的，但无法使用utf-8解码的字符串

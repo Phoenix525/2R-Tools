@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import deepl
+from deepl import DeepLClient, http_client
 
-from src.api.base_translation import BaseTranslation, ValidateStringsType
-from src.utils.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
-from src.utils.utils import (
+from app.api.base_translation import BaseTranslation, ValidateStringsType
+from app.utils.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
+from app.utils.utils import (
     acquire_token,
     enpun_2_zhpun,
     print_err,
@@ -57,8 +57,8 @@ class DeepLTranslation(BaseTranslation):
         )
 
         try:
-            deepl.http_client.max_network_retries = 3
-            deepl_client = deepl.DeepLClient(self.__auth_key)
+            http_client.max_network_retries = 3
+            deepl_client = DeepLClient(self.__auth_key)
             result = deepl_client.translate_text(
                 source_txt, source_lang=from_lang, target_lang=to_lang
             )

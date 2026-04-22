@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import ast
-import base64
-import json
+from ast import literal_eval
+from base64 import b64decode
+from json import loads
 
 from xfyunsdknlp.translate_client import TranslateClient
 
-from src.api.base_translation import BaseTranslation
-from src.utils.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
-from src.utils.utils import (
+from app.api.base_translation import BaseTranslation
+from app.utils.encryptor import SimpleAPIKeyEncryptor, SimpleKeyStore
+from app.utils.utils import (
     acquire_token,
     enpun_2_zhpun,
     print_err,
@@ -73,10 +73,10 @@ class XunFeiTranslation(BaseTranslation):
         try:
             target = ""
             resp = self.__client.send_ist_v2(source_txt, from_lang, to_lang)
-            json_resp = json.loads(resp)
+            json_resp = loads(resp)
             if json_resp["header"]["code"] == 0:
                 result = json_resp["payload"]["result"]["text"]
-                fd = ast.literal_eval(base64.b64decode(result).decode("utf-8"))
+                fd = literal_eval(b64decode(result).decode("utf-8"))
                 target = fd["trans_result"]["dst"]
                 # 翻译引擎返回的字符串可能存在一些\u开头的，但无法使用utf-8解码的字符串
                 # encode函数遇此问题默认是抛异常，这里修改参数调整为将字符串替换成“?”
