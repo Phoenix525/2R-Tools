@@ -9,16 +9,15 @@
 - Python 3.10+；
 
 ## 翻译项目结构
-- Translated Libraries文件夹：译文库。
+- [TRANS_LIBS]文件夹：译文库。
 	- rpgmz_default_library.json：RPG Maker MZ引擎初始简中译文。
 	- rpgmv_default_library.json：RPG Maker MV引擎初始简中译文。
 	- rpgvxace_default_library.json：RPG Maker VX Ace引擎初始简中译文。
 	- TransLib.json：本地译文库（暂时不支持区分语种）。可以通过工具进行扩充，适用于所有游戏引擎的文本翻译。译文库不宜储存存在多含义的文本，这可能会导致翻译文本词不达意。在提取待翻文本或进行文本翻译时，工具会先在本地译文库中查找。
 	- gameText.json：RPGM游戏旧版本翻译文件（暂时不支持区分语种）。在提取RPGM游戏翻译文本时，工具会扫描该文件，若存在结果，则会覆盖从TransLib.json中获取的译文，并录入新的翻译文本中。
-- RPGM Workspace文件夹：RPGM项目工作区。用于存放和管理翻译文件。
-- RPGM Data Input文件夹：存放RPGM的初始json代码文件。
-- RPGM Data Output文件夹：存放RPGM的新生成json代码文件。
-- waiting-for-entry文件夹：放置json和rpy翻译文件，用于将翻译数据写入TransLib.json译文库。
+- [RPGM_TRANS]文件夹：RPGM项目工作区。用于存放和管理rpgm翻译文件。
+- [RPGM_DATAS]文件夹：放置RPGM的游戏data文件。
+- [WAIT_FOR_ENTRY]文件夹：放置json和rpy翻译文件，用于将翻译数据写入TransLib.json译文库。
 
 ## 内置翻译引擎
 - 本地AI翻译（需自行部署环境及下载模型）：
