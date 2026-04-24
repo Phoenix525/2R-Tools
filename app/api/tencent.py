@@ -33,7 +33,7 @@ class TencentTranslation(BaseTranslation):
     腾讯翻译引擎
     """
 
-    def __init__(self, section="tencent"):
+    def __init__(self, section: str = "tencent"):
 
         BaseTranslation.__init__(
             self,

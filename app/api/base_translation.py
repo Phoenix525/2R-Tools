@@ -41,10 +41,10 @@ class BaseTranslation(object):
     def __init__(
         self,
         *,
-        section="",
-        activated=False,
-        max_qps=1,
-        max_char=2000,
+        section: str = "",
+        activated: bool = False,
+        max_qps: int = 1,
+        max_char: int = 2000,
         comment_langs: tuple[str] = (),
         from_langs: tuple[tuple[str]] = (),
         to_langs: tuple[tuple[str]] = (),
@@ -96,7 +96,9 @@ class BaseTranslation(object):
         """
         return self._activated
 
-    def check_text_and_lang(self, source_txt, from_lang="", to_lang="") -> str:
+    def check_text_and_lang(
+        self, source_txt: str, from_lang: str = "", to_lang: str = ""
+    ) -> str:
         """
         校验文本长度、源语种和目标语种是否符合API要求
         传入的源语种不在支持范围内，会尝试通过文本识别语种，再校验一次
@@ -148,10 +150,10 @@ class BaseTranslation(object):
     def input_what_we_need(
         self,
         length: int,
-        first_config=True,
+        first_config: bool = True,
         *,
-        validate_type=ValidateStringsType.STRING_LETTER_NUM,
-        prompt="请输入：",
+        validate_type: str = ValidateStringsType.STRING_LETTER_NUM,
+        prompt: str = "请输入：",
     ) -> str:
         """
         输入密钥，并验证是否合法，合法返回字串，反之返回空值

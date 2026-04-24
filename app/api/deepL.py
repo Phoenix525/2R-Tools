@@ -19,7 +19,7 @@ class DeepLTranslation(BaseTranslation):
     DeepL翻译引擎
     """
 
-    def __init__(self, section="deepL"):
+    def __init__(self, section: str = "deepL"):
 
         BaseTranslation.__init__(
             self,

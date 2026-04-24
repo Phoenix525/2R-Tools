@@ -23,7 +23,7 @@ class XunFeiTranslation(BaseTranslation):
     讯飞翻译引擎
     """
 
-    def __init__(self, section="xunfei"):
+    def __init__(self, section: str = "xunfei"):
 
         BaseTranslation.__init__(
             self,

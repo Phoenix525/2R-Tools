@@ -19,7 +19,7 @@ from app.utils.global_data import GlobalData
 from app.utils.utils import get_projects_list, print_info, to_int, validate_index
 
 
-def start_main(first_select=True):
+def start_main(first_select: bool = True):
 
     # 用户输入内容
     _inp = ""
@@ -105,11 +105,7 @@ def start_main(first_select=True):
 
 
 def __get_rpgm_project(
-    select="",
-    first_select=True,
-    *,
-    projects_list=None,
-    prompt="",
+    select: str = "", first_select: bool = True, *, projects_list: list[str] = None
 ) -> str:
     """
     获取当前要操作的rpgm翻译文件路径
@@ -134,10 +130,13 @@ def __get_rpgm_project(
 
             filename = f"{_inp}.json"
             # 创建新文件
-            GlobalData.rpgm_project_folder_abspath.joinpath(filename).touch(
-                exist_ok=True
-            )
-            print_info(f"当前RPGM翻译项目：{filename}")
+            GlobalData.rpgm_trans_abspath.joinpath(filename).touch(exist_ok=True)
+            if select != "JSON":
+                print_info(
+                    f"当前RPGM翻译项目：{filename}，请确保{GlobalData.rpgm_datas_abspath.name}目录下有名为{_inp}的游戏data文件夹！"
+                )
+            else:
+                print_info(f"当前RPGM翻译项目：{filename}")
             return filename
 
         print_msg = """===========================================================================================
@@ -173,22 +172,32 @@ def __get_rpgm_project(
             filename = f"{_inp}.json"
 
         # 创建新文件
-        GlobalData.rpgm_project_folder_abspath.joinpath(filename).touch(exist_ok=True)
-        print_info(f"当前RPGM翻译项目：{filename}")
+        GlobalData.rpgm_trans_abspath.joinpath(filename).touch(exist_ok=True)
+        if select != "JSON":
+            print_info(
+                f"当前RPGM翻译项目：{filename}，请确保{GlobalData.rpgm_datas_abspath.name}目录下有名为{filename[:-5]}的游戏data文件夹！"
+            )
+        else:
+            print_info(f"当前RPGM翻译项目：{filename}")
         return filename
 
     # 索引
     index = to_int(_inp) - 1
     if validate_index(projects_list, index, False):
         project = projects_list[index]
-        print_info(f"当前RPGM翻译项目：{project}")
+        if select != "JSON":
+            print_info(
+                f"当前RPGM翻译项目：{project}，请确保{GlobalData.rpgm_datas_abspath.name}目录下有名为{project[:-5]}的游戏data文件夹！"
+            )
+        else:
+            print_info(f"当前RPGM翻译项目：{project}")
         return project
 
     return __get_rpgm_project(select, False, projects_list=projects_list)
 
 
 def __get_renpy_project(
-    select="", first_select=True, *, projects_list=None
+    select: str = "", first_select: bool = True, *, projects_list: list[str] = None
 ) -> str:
     """
     选择当前要操作的ren\'Py项目名称，若不存在则新建一个
@@ -206,7 +215,7 @@ def __get_renpy_project(
             if _inp in ("", "\r", "\n"):
                 return ""
 
-            GlobalData.renpy_project_folder_abspath.joinpath(_inp).mkdir(
+            GlobalData.renpy_trans_abspath.joinpath(_inp).mkdir(
                 parents=True, exist_ok=True
             )
             print_info(f"当前Ren'Py翻译项目：{_inp}")
@@ -241,9 +250,7 @@ def __get_renpy_project(
             if _inp in ("", "\r", "\n"):
                 return ""
 
-        GlobalData.renpy_project_folder_abspath.joinpath(_inp).mkdir(
-            parents=True, exist_ok=True
-        )
+        GlobalData.renpy_trans_abspath.joinpath(_inp).mkdir(parents=True, exist_ok=True)
         print_info(f"当前Ren'Py翻译项目：{_inp}")
         return _inp
 

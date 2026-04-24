@@ -27,7 +27,7 @@ class ALiBaBaTranslation(BaseTranslation):
     阿里翻译引擎（通用版）
     """
 
-    def __init__(self, section="alibaba"):
+    def __init__(self, section: str = "alibaba"):
 
         BaseTranslation.__init__(
             self,

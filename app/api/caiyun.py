@@ -22,7 +22,7 @@ class CaiyunTranslation(BaseTranslation):
     彩云小译翻译引擎
     """
 
-    def __init__(self, section="caiyun"):
+    def __init__(self, section: str = "caiyun"):
 
         BaseTranslation.__init__(
             self,

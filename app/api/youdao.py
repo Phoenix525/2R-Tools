@@ -26,7 +26,7 @@ class YoudaoTranslation(BaseTranslation):
     有道智云翻译引擎
     """
 
-    def __init__(self, section="youdao"):
+    def __init__(self, section: str = "youdao"):
 
         BaseTranslation.__init__(
             self,

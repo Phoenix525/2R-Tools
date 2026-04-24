@@ -5,15 +5,14 @@
 @Date: 2020-08-10 23:33:35
 """
 
-from gc import collect
 from copy import deepcopy
+from gc import collect
 from pathlib import Path
 
 import main
 from app.utils.global_data import GlobalData
 from app.utils.utils import (
     get_file_encoding,
-    iter_files,
     merge_dicts,
     print_info,
     read_json,
@@ -25,14 +24,11 @@ __txt_library_cache: dict[str, str] = None
 
 
 def start():
+    """
+    更新译文库
+    """
 
-    print(r"""
-===========================================================================================
-                                  rpy/json 写入译文库工具
-                                      作者：Phoenix
-                                      版权归作者所有
-===========================================================================================
-""")
+    print("\n")
 
     if not __choose_option():
         main.start_main()
@@ -56,15 +52,18 @@ def __walk_file():
     """
 
     # 如果文件夹不存在，新建一个
-    if not GlobalData.waiting_for_entry.exists():
+    if not GlobalData.wait_for_entry.exists():
         print("无待录入文本，译文库无需更新！")
-        GlobalData.waiting_for_entry.mkdir(parents=True)
+        GlobalData.wait_for_entry.mkdir(parents=True)
         return
 
     print("正在更新译文库……\n")
     global __txt_library_cache
     # 遍历所有文件
-    for file, target_abspath in iter_files(GlobalData.waiting_for_entry):
+    for file in GlobalData.wait_for_entry.rglob("*"):
+        if not file.is_file():
+            continue
+
         file_name = file.name
         # 扫描renpy翻译文件
         if validate_renpy_trans_file(file):
@@ -84,12 +83,15 @@ def __walk_file():
         print_info("待录入文本为空，译文库无需更新！")
         return
 
-    __write_translib()
+    __write_to_translib()
     print_info("译文库已完成更新！")
 
 
 def __scanning_rpy_file(
-    file_path: str, filename: str, txt_libraries=None, rewrite=False
+    file_path: str,
+    filename: str,
+    txt_libraries: dict[str, str] = None,
+    rewrite: bool = False,
 ):
     """
     扫描原翻译文本，将需要的数据存入缓存器
@@ -112,12 +114,12 @@ def __scanning_rpy_file(
             line = line.rstrip("\n")
 
             # 空行
-            if GlobalData.pattern_empty_line.match(line) is not None:
+            if GlobalData.pattern_empty_line.match(line):
                 continue
 
             # 标志符行
-            identifier_match = GlobalData.pattern_identifier.match(line)
-            if identifier_match is not None:
+            identifier_match = GlobalData.pattern_identifier_line.match(line)
+            if identifier_match:
                 _identifier = identifier_match.group(1)
                 # 扫描到标志符行，说明进入了新的原译组，则初始化原文
                 # 此步非常重要，避免在没有原文且选择覆盖的情况下出错
@@ -125,9 +127,9 @@ def __scanning_rpy_file(
                 continue
 
             # 原文本行
-            old_say_match = GlobalData.pattern_old_say.match(line)
+            old_say_match = GlobalData.pattern_old_say_line.match(line)
             if (
-                old_say_match is not None
+                old_say_match
                 and old_say_match.group(1) != "voice"
                 and _identifier not in ("", "strings")
             ):
@@ -135,16 +137,16 @@ def __scanning_rpy_file(
                 continue
 
             # 译文行
-            new_say_match = GlobalData.pattern_new_say.match(line)
+            new_say_match = GlobalData.pattern_new_say_line.match(line)
             if (
-                new_say_match is not None
+                new_say_match
                 and new_say_match.group(1) != "voice"
                 and _identifier not in ("", "strings")
             ):
-                if _old_say.strip() == "":
+                if not _old_say.strip():
                     continue
                 new_say = new_say_match.group(2)  # 译文
-                if new_say == "":
+                if not new_say:
                     continue
                 if _old_say not in txt_libraries or rewrite:
                     txt_libraries[_old_say] = new_say
@@ -153,25 +155,25 @@ def __scanning_rpy_file(
                 continue
 
             # old行
-            old_match = GlobalData.pattern_old.match(line)
-            if old_match is not None and _identifier == "strings":
+            old_match = GlobalData.pattern_old_strings_line.match(line)
+            if old_match and _identifier == "strings":
                 _old_say = old_match.group(1)
                 continue
 
             # new 行
-            new_match = GlobalData.pattern_new.match(line)
-            if new_match is not None and _identifier == "strings":
-                if _old_say.strip() == "":
+            new_match = GlobalData.pattern_new_strings_line.match(line)
+            if new_match and _identifier == "strings":
+                if not _old_say.strip():
                     continue
                 new_say = new_match.group(1)  # 译文
-                if new_say == "":
+                if not new_say:
                     continue
                 if _old_say not in txt_libraries or rewrite:
                     txt_libraries[_old_say] = new_say
                 _old_say = ""
 
 
-def __write_translib():
+def __write_to_translib():
     """
     写入译文库
     """
@@ -180,16 +182,19 @@ def __write_translib():
         # 如果缓存库查询到的键或值不是字串，为错误数据，跳过以屏蔽
         if not isinstance(k, str) or not isinstance(v, str):
             continue
+        # 将含有英文的原文本统一调整为大写字母，方便统一查询。
+        # 这里大部分语种都能正常处理，土耳其语等语种可能会出现奇怪的结果，但因为这些语种使用的可能性不大，这里就不做单独处理了。
+        k = k.upper()
         # 译文库中已有该文本，跳过
         if k in translated_txt_lib:
             continue
-        if v.strip() == "":
+        if not v.strip():
             continue
 
         translated_txt_lib[k] = v
 
     write_json(
-        GlobalData.translated_lib_abspath,
+        GlobalData.translib_abspath,
         translated_txt_lib,
         backup=False,
     )
@@ -204,7 +209,7 @@ def __update_json_trans(pre_trans_path: str, new_trans_path: str):
     print("JSON文本已完成更新！")
 
 
-def __choose_option(first_select=True) -> bool:
+def __choose_option(first_select: bool = True) -> bool:
     """
     输入序号选择对应的操作
 

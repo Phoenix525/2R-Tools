@@ -28,8 +28,6 @@ from py3langid import classify
 
 from app.utils.global_data import GlobalData
 
-# from pwinput import pwinput
-
 
 def print_debug(value: str):
     """
@@ -77,7 +75,7 @@ def get_md5(parm_str: any, cut=False) -> str:
     return value[8:-8] if cut else value
 
 
-def merge_dicts(dicts: list[dict], rewrite=True) -> dict:
+def merge_dicts(dicts: list[dict], rewrite: bool = True) -> dict:
     """
     将多个字典合并成一个字典
 
@@ -152,7 +150,9 @@ def read_json(file_path: str | Path) -> list | dict | None:
         return None
 
 
-def write_json(file_abspath: str | Path, datas=None, *, indent=4, backup=True):
+def write_json(
+    file_abspath: str | Path, datas=None, *, indent: int = 4, backup: bool = True
+):
     """
     将python对象转换成JSON格式并写入文件
 
@@ -176,7 +176,7 @@ def write_json(file_abspath: str | Path, datas=None, *, indent=4, backup=True):
             return
         # 如果文件需要备份
         if backup:
-            copy_file(file_abspath, file_abspath.parent / "bak")
+            copy_file(file_abspath, tar_dir_abspath=file_abspath.parent / "bak")
 
     try:
         with open(file_abspath, "w", encoding=get_file_encoding(file_abspath)) as fp:
@@ -186,64 +186,89 @@ def write_json(file_abspath: str | Path, datas=None, *, indent=4, backup=True):
                 print(f"正在创建 {file_abspath.name} 中……")
             dump(datas, fp, indent=indent, skipkeys=True, ensure_ascii=False)
             if file_is_exist:
-                print_info(f"{file_abspath.name} 已更新！")
+                print(f"{file_abspath.name} 已更新！\n")
             else:
-                print_info(f"{file_abspath.name} 已创建！")
+                print(f"{file_abspath.name} 已创建！\n")
     except Exception as e:
         print_err(f"write_json()写入{file_abspath.name}异常：{str(e)}")
 
 
 def copy_file(
-    source_file_abspath: str | Path, target_dir_abspath: str | Path, time_mark=True
-):
+    src_file_abspath: str | Path,
+    *,
+    tar_file_abspath: str | Path = None,
+    tar_dir_abspath: str | Path = None,
+) -> Path:
     """
-    将文件拷贝到指定路径。
+    将文件拷贝到指定文件夹/文件。若不指定路径，则在当前目录下拷贝，并添加时间前缀。
 
-    :param source_file: 要拷贝的文件路径
-    :param target_dir: 拷贝文件存放目录路径
-    :param time_mark: 是否在文件名后面加上拷贝日期时间。默认添加
+    :param src_file_abspath: 要拷贝的文件路径
+    :param tar_file_abspath: 拷贝到文件路径
+    :param tar_dir_abspath: 拷贝到文件夹路径
+    :param time_prefix: 是否在文件夹/文件名前面加上拷贝时间。默认添加，以防覆盖已有文件
     """
 
-    source_file_abspath = Path(source_file_abspath)
-    target_dir_abspath = Path(target_dir_abspath)
-    if not source_file_abspath.is_file() or not target_dir_abspath.is_dir():
-        return
+    src_file_abspath = Path(src_file_abspath)
+    if not src_file_abspath.is_file():
+        return None
 
-    target_dir_abspath.mkdir(parents=True, exist_ok=True)
-
-    new_file_abspath = target_dir_abspath
-    if time_mark:
+    # 如果未传入目标路径，则默认在当前目录拷贝文件，并给拷贝文件添加时间前缀
+    if not tar_dir_abspath and not tar_file_abspath:
         time = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-        new_file_abspath = replace_complex_stem(source_file_abspath, f"_{time}")
-    copy(str(source_file_abspath), str(new_file_abspath))
+        tar_file_abspath = replace_complex_stem(src_file_abspath, prefix=f"{time}_")
+    else:
+        if tar_dir_abspath:  # 如果目标路径是文件夹
+            tar_dir_abspath = Path(tar_dir_abspath)
+            tar_dir_abspath.mkdir(parents=True, exist_ok=True)
+            tar_file_abspath = tar_dir_abspath.joinpath(src_file_abspath.name)
+
+        else:  # 如果目标路径是文件
+            tar_file_abspath = Path(src_file_abspath)
+            tar_file_abspath.parent.mkdir(parents=True, exist_ok=True)
+
+        # 如果目标路径已存在该文件，则添加时间前缀
+        if tar_file_abspath.exists():
+            time = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+            tar_file_abspath = replace_complex_stem(tar_file_abspath, prefix=f"{time}_")
+
+    # 拷贝文件
+    new_file_abspath = Path(copy(str(src_file_abspath), str(tar_file_abspath)))
+    return new_file_abspath
 
 
-def copy_directory(source_abspath: str | Path, target_abspath: str | Path):
+def copy_tree(src_dir_abspath: str | Path, tar_dir_abspath: str | Path = None):
     """
-    拷贝目录和文件
+    递归拷贝文件夹，若拷贝的文件已存在，则会给拷贝文件添加时间前缀
 
-    :param source_path: 原路径，可以是文件夹也可以是文件路径
-    :param target_path: 目标路径
+    :param src_dir_abspath: 原文件夹路径
+    :param tar_dir_abspath: 目标文件夹路径
     """
 
-    source_abspath = Path(source_abspath)
-    if not source_abspath.exists():
-        print_err(f"待拷贝路径不存在：{source_abspath} ")
+    src_dir_abspath = Path(src_dir_abspath)
+    # 但原路径不存在或不是文件夹时，直接返回
+    if not src_dir_abspath.is_dir():
         return
 
-    target_abspath = Path(target_abspath)
+    # 如果未传入目标路径，则在当前路径的文件夹添加时间前缀
+    if not tar_dir_abspath:
+        time = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+        tar_dir_abspath = replace_complex_stem(src_dir_abspath, prefix=f"{time}_")
+    else:
+        tar_dir_abspath = Path(tar_dir_abspath)
+        # 如果目标路径已存在，则在目标路径的文件夹添加时间前缀
+        if tar_dir_abspath.exists():
+            if tar_dir_abspath.is_file():
+                tar_dir_abspath = tar_dir_abspath.parent
+            time = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+            tar_dir_abspath = replace_complex_stem(tar_dir_abspath, prefix=f"{time}_")
+
     # 确保目标路径存在
-    target_abspath.mkdir(parents=True, exist_ok=True)
+    tar_dir_abspath.mkdir(parents=True, exist_ok=True)
 
-    # 待拷贝对象是文件
-    if source_abspath.is_file():
-        copy(str(source_abspath), str(target_abspath))
-        return
-
-    for item in source_abspath.iterdir():
-        target = target_abspath / item.name
+    for item in src_dir_abspath.iterdir():
+        target = tar_dir_abspath / item.name
         if item.is_dir():
-            copy_directory(item, target)
+            copy_tree(item, target)
         else:
             copy(str(item), str(target))
 
@@ -343,18 +368,18 @@ def is_letters_and_digits(string: str, length: int) -> bool:
     return bool(match(pattern, string))
 
 
-def validate_lang(txt: str) -> str:
+def validate_lang(txt: str = "") -> str:
     """
     检测语言，查询结果参考ISO 639-1语言编码标准
     """
 
-    if txt.strip() == "":
+    if not txt.strip():
         return "auto"
 
     return classify(txt)[0]
 
 
-def match_lang(txt: str, lang: str) -> bool:
+def match_lang(txt: str = "", lang: str = "") -> bool:
     """
     匹配符合指定列表中语种的文本。匹配返回True，反之返回False。
     由于语言检测程序的限制，此方法存在一定误差。
@@ -364,7 +389,7 @@ def match_lang(txt: str, lang: str) -> bool:
     """
 
     # 传入的待匹配文本为空字符串或语种列表为空字符串时，返回True
-    if txt.strip() == "" or lang.strip() == "":
+    if not txt.strip() or not lang.strip():
         return True
 
     # try:
@@ -379,7 +404,7 @@ def match_lang(txt: str, lang: str) -> bool:
 
     for lang in langlist:
         lang = lang.strip()
-        if lang == "":
+        if not lang:
             continue
 
         try:
@@ -390,13 +415,15 @@ def match_lang(txt: str, lang: str) -> bool:
     return False
 
 
-def full_2_half(txt: str) -> str:
+def full_2_half(txt: str = "") -> str:
     """
     将字符串中的全角符号转换成半角符号
     """
 
-    txt_new = ""
+    if not txt.strip():
+        return txt
 
+    txt_new = ""
     for char in txt:
         s_int = ord(char)
         # 单独处理空格
@@ -414,10 +441,13 @@ def full_2_half(txt: str) -> str:
     return txt_new
 
 
-def half_2_full(txt: str) -> str:
+def half_2_full(txt: str = "") -> str:
     """
     将字符串中的半角符号转换成全角符号
     """
+
+    if not txt.strip():
+        return txt
 
     txt_new = ""
     for char in txt:
@@ -437,10 +467,13 @@ def half_2_full(txt: str) -> str:
     return txt_new
 
 
-def zhpun_2_enpun(txt: str) -> str:
+def zhpun_2_enpun(txt: str = "") -> str:
     """
     将字符串中的中文标点符号转换为英文标点符号
     """
+
+    if not txt.strip():
+        return txt
 
     # 处理常用标点符号
     chs_pun = "，。！？：；（）【】《》`“”‘’"
@@ -450,10 +483,13 @@ def zhpun_2_enpun(txt: str) -> str:
     return txt
 
 
-def enpun_2_zhpun(txt: str, no_blank=False) -> str:
+def enpun_2_zhpun(txt: str = "", no_blank: bool = False) -> str:
     """
     将字符串中的英文标点符号转换为中文标点符号
     """
+
+    if not txt.strip():
+        return txt
 
     # 使用迭代器处理单引号。
     # 由于英文中存在使用'来表示名词的所有格以及缩写等作用，只存在单个单引号，所以不便直接使用迭代器进行替换。
@@ -482,12 +518,12 @@ def enpun_2_zhpun(txt: str, no_blank=False) -> str:
     return txt
 
 
-def has_upper_letter(txt: str) -> bool:
+def has_upper_letter(txt: str = "") -> bool:
     """
     查询字符串中是否含有大写英文字母，没有返回False；反之返回True
     """
 
-    if txt.strip() == "":
+    if not txt.strip():
         return False
 
     my_re = compile(r"[A-Z]", S)
@@ -498,12 +534,12 @@ def has_upper_letter(txt: str) -> bool:
     return True
 
 
-def has_lower_letter(txt: str) -> bool:
+def has_lower_letter(txt: str = "") -> bool:
     """
     查询字符串中是否含有小写英文字母，没有返回False；反之返回True
     """
 
-    if txt.strip() == "":
+    if not txt.strip():
         return False
 
     my_re = compile(r"[a-z]", S)
@@ -514,12 +550,12 @@ def has_lower_letter(txt: str) -> bool:
     return True
 
 
-def remove_escapes(txt: str) -> str:
+def remove_escapes(txt: str = "") -> str:
     """
     删除文本中的转义字符，避免云翻译因转义字符的影响导致漏翻或语意错误
     """
 
-    if txt.strip() == "":
+    if not txt.strip():
         return txt
 
     # TODO 这里的处理过于粗糙，需要进一步优化
@@ -539,7 +575,7 @@ def remove_escapes(txt: str) -> str:
     return txt
 
 
-def update_phoenix_mark(datas=None, update=False):
+def update_phoenix_mark(datas=None, update: bool = False):
     """
     切换JSON文本更新标记。用于判断是否要对json文件进行更新写入。
     """
@@ -550,7 +586,7 @@ def update_phoenix_mark(datas=None, update=False):
     datas[GlobalData.KEY_PHOENIX] = update
 
 
-def switch_change_mark(base=False, change=False) -> bool:
+def switch_change_mark(base: bool = False, change: bool = False) -> bool:
     """
     切换更改标记
     """
@@ -602,7 +638,7 @@ def validate_renpy_trans_file(file_path: str | Path) -> bool:
     with open(file_path, "r", encoding=get_file_encoding(file_path)) as inp:
         for line in inp:
             # 如果能匹配到translate标识符，则返回True
-            if GlobalData.pattern_identifier.match(line) is not None:
+            if GlobalData.pattern_identifier_line.match(line) is not None:
                 return True
     return False
 
@@ -616,46 +652,49 @@ def get_projects_list(engine_type: str) -> list[str]:
 
     if engine_type == "renpy":
         # 判断ren'Py项目工作区是否存在，不存在则新建一个，并返回空列表
-        if not GlobalData.renpy_project_folder_abspath.exists():
-            GlobalData.renpy_project_folder_abspath.mkdir(parents=True)
+        if not GlobalData.renpy_trans_abspath.exists():
+            GlobalData.renpy_trans_abspath.mkdir(parents=True)
             return []
 
         # 获取所有翻译文件夹
         folders = [
             item.name
-            for item in GlobalData.renpy_project_folder_abspath.iterdir()
+            for item in GlobalData.renpy_trans_abspath.iterdir()
             if item.is_dir()
         ]
         return folders
 
     elif engine_type == "rpgm":
         # 判断rpgm项目工作区是否存在，不存在则新建一个，并返回空列表
-        if not GlobalData.rpgm_project_folder_abspath.exists():
-            GlobalData.rpgm_project_folder_abspath.mkdir(parents=True)
+        if not GlobalData.rpgm_trans_abspath.exists():
+            GlobalData.rpgm_trans_abspath.mkdir(parents=True)
             return []
 
         # 获取所有JSON文件
-        files = [
-            item.name for item in GlobalData.rpgm_project_folder_abspath.glob("*.json")
-        ]
+        files = [item.name for item in GlobalData.rpgm_trans_abspath.glob("*.json")]
         return files
 
     else:
         return []
 
 
-def hashlib_256(res: str) -> str:
+def hashlib_256(res: str = "") -> str:
     """
     对传入的字串进行SHA256计算，把计算结果进行Base64编码后输出
 
     :param res: 要加密的字串
     """
+    if not res.strip():
+        return res
+
     m = sha256(bytes(res.encode(encoding="utf-8"))).digest()
     result = b64encode(m).decode(encoding="utf-8")
     return result
 
 
-def validate_index(lst: list | tuple | str, index=0, with_negative=True) -> bool:
+def validate_index(
+    lst: list | tuple | str, index: int = 0, with_negative: bool = True
+) -> bool:
     """
     判断索引是否有效（支持负索引）
 
@@ -672,7 +711,9 @@ def validate_index(lst: list | tuple | str, index=0, with_negative=True) -> bool
     return 0 <= index < lst_length
 
 
-def acquire_token(qps=1, tokens=1, last_refill=0) -> tuple[int | float]:
+def acquire_token(
+    qps: int = 1, tokens: float = 1, last_refill: float = 0
+) -> tuple[int | float]:
     """
     令牌桶限流器
 
@@ -718,7 +759,7 @@ def read_config(
 def write_config(
     section: str,
     keys=None,
-    add=True,
+    add: bool = True,
     config_abspath: str | Path = GlobalData.config_abspath,
 ) -> bool:
     """
@@ -752,7 +793,7 @@ def write_config(
         else:
             conf.remove_option(section, key)
 
-    copy_file(config_abspath, GlobalData.base_abspath)
+    copy_file(config_abspath)
     with open(config_abspath, "w", encoding=get_file_encoding(config_abspath)) as f:
         conf.write(f)
     return True
@@ -812,44 +853,17 @@ def get_key() -> str:
         return ch
 
 
-def iter_files(
-    directory: str | Path,
-    *,
-    create_dir: bool = False,
-    target_abspath: str | Path = None,
-):
+def replace_complex_stem(source_path: Path, prefix: str = "", suffix: str = "") -> Path:
     """
-    生成器，逐个返回文件
-    """
+    精确替换文件名中最核心的stem部分，并保留所有扩展名。
+    为避免文件或目录多后缀名的获取问题，更名只在名称最前面或后缀名最后面进行增加
 
-    directory = Path(directory)
-    if target_abspath:
-        target_abspath = Path(target_abspath)
-
-    for file in directory.rglob("*"):
-        if file.is_file():
-            target_path: Path = None
-            if create_dir:
-                # 保持相对路径结构
-                relative_path = file.parent.relative_to(directory)
-                target_path = target_abspath / relative_path
-                target_path.mkdir(parents=True, exist_ok=True)
-            yield file, target_path
-
-
-def replace_complex_stem(source_path: Path, new_stem: str) -> Path:
-    """
-    精确替换文件名中最核心的stem部分，并保留所有扩展名
+    :param source_path: 待更名的文件夹/文件路径
+    :param prefix: 前缀
+    :param suffix: 后缀名
     """
 
-    # 仅文件需要获取后缀名
-    if source_path.is_file():
-        stem_with_suffix = get_file_stem(source_path.name)
-        # 用新的stem和原来的所有扩展名组成新文件名
-        new_name = stem_with_suffix[0] + new_stem + "." + stem_with_suffix[1]
-    else:
-        new_name = source_path.name + new_stem
-    # 用with_name进行整体替换
+    new_name = prefix + source_path.name + suffix
     return source_path.with_name(new_name)
 
 

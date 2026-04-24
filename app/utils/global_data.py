@@ -22,55 +22,31 @@ class GlobalData:
     """译文TODO标识符\n\n此处写死，避免用户修改导致文本不通用。由open_todo决定是否开启。"""
 
     RPGM_GAME_DEFAULT_TXT: str = "gameText.json"
-    """RPGM旧版本翻译文件\n\n将翻译项目改成此名后置入Translated Libraries文件夹，程序在提取RPGM翻译文本时会自动从旧版本翻译文件中查询并写入已有译文。"""
+    """RPGM旧版本翻译文件\n\n将翻译项目改成此名后置入[TRANS_LIBS]文件夹，程序在提取RPGM翻译文本时会自动从旧版本翻译文件中查询并写入已有译文。"""
 
     base_abspath = Path(__file__).parent.parent.parent
     """项目所在绝对路径"""
 
-    rpgm_project_folder_abspath = base_abspath / "RPGM Workspace"
+    rpgm_trans_abspath = base_abspath / "[RPGM_TRANS]"
     """rpgm项目工作区的绝对路径"""
 
-    renpy_project_folder_abspath = base_abspath / "RenPy Workspace"
+    renpy_trans_abspath = base_abspath / "[RENPY_TRANS]"
     """renpy项目工作区的绝对路径"""
 
-    rpgm_input_abspath = base_abspath / "RPGM Data Input"
+    rpgm_datas_abspath = base_abspath / "[RPGM_DATAS]"
     """存放rpgm初始data游戏数据目录的绝对路径"""
 
-    rpgm_output_abspath = base_abspath / "RPGM Data Output"
-    """存放生成的rpgm新data游戏数据目录的绝对路径"""
-
-    waiting_for_entry = base_abspath / "waiting-for-entry"
+    wait_for_entry = base_abspath / "[WAIT_FOR_ENTRY]"
     """本地译文库更新目录。\n\n将rpy或json翻译文件置入其中，便可使用程序将其中的文本写入本地译文库。"""
 
-    translated_libraries_abspath = base_abspath / "Translated Libraries"
+    trans_libs_abspath = base_abspath / "[TRANS_LIBS]"
     """初始译文目录的绝对路径"""
+
+    translib_abspath = trans_libs_abspath / "TransLib.json"
+    """本地译文库绝对路径"""
 
     config_abspath = base_abspath / "config.ini"
     """配置文件绝对路径"""
-
-    translated_lib_abspath = translated_libraries_abspath / "TransLib.json"
-    """本地译文库绝对路径"""
-
-    # 正则：匹配空行
-    pattern_empty_line: Pattern[str] = compile(r"^\s*$")
-    # 正则：匹配rpy的文本标识符行
-    pattern_identifier: Pattern[str] = compile(r"^\s*translate\s*.*\s(.*):")
-    # 正则：匹配rpy的old语句
-    pattern_old: Pattern[str] = compile(r'^\s*old\s*"(.*)"')
-    # 正则：匹配rpy的new语句
-    pattern_new: Pattern[str] = compile(r'^\s*new\s*"(.*)"')
-    # 正则匹配rpy的say原文
-    pattern_old_say: Pattern[str] = compile(r'^\s*#+\s*(".*?[^\\]"|[\S\s]*?)\s*"(.*)"')
-    # 正则：匹配rpy的say译文
-    pattern_new_say: Pattern[str] = compile(
-        r'(?!\s*#+)\s*(".*?[^\\]"|[\S\s]*?)\s*"(.*)"\s*(.*)'
-    )
-    # 正则：匹配rpy的who
-    pattern_who: Pattern[str] = compile(r'^"(.*?[^\\])"')
-    # 正则：匹配注释符号
-    pattern_annotation: Pattern[str] = compile(r"^\s*#\s*")
-    # 正则：匹配rpg的Mapxxx.json文件
-    pattern_map: Pattern[str] = compile(r"^Map\d{3}$")
 
     # 变量
     debug: bool = False
@@ -145,6 +121,31 @@ class GlobalData:
     google_api = None
     ollama_api = None
     hunyuan_mt_api = None
+
+    pattern_empty_line: Pattern[str] = compile(r"^\s*$")
+    """正则：匹配空行"""
+    pattern_identifier_line: Pattern[str] = compile(r"^\s*translate\s*.*\s(.*):")
+    """正则：匹配rpy的文本标识符行"""
+    pattern_old_strings_line: Pattern[str] = compile(r'^\s*old\s*"(.*)"')
+    """正则：匹配rpy的old语句行"""
+    pattern_new_strings_line: Pattern[str] = compile(r'^\s*new\s*"(.*)"')
+    """正则：匹配rpy的new语句行"""
+    pattern_old_say_line: Pattern[str] = compile(
+        r'^\s*#+\s*(".*?[^\\]"|[\S\s]*?)\s*"(.*)"'
+    )
+    """正则匹配rpy的say原文注释行"""
+    pattern_new_say_line: Pattern[str] = compile(
+        r'(?!\s*#+)\s*(".*?[^\\]"|[\S\s]*?)\s*"(.*)"\s*(.*)'
+    )
+    """正则：匹配rpy的say译文行"""
+    pattern_who: Pattern[str] = compile(r'^"(.*?[^\\])"')
+    """正则：匹配rpy的who"""
+    pattern_identifier: Pattern[str] = compile(r"^(?:\d+_)?([a-fA-F0-9]{8})(?:_.*)?$")
+    """正则：匹配rpy8位标识符，从后往前匹配"""
+    pattern_annotation: Pattern[str] = compile(r"^\s*#\s*")
+    """正则：匹配注释符号"""
+    pattern_map: Pattern[str] = compile(r"^Map\d{3}$")
+    """正则：匹配rpg的Mapxxx.json文件"""
 
     @classmethod
     def __class_getitem__(cls, key):

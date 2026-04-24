@@ -8,19 +8,18 @@
 from datetime import datetime
 from gc import collect
 from pathlib import Path
-from shutil import copy, rmtree
 from sys import exit
 
 import main
 from app.utils.global_data import GlobalData
 from app.utils.utils import (
+    copy_file,
+    copy_tree,
     del_key_from_dict,
     get_md5,
-    iter_files,
     match_lang,
     merge_dicts,
     print_err,
-    print_info,
     print_warn,
     read_json,
     switch_change_mark,
@@ -84,18 +83,12 @@ def start(project_name: str):
     启动界面
     """
 
+    print("\n")
+
     global __curr_rpgm_project_name, __curr_rpgm_project_path
 
     __curr_rpgm_project_name = project_name
-    __curr_rpgm_project_path = GlobalData.rpgm_project_folder_abspath / project_name
-
-    print("""
-===========================================================================================
-                              RPG Maker VX Ace 文本提取写入工具
-                                      作者：Phoenix
-                                      版权归作者所有
-===========================================================================================
-""")
+    __curr_rpgm_project_path = GlobalData.rpgm_trans_abspath / project_name
 
     no_skip = __choose_option()
     if not no_skip:
@@ -105,7 +98,7 @@ def start(project_name: str):
         return
 
     # 判断翻译文本是否有变动，没有则跳过
-    if not __game_txt_cache.get(GlobalData.KEY_PHOENIX):
+    if not __game_txt_cache or not __game_txt_cache.get(GlobalData.KEY_PHOENIX):
         print(f"{__curr_rpgm_project_name} 未发生更改，无需写入！\n")
     else:
         # 将更新标识的值重置为False
@@ -148,53 +141,71 @@ def __walk_file(_type: str):
     遍历文件夹内所有内容
     """
 
-    if not GlobalData.rpgm_input_abspath.exists():
-        GlobalData.rpgm_input_abspath.mkdir(parents=True)
-        print_err("RPGM Data Input目录无文件！")
+    GlobalData.rpgm_datas_abspath.mkdir(parents=True, exist_ok=True)
+    # 根据翻译项目名称查找相应名称的Data文件夹
+    rpgm_datas_abspath = (
+        Path(GlobalData.rpgm_datas_abspath) / __curr_rpgm_project_name[:-5]
+    )
+    if not rpgm_datas_abspath.exists():
+        print_err(f"{rpgm_datas_abspath.name}项目不存在！")
         return
 
-    if _type == WRITEIN:
-        if GlobalData.rpgm_output_abspath.exists():
-            rmtree(GlobalData.rpgm_output_abspath)
-        GlobalData.rpgm_output_abspath.mkdir(parents=True, exist_ok=True)
-
-    # 读取文本库
-    if not __read_game_txt(_type):
-        return
-
-    # 遍历所有文件，筛选出需要的json文件进行处理
-    for file, target_path in iter_files(
-        GlobalData.rpgm_input_abspath,
-        create_dir=_type == WRITEIN,
-        target_abspath=GlobalData.rpgm_output_abspath,
-    ):
-        if file.suffix != ".json" or (
-            file.stem not in GlobalData.rpg_white_list
-            and not GlobalData.pattern_map.match(file.stem)
+    if rpgm_datas_abspath.is_file():
+        if rpgm_datas_abspath.suffix != ".json" or (
+            rpgm_datas_abspath.stem not in GlobalData.rpg_white_list
+            and not GlobalData.pattern_map.match(rpgm_datas_abspath.stem)
         ):
-            # 如果当前为写入模式，在新目录拷贝一份该文件
-            if _type == WRITEIN:
-                copy(str(file), str(target_path))
-            print(f"{file.name} 不在白名单内，已跳过！\n")
-            continue
+            print(f"{rpgm_datas_abspath.name} 不在白名单内，已跳过！\n")
+            return
 
-        __deal_with_json_file(file, target_path, _type)
+        # 写回模式下，备份Data文件
+        if _type == WRITEIN:
+            copy_file(rpgm_datas_abspath)
+
+        # 读取文本库
+        if not __read_game_txt(_type):
+            return
+
+        __deal_with_json_file(rpgm_datas_abspath, _type)
+
+    else:
+        # 写回模式下，备份Data文件夹
+        if _type == WRITEIN:
+            copy_tree(rpgm_datas_abspath)
+
+        # 读取文本库
+        if not __read_game_txt(_type):
+            return
+
+        # 遍历所有文件，筛选出需要的json文件进行处理
+        for file in rpgm_datas_abspath.rglob("*.json"):
+            if not file.is_file():
+                continue
+
+            if (
+                file.stem not in GlobalData.rpg_white_list
+                and not GlobalData.pattern_map.match(file.stem)
+            ):
+                print(f"{file.name} 不在白名单内，已跳过！\n")
+                continue
+
+            __deal_with_json_file(file, _type)
 
 
-def __deal_with_json_file(source_file: Path, target_path: Path, _type: str):
+def __deal_with_json_file(data_abspath: Path, _type: str):
     """
     处理JSON数据
     """
 
-    print(f"当前扫描文本：{source_file.name}")
+    print(f"当前扫描文本：{data_abspath.name}")
     # 这里的json_datas不做拷贝，直接传入下面的函数
-    json_datas = read_json(source_file)
+    json_datas = read_json(data_abspath)
     if not json_datas:
-        print(f"{source_file.name} 无内容，已跳过！\n")
+        print(f"{data_abspath.name} 无内容，已跳过！\n")
         return
 
     # 无后缀文件名
-    filename = source_file.stem
+    filename = data_abspath.stem
     # 翻译文本所在文件的标识
     file_mark = ""
     # 当前为提取模式时，在处理文本之前，将标识行写入缓存
@@ -221,11 +232,11 @@ def __deal_with_json_file(source_file: Path, target_path: Path, _type: str):
         if not _change:
             global __game_txt_cache
             __game_txt_cache = del_key_from_dict(file_mark, __game_txt_cache)
-        print_info(f"{source_file.name} 扫描完成！\n")
+        print(f"{data_abspath.name} 扫描完成！\n")
 
     # 当前为写入模式时，写入json文本
     elif _type == WRITEIN:
-        write_json(target_path / source_file.name, json_datas, indent=2, backup=False)
+        write_json(data_abspath, json_datas, indent=2, backup=False)
 
 
 def __sacnning_type_player(json_datas: list, _type: str, filename: str) -> bool:
@@ -880,29 +891,31 @@ def __read_game_txt(_type: str) -> bool:
 
     # 读取引擎默认文本库
     default_libraries = read_json(
-        GlobalData.translated_libraries_abspath / RPGVXACE_DEFAULT_LIBRARY
+        GlobalData.trans_libs_abspath / RPGVXACE_DEFAULT_LIBRARY
     )
     # 读取游戏已有译文
     translated_libraries = read_json(
-        GlobalData.translated_libraries_abspath / GlobalData.RPGM_GAME_DEFAULT_TXT
+        GlobalData.trans_libs_abspath / GlobalData.RPGM_GAME_DEFAULT_TXT
     )
-    # 合并两个译文为一个译文库，若有相同键，游戏译文覆盖默认译文
-    libraries = merge_dicts([default_libraries, translated_libraries])
-    # 初始化译文库缓存
+
     global __game_txt_library
-    __game_txt_library = libraries
+    # 合并两个译文为一个译文库，若有相同键，游戏译文覆盖默认译文
+    __game_txt_library = merge_dicts([default_libraries, translated_libraries])
     return True
 
 
-def __write_in_cache(key: str, _loc="", filter_lang="", value="") -> bool:
+def __write_in_cache(
+    key: str = "", _loc: str = "", filter_lang: str = "", value: str = ""
+) -> bool:
     """
     将数据存入缓存
     """
 
-    if key.strip() == "":
+    if not key.strip():
         return False
 
     _key = _loc + "_" + key if _loc != "" else key
+    _key = _key.upper()
 
     # 不匹配指定语种的文本不存入缓存
     if not match_lang(key, filter_lang):
@@ -939,15 +952,16 @@ def __write_in_cache(key: str, _loc="", filter_lang="", value="") -> bool:
     return True
 
 
-def __read_from_cache(key: str, _loc="") -> str:
+def __read_from_cache(key: str = "", _loc: str = "") -> str:
     """
     从缓存获取数据，若找不到则返回原值
     """
 
-    if key is None or key.strip() == "":
+    if not key.strip():
         return key
 
     _key = _loc + "_" + key if _loc != "" else key
+    _key = _key.upper()
 
     val = __game_txt_cache.get(_key, "")
     val_strip = val.strip().upper()
@@ -963,7 +977,7 @@ def __read_from_cache(key: str, _loc="") -> str:
     return val
 
 
-def __choose_option(first_select=True) -> bool:
+def __choose_option(first_select: bool = True) -> bool:
     """
     输入序号选择对应的操作
 

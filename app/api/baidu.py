@@ -27,7 +27,7 @@ class BaiduTranslation(BaseTranslation):
     不包含词典、tts语音合成等资源，如有相关需求请联系translate_api@baidu.com
     """
 
-    def __init__(self, section="baidu"):
+    def __init__(self, section: str = "baidu"):
 
         BaseTranslation.__init__(
             self,

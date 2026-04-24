@@ -36,18 +36,12 @@ def start(project_name: str):
     启动界面
     """
 
+    print("\n")
+
     global __curr_rpgm_project_name, __curr_rpgm_project_path
 
     __curr_rpgm_project_name = project_name
-    __curr_rpgm_project_path = GlobalData.rpgm_project_folder_abspath / project_name
-
-    print("""
-===========================================================================================
-                                   JSON文本机翻工具
-                                      作者：Phoenix
-                                      版权归作者所有
-===========================================================================================
-""")
+    __curr_rpgm_project_path = GlobalData.rpgm_trans_abspath / project_name
 
     no_skip = __choose_option()
 
@@ -97,7 +91,7 @@ def __initialize():
     __translate()
 
 
-def __translate(filter_lang=""):
+def __translate(filter_lang: str = ""):
     """
     扫描缓存，逐条翻译并覆写
 
@@ -153,7 +147,7 @@ def __translate(filter_lang=""):
     print_info("翻译完成！\n")
 
 
-def __add_todo(_filter=""):
+def __add_todo(filter_lang: str = ""):
     """
     查找漏翻字段，添加TODO
     """
@@ -174,7 +168,7 @@ def __add_todo(_filter=""):
             continue
 
         # 若传入_filter，则只处理指定的语种
-        if not match_lang(k.split("_")[-1], _filter):
+        if not match_lang(k.split("_")[-1], filter_lang):
             continue
 
         _count += 1
@@ -187,19 +181,19 @@ def __add_todo(_filter=""):
     __wirte_in_file()
 
 
-def __add_pass(_filter="ru"):
+def __add_pass(filter_lang: str = "ru"):
     """
     查找指定语种，添加PASS
     """
 
-    if _filter.strip() == "":
+    if not filter_lang.strip():
         _inp = input("请输入指定语种缩写，直接回车默认为ru（俄语）：").strip()
         if _inp != "":
-            _filter = _inp
+            filter_lang = _inp
         else:
-            _filter = "ru"
+            filter_lang = "ru"
 
-    print(f"当前指定语种为{_filter}\n")
+    print(f"当前指定语种为{filter_lang}\n")
 
     print("正在扫描……")
     if not __read_game_txt():
@@ -215,7 +209,7 @@ def __add_pass(_filter="ru"):
         if v != "":
             continue
         # 处理指定语种
-        if not match_lang(k.split("_")[-1], _filter):
+        if not match_lang(k.split("_")[-1], filter_lang):
             continue
 
         _count += 1
@@ -248,7 +242,7 @@ def __read_game_txt() -> bool:
     return True
 
 
-def __wirte_in_file(bak=True):
+def __wirte_in_file(bak: bool = True):
     """
     将结果写入文件
 
@@ -263,7 +257,7 @@ def __wirte_in_file(bak=True):
     write_json(__curr_rpgm_project_path, __game_txt_cache, backup=bak)
 
 
-def __choose_option(first_select=True) -> bool:
+def __choose_option(first_select: bool = True) -> bool:
     """
     输入序号选择对应的操作
 

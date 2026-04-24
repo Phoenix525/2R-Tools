@@ -18,7 +18,7 @@ class GoogleTranslation(BaseTranslation):
     谷歌翻译第三方API
     """
 
-    def __init__(self, section="google"):
+    def __init__(self, section: str = "google"):
 
         BaseTranslation.__init__(
             self,

@@ -25,7 +25,7 @@ class HuoshanTranslation(BaseTranslation):
     火山翻译引擎
     """
 
-    def __init__(self, section="huoshan"):
+    def __init__(self, section: str = "huoshan"):
 
         BaseTranslation.__init__(
             self,

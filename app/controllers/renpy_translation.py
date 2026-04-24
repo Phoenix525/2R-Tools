@@ -12,7 +12,6 @@ translate chinese xxx_xxx_xxxxxxxx:
     pov "" with dissolve
 """
 
-from datetime import datetime
 from gc import collect
 from pathlib import Path
 from sys import exit
@@ -21,12 +20,11 @@ import main
 from app.controllers.interpreter import Interpreter
 from app.utils.global_data import GlobalData
 from app.utils.utils import (
-    copy_directory,
+    copy_file,
+    copy_tree,
     get_file_encoding,
-    iter_files,
     print_err,
     print_info,
-    replace_complex_stem,
     validate_renpy_trans_file,
 )
 
@@ -34,8 +32,7 @@ from app.utils.utils import (
 END_SAY = "-*- END -*-"
 
 # pylint: disable=invalid-name
-__input_abspath: str | Path = GlobalData.rpy_trans_input_abspath
-__output_abspath: Path = None
+__wait_translate_abspath: str | Path = GlobalData.rpy_trans_input_abspath
 
 # 是否覆盖所有译文
 __rewrite_all: bool = False
@@ -57,14 +54,7 @@ def start():
     Ren'Py 翻译文本翻译工具
     """
 
-    print(r"""
-===========================================================================================
-                                Ren'Py 翻译文本机翻工具
-                                    作者：Phoenix
-                                    版权归作者所有
-                            PS： 所有操作均不会影响原文件！
-===========================================================================================
-""")
+    print("\n")
 
     no_skip = __input_path()
     if not no_skip:
@@ -102,16 +92,16 @@ def init_global_datas():
     """
 
     global \
-        __input_abspath, \
-        __output_abspath, \
+        __wait_translate_abspath, \
+        __bak_translate_abspath, \
         __rewrite_all, \
         __rewrite_todo, \
         __interpreter, \
         __curr_renpy_project_name, \
         __curr_renpy_project_path
 
-    __input_abspath = GlobalData.rpy_trans_input_abspath
-    __output_abspath = None
+    __wait_translate_abspath = GlobalData.rpy_trans_input_abspath
+    __bak_translate_abspath = None
     __rewrite_all = False
     __rewrite_todo = False
     __interpreter = None
@@ -126,55 +116,57 @@ def __walk_file():
     遍历文件夹内所有内容
     """
 
-    if __input_abspath.is_file():
-        if not validate_renpy_trans_file(__input_abspath):
+    if __wait_translate_abspath.is_file():
+        if not validate_renpy_trans_file(__wait_translate_abspath):
             print_err("没有可翻译的Ren'Py翻译文件！")
             return
-        print(f"当前更新文本：{__input_abspath.name}")
-        __process_file(__input_abspath, __output_abspath)
+
+        # 备份翻译文件
+        copy_file(__wait_translate_abspath)
+        print(f"当前更新文本：{__wait_translate_abspath.name}")
+        __process_file(__wait_translate_abspath)
+
     else:
-        for file, target_abspath in iter_files(
-            __input_abspath, create_dir=True, target_abspath=__output_abspath
-        ):
-            # 非renPy翻译文本直接拷贝至新目录
-            if not validate_renpy_trans_file(file):
-                copy_directory(file, target_abspath)
+        # 备份翻译项目
+        copy_tree(__wait_translate_abspath)
+        for file in __wait_translate_abspath.rglob("*"):
+            if not file.is_file():
                 continue
 
             print(f"当前翻译文本：{file.name}")
-            __process_file(file, target_abspath / file.name)
+            __process_file(file)
     print_info("翻译已全部完成，请前往原路径查看翻译文本！")
 
 
-def __process_file(old_trans_abspath: Path, new_trans_abspath: Path):
+def __process_file(wait_trans_abspath: Path):
     """
     读取文本、翻译并写入
     """
 
+    # todo 在遇到超大文件时会有内存占用问题。不过翻译文件一般不会超过20M，当天的逻辑基本不会有什么问题。
+    # 临时文件内容
+    tmp_lines = []
     # 待翻译文本字典，将文本提取出来统一翻译。键为源文本的行索引，值为文本
     translate_txts: dict[int, dict[str, str]] = {}
-    # 原文
-    _old_say = ""
-    # 标识符
-    _identifier = "strings"
 
-    lightSen = []
-
-    with open(
-        old_trans_abspath, "r", encoding=get_file_encoding(old_trans_abspath)
-    ) as inp:
+    encode = get_file_encoding(wait_trans_abspath)
+    with open(wait_trans_abspath, "r", encoding=encode) as inp:
+        # 原文
+        _old_say = ""
+        # 标识符
+        _identifier = "strings"
         # 获取要翻译的文本列表
         for line_num, line in enumerate(inp, 1):
-            lightSen.append(line)
+            tmp_lines.append(line)
             # 删除换行符
             temp_line = line.rstrip("\n")
             # 空行
-            if GlobalData.pattern_empty_line.match(temp_line) is not None:
+            if GlobalData.pattern_empty_line.match(temp_line):
                 continue
 
             # 标志符行
-            identifier_match = GlobalData.pattern_identifier.match(temp_line)
-            if identifier_match is not None:
+            identifier_match = GlobalData.pattern_identifier_line.match(temp_line)
+            if identifier_match:
                 _identifier = identifier_match.group(1)
                 # 扫描到标志符行，说明进入了新的BAP，原文清空
                 # 此步非常重要，避免在没有原文且选择覆盖的情况下出错
@@ -182,23 +174,23 @@ def __process_file(old_trans_abspath: Path, new_trans_abspath: Path):
                 continue
 
             # 原文行
-            old_say_match = GlobalData.pattern_old_say.match(temp_line)
-            if old_say_match is not None and _identifier not in ("", "strings"):
+            old_say_match = GlobalData.pattern_old_say_line.match(temp_line)
+            if old_say_match and _identifier not in ("", "strings"):
                 # 跳过cv语音行
                 if old_say_match.group(1) != "voice":
                     _old_say = old_say_match.group(2)
                 continue
 
             # 译文行
-            new_say_match = GlobalData.pattern_new_say.match(temp_line)
-            if new_say_match is not None and _identifier not in ("", "strings"):
+            new_say_match = GlobalData.pattern_new_say_line.match(temp_line)
+            if new_say_match and _identifier not in ("", "strings"):
                 _who = new_say_match.group(1)
                 # 跳过cv语音行
                 if _who == "voice":
                     continue
 
                 # rpy翻译文件原文本质上是注释，有些rpy翻译文件因一些原因删除了原文注释，所以原文say为空，表明找不到原文注释，这种情况无法获取原文进行翻译，只能跳过
-                if _old_say.strip() == "":
+                if not _old_say.strip():
                     continue
 
                 # 如果原文为END_SAY，说明当前BAP已结束，现在是多出来的译文行，跳过
@@ -207,7 +199,7 @@ def __process_file(old_trans_abspath: Path, new_trans_abspath: Path):
 
                 # 存在字符串形式的who，先不作翻译
                 # who_match = PATTERN_WHO.match(_who)
-                # if who_match is not None and who_match.group(1) != '':
+                # if who_match and who_match.group(1) != '':
                 #     who = who_match.group(1)
                 #     translate_txts[index]['who'] = who
 
@@ -235,15 +227,15 @@ def __process_file(old_trans_abspath: Path, new_trans_abspath: Path):
                 continue
 
             # old行
-            old_match = GlobalData.pattern_old.match(temp_line)
-            if old_match is not None and _identifier == "strings":
+            old_match = GlobalData.pattern_old_strings_line.match(temp_line)
+            if old_match and _identifier == "strings":
                 _old_say = old_match.group(1)
                 continue
 
             # new行
-            new_match = GlobalData.pattern_new.match(temp_line)
-            if new_match is not None and _identifier == "strings":
-                if _old_say == "":
+            new_match = GlobalData.pattern_new_strings_line.match(temp_line)
+            if new_match and _identifier == "strings":
+                if not _old_say:
                     continue
 
                 original_new = new_match.group(1)  # 译文
@@ -268,12 +260,10 @@ def __process_file(old_trans_abspath: Path, new_trans_abspath: Path):
 
     # 待翻文本字典为空，不需要翻译
     if not translate_txts:
-        print_info(f"{old_trans_abspath.name} 无需翻译！\n")
+        print(f"{wait_trans_abspath.name} 无需翻译！\n")
         return
 
-    with open(
-        new_trans_abspath, "w", encoding=get_file_encoding(new_trans_abspath)
-    ) as outp:
+    with open(wait_trans_abspath, "w", encoding=encode) as outp:
         tmp_translate_txts: dict[int, dict[str, str]] = {}
         txts_len = len(translate_txts)
         for idx, key in enumerate(translate_txts.keys()):
@@ -300,13 +290,13 @@ def __process_file(old_trans_abspath: Path, new_trans_abspath: Path):
                     reverse_dst = dst[::-1]
                     new_line = reverse_line.replace('""', f'"{reverse_dst}"')
                     reverse_line = new_line[::-1]
-                    lightSen[tmp_key - 1] = reverse_line
+                    tmp_lines[tmp_key - 1] = reverse_line
                 # 新逻辑会将未翻译文本也写回文件，避免意外退出导致文件中的翻译文本被截断
-                outp.writelines(lightSen)
+                outp.writelines(tmp_lines)
                 outp.flush()
                 tmp_translate_txts = {}
 
-    print_info(f"{old_trans_abspath.name} 翻译完成！")
+    print(f"{wait_trans_abspath.name} 翻译完成！\n")
 
 
 def __input_path(first_select=True) -> bool:
@@ -316,27 +306,25 @@ def __input_path(first_select=True) -> bool:
     :param first_select: 首次输入路径
     """
 
-    global __input_abspath, __output_abspath
+    global __wait_translate_abspath
 
     # 用户输入内容
     _inp = ""
     # 首次输入路径
     if first_select:
-        if __input_abspath:
-            print_info("正在验证默认路径……")
+        if __wait_translate_abspath:
+            print("正在验证默认翻译项目路径……")
+            __wait_translate_abspath = Path(__wait_translate_abspath)
             # 若路径不存在，则重新手动输入
-            if not Path(__input_abspath).exists():
-                __input_abspath = ""
+            if not __wait_translate_abspath.exists():
+                __wait_translate_abspath = ""
                 return __input_path(False)
 
-            __input_abspath, __output_abspath = __create_new_trans_project_path(
-                __input_abspath
-            )
-            print_info("路径验证成功！\n")
+            print("路径验证成功！\n")
             return True
         _inp = input("请输入翻译项目的绝对路径或回车返回主菜单：").strip()
     else:
-        _inp = input("路径错误，请重新输入正确的路径或回车返回主菜单：").strip()
+        _inp = input("路径不存在，请重新输入正确的路径或回车返回主菜单：").strip()
 
     # 输入为空，返回主菜单
     if _inp in ("", "\r", "\n"):
@@ -348,43 +336,9 @@ def __input_path(first_select=True) -> bool:
     if not _inp.exists():
         return __input_path(False)
 
-    __input_abspath, __output_abspath = __create_new_trans_project_path(_inp)
-    print_info("路径验证成功！\n")
+    __wait_translate_abspath = _inp
+    print("路径验证成功！\n")
     return True
-
-
-def __create_new_trans_project_path(input_abspath: str | Path) -> tuple[Path]:
-    """
-    创建新翻译项目路径
-
-    :param input_abspath: 原路径
-    """
-
-    input_abspath = Path(input_abspath)
-    output_abspath: Path = None
-    # 如果输入路径是文件夹
-    if input_abspath.is_dir():
-        # 输出路径也生成文件夹
-        output_abspath = input_abspath.with_name(f"{input_abspath.name}-new")
-        # 如果输出文件夹已存在，先将其更名，再新建空文件夹
-        if output_abspath.exists():
-            time = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-            bak_output_abspath = output_abspath.with_name(
-                f"{output_abspath.name}_{time}"
-            )
-            output_abspath.rename(bak_output_abspath)
-        output_abspath.mkdir(parents=True, exist_ok=True)
-
-    # 如果输入路径是文件
-    elif input_abspath.is_file():
-        # 如果输出文件已存在，将其更名备份
-        output_abspath = replace_complex_stem(input_abspath, "-new")
-        if output_abspath.exists():
-            time = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-            bak_output_abspath = replace_complex_stem(output_abspath, f"_{time}")
-            output_abspath.rename(bak_output_abspath)
-
-    return input_abspath, output_abspath
 
 
 def __rewrite_all_text() -> bool:

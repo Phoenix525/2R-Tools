@@ -158,7 +158,7 @@ class HunYuanMTTranslation(BaseTranslation):
         """
 
         # 如果分词器和模型都不为空，说明已加载，无需再次加载
-        if self.__tokenizer is not None and self.__model is not None:
+        if self.__tokenizer and self.__model:
             return False
 
         print_warn("请确保已关闭其他占用大量显存及内存的程序，否则可能加载失败!")

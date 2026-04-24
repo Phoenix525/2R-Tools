@@ -6,4 +6,4 @@ from app.utils.utils import get_config, read_json
 
 get_config()
 
-GlobalData.translated_lib_library = read_json(GlobalData.translated_lib_abspath)
+GlobalData.translated_lib_library = read_json(GlobalData.translib_abspath)

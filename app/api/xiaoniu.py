@@ -25,7 +25,7 @@ class XiaoNiuTranslation(BaseTranslation):
     小牛翻译引擎
     """
 
-    def __init__(self, section="xiaoniu"):
+    def __init__(self, section: str = "xiaoniu"):
 
         BaseTranslation.__init__(
             self,

@@ -43,7 +43,7 @@ class Interpreter:
     :param api_name: 翻译接口名称
     """
 
-    def __init__(self, *, api_name=""):
+    def __init__(self, *, api_name: str = ""):
 
         # 从翻译引擎表获取引擎名称表
         self.__api_names: list[str] = self.__list_api_names()
@@ -68,7 +68,11 @@ class Interpreter:
             self.__select_api_type()
 
     def translate_txt(
-        self, source_txt="", *, open_todo=False, activate_context="-1"
+        self,
+        source_txt: str = "",
+        *,
+        open_todo: bool = False,
+        activate_context: str = "-1",
     ) -> str:
         """
         翻译单条文本
@@ -86,7 +90,7 @@ class Interpreter:
         print(f"原文：{source_txt}")
 
         # 先从译文库中查找，如果有则直接取值返回
-        translated = self.__get_value_from_library(source_txt)
+        translated = self.__read_from_translib(source_txt)
         if translated:
             return translated
 
@@ -109,8 +113,8 @@ class Interpreter:
         self,
         source_txt_dict: dict[str, str],
         *,
-        open_todo=False,
-        activate_context="-1",
+        open_todo: bool = False,
+        activate_context: str = "-1",
     ) -> dict[str, str]:
         """
         翻译多条文本【字典格式】
@@ -130,7 +134,7 @@ class Interpreter:
             print(f"原文：{text}")
 
             # 先从译文库中查找，如果有则直接取值返回
-            translated = self.__get_value_from_library(text)
+            translated = self.__read_from_translib(text)
             if translated:
                 tmp_source_txt[key] = translated
                 continue
@@ -153,7 +157,11 @@ class Interpreter:
         return tmp_source_txt
 
     def translate_txt_list(
-        self, source_txt_list: list[str], *, open_todo=False, activate_context="-1"
+        self,
+        source_txt_list: list[str],
+        *,
+        open_todo: bool = False,
+        activate_context: str = "-1",
     ) -> list[str]:
         """
         翻译多条文本【列表格式】
@@ -172,7 +180,7 @@ class Interpreter:
         for text in source_txt_list:
             print(f"原文：{text}")
             # 先从译文库中查找，如果有则直接取值返回
-            translated = self.__get_value_from_library(text)
+            translated = self.__read_from_translib(text)
             if translated:
                 tmp_source_txt_list.append(translated)
                 continue
@@ -201,15 +209,14 @@ class Interpreter:
         self.__curr_api = None
         self.__curr_api_name = ""
 
-    def __get_value_from_library(self, source_txt: str) -> str:
+    def __read_from_translib(self, source_txt: str) -> str:
         """
         从译文库中获取译文
         """
 
-        if (
-            source_txt in GlobalData.translated_lib_library
-            and GlobalData.translated_lib_library[source_txt] != ""
-        ):
+        # 将语句调整为大写后查询
+        source_txt = source_txt.upper()
+        if GlobalData.translated_lib_library.get(source_txt, ""):
             target = GlobalData.translated_lib_library[source_txt]
             print(f"库译文：{target}\n")
             return target
@@ -337,7 +344,13 @@ class Interpreter:
 
         self.__select_lang_type()
 
-    def __select_api_type(self, serial_num=1, first_select=True, *, api_titles=[]):
+    def __select_api_type(
+        self,
+        serial_num: int = 1,
+        first_select: bool = True,
+        *,
+        api_titles: list[str] = [],
+    ):
         """
         选择翻译引擎
 
@@ -459,7 +472,7 @@ class Interpreter:
 
         # 输入的序号转换成整型
         _inp_serial = to_int(_inp) - 1
-        if not validate_index(curr_langs, _inp_serial):
+        if not validate_index(curr_langs, _inp_serial, False):
             self.__select_lang_type(False, target_langs=target_langs)
             return
 

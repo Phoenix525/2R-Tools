@@ -15,7 +15,7 @@ class SimpleAPIKeyEncryptor:
     简单的API密钥加密管理器
     """
 
-    def __init__(self, password=""):
+    def __init__(self, password: str = ""):
         """
         初始化加密器
 
@@ -44,7 +44,7 @@ class SimpleAPIKeyEncryptor:
         decrypted = self.__cipher.decrypt(base64.b64decode(encrypted_text))
         return decrypted.decode()
 
-    def __chipher(self, input_str="") -> Fernet:
+    def __chipher(self, input_str: str = "") -> Fernet:
         """
         从密码生成费尔内特令牌
 
@@ -74,7 +74,7 @@ class SimpleKeyStore:
             keys = {}
         self.__keys = keys
 
-    def add_keys(self, section: str, keys=None):
+    def add_keys(self, section: str, keys: dict[str, str] = None):
         """
         添加并加密存储数据
 

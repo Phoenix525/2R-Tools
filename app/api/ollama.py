@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from app.api.ollama import ChatResponse, chat
-
 from app.api.base_translation import BaseTranslation
+from app.api.ollama import ChatResponse, chat
 from app.utils.utils import print_err, read_config, remove_escapes
 
 
@@ -14,7 +13,7 @@ class OllamaTranslation(BaseTranslation):
     使用该翻译引擎，需要先启动Ollama。
     """
 
-    def __init__(self, section="ollama"):
+    def __init__(self, section: str = "ollama"):
 
         BaseTranslation.__init__(
             self,

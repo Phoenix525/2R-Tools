@@ -20,11 +20,7 @@ def start():
     翻译单条语句模式
     """
 
-    print("""
-===========================================================================================
-                                       机器翻译工具
-                                      作者：Phoenix
-                                      版权归作者所有""")
+    print()
 
     # 实例化翻译引擎
     global __interpreter
@@ -48,7 +44,7 @@ def init_global_datas():
     collect()
 
 
-def __translate(first_trans=True) -> bool:
+def __translate(first_trans: bool = True) -> bool:
     """
     开始翻译
 
