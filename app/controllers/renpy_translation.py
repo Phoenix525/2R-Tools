@@ -32,7 +32,7 @@ from app.utils.utils import (
 END_SAY = "-*- END -*-"
 
 # pylint: disable=invalid-name
-__wait_translate_abspath: str | Path = GlobalData.rpy_trans_input_abspath
+__wait_translate_abspath: str | Path = GlobalData.rpy_trans_abspath
 
 # 是否覆盖所有译文
 __rewrite_all: bool = False
@@ -100,7 +100,7 @@ def init_global_datas():
         __curr_renpy_project_name, \
         __curr_renpy_project_path
 
-    __wait_translate_abspath = GlobalData.rpy_trans_input_abspath
+    __wait_translate_abspath = GlobalData.rpy_trans_abspath
     __bak_translate_abspath = None
     __rewrite_all = False
     __rewrite_todo = False

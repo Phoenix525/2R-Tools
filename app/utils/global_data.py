@@ -61,7 +61,7 @@ class GlobalData:
     pass_filter: list[str] = []
     """JSON翻译文件文本翻译忽略标记\n\n程序在翻译时，会忽略带有该标记的文本，以保持原文本。可在配置文件中调整。"""
 
-    rpy_trans_input_abspath: str = ""
+    rpy_trans_abspath: str = ""
     """Ren'Py翻译项目的绝对路径。可在配置文件中调整。"""
 
     rpy_trans_bap_max_cache: int = 0
@@ -70,7 +70,7 @@ class GlobalData:
     rpy_update_old_abspath: str = ""
     """Ren'Py更新中旧版本翻译项目的绝对路径。可在配置文件中调整。"""
 
-    rpy_update_new_abspath: str = ""
+    rpy_update_wait_abspath: str = ""
     """Ren'Py更新中待更新翻译项目的绝对路径。可在配置文件中调整。"""
 
     rpy_update_bap_max_cache: int = 0
@@ -85,7 +85,7 @@ class GlobalData:
     rpg_duplicate_removal_list: list[str] = []
     """RPGM翻译文本可去重列表\n\n无需使用标识符区分相同文本的。可在配置文件中调整。"""
 
-    rpg_type_array_object: list[str] = []
+    rpg_type_list_dict: list[dict] = []
     """RPGM文件内容是list[dict]数据结构的。可在配置文件中调整。"""
 
     rpg_script_regexp: list[str] = []

@@ -892,14 +892,14 @@ def get_config():
     GlobalData.open_todo = conf.getboolean("common_settings", "open_todo")
     GlobalData.none_filter = conf.get("filter_texts", "none_filter")
     GlobalData.pass_filter = conf.get("filter_texts", "pass_filter").upper().split(",")
-    GlobalData.rpy_trans_input_abspath = conf.get("rpy_trans_tool", "rpy_input_abspath")
 
+    GlobalData.rpy_trans_abspath = conf.get("rpy_trans_tool", "wait_trans_abspath")
     rpy_bap_max_cache = conf.getint("rpy_trans_tool", "rpy_bap_max_cache")
     if rpy_bap_max_cache > 0:
         GlobalData.rpy_trans_bap_max_cache = rpy_bap_max_cache
 
     GlobalData.rpy_update_old_abspath = conf.get("rpy_update_tool", "rpy_old_abspath")
-    GlobalData.rpy_update_new_abspath = conf.get("rpy_update_tool", "rpy_new_abspath")
+    GlobalData.rpy_update_wait_abspath = conf.get("rpy_update_tool", "rpy_wait_abspath")
 
     rpy_bap_max_cache = conf.getint("rpy_update_tool", "rpy_bap_max_cache")
     if rpy_bap_max_cache > 0:
@@ -918,8 +918,8 @@ def get_config():
     GlobalData.rpg_duplicate_removal_list = conf.get(
         "rpgm_extraction_writing", "rpg_duplicate_removal_list"
     ).split(",")
-    GlobalData.rpg_type_array_object = conf.get(
-        "rpgm_extraction_writing", "rpg_type_array_object"
+    GlobalData.rpg_type_list_dict = conf.get(
+        "rpgm_extraction_writing", "rpg_type_list_dict"
     ).split(",")
     GlobalData.rpg_script_regexp = conf.get(
         "rpgm_extraction_writing", "rpg_script_regexp"

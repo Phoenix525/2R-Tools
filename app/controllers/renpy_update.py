@@ -38,7 +38,7 @@ END_SAY = "-*- END -*-"
 # 旧版本翻译项目路径
 __pre_trans_project_abspath: str | Path = GlobalData.rpy_update_old_abspath
 # 待更新的翻译项目路径
-__wait_upd_project_abspath: str | Path = GlobalData.rpy_update_new_abspath
+__wait_upd_project_abspath: str | Path = GlobalData.rpy_update_wait_abspath
 
 __translation_cache: dict[str, dict[str, list[str]]] = {}
 """译文缓存库。key为原文，可储存who和strings。格式：{old_say:{identifier:[str,str]}}"""
@@ -95,7 +95,7 @@ def init_global_datas():
         __curr_renpy_project_path
 
     __pre_trans_project_abspath = GlobalData.rpy_update_old_abspath
-    __wait_upd_project_abspath = GlobalData.rpy_update_new_abspath
+    __wait_upd_project_abspath = GlobalData.rpy_update_wait_abspath
     __translation_cache.clear()
     __identifier_cache.clear()
     __curr_renpy_project_name = ""
