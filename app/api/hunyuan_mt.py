@@ -216,7 +216,7 @@ class HunYuanMTTranslation(BaseTranslation):
             print_err(f"Hunyuan-MT模型加载失败：请检查报错信息：{str(e)}")
             return False
         else:
-            load_time = time.time() - start_time
+            load_time = time() - start_time
             print_info(f"模型加载完成，耗时: {load_time:.2f}秒")
             return True
 

@@ -328,7 +328,7 @@ class Interpreter:
 
             # 腾讯Hunyuan-MT
             case "hunyuan_mt":
-                if GlobalData.hunyuan_mt_api:
+                if not GlobalData.hunyuan_mt_api:
                     from app.api.hunyuan_mt import HunYuanMTTranslation
 
                     GlobalData.hunyuan_mt_api = HunYuanMTTranslation()

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+from ollama import ChatResponse, chat
+
 from app.api.base_translation import BaseTranslation
-from app.api.ollama import ChatResponse, chat
 from app.utils.utils import print_err, read_config, remove_escapes
 
 
